@@ -1,0 +1,48 @@
+{
+  "name": "dsh-plugin-shop-accounts",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "DSH 插件：电商平台店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688，都是商家端）—— 一个店铺一份 Chrome 登录档案，登录一次长期复用，上架时直接挑选",
+  "keywords": ["dsh-plugin", "dsh", "ecommerce", "chrome", "cdp"],
+  "license": "MIT",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "test"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "smoke": "node test/smoke.mjs"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  }
+}

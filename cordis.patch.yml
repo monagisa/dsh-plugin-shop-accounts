@@ -1,0 +1,8 @@
+# dsh-plugin-shop-accounts —— cordis 挂载补丁
+#
+# `name` 必须是**发布包名**：加载器拿它当 import 说明符（不是相对路径）。
+# `id` 是 cordis 行的 id，同时也是插件设置（设置 → 插件 → 本插件）那一行的命名空间。
+# id 一旦改了，用户在这个命名空间下存过的设置就读不到了 —— 别改。
+- insert:
+    - id: shop-accounts
+      name: "dsh-plugin-shop-accounts"
