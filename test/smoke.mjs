@@ -183,6 +183,22 @@ await test('停在登录页 → 有 cookie 也不判已登录（站点不认这�
   assert.equal(P.looksLikeLoginPage(p.homeUrl, p), false);
 });
 
+await test('凭证到期时间：只认平台会话 cookie、取最晚；会话级/匿名/错域都不算', () => {
+  const p = P.platformOf('pdd');
+  const mk = (name, expires, domain) => ({ name, expires, domain, value: 'real-value' });
+  const later = Math.floor(Date.parse('2027-01-27T03:44:17Z') / 1000);
+  const earlier = later - 86400;
+  const at = (cookies) => P.tokenExpiryOf(cookies, p);
+  assert.equal(
+    at([mk('PASS_ID', later, '.pinduoduo.com'), mk('SUB_PASS_ID', earlier, '.pinduoduo.com')]),
+    new Date(later * 1000).toISOString(),
+    '取最晚的那张凭证',
+  );
+  assert.equal(at([mk('PASS_ID', -1, '.pinduoduo.com')]), null, '会话级 cookie 没有到期时间');
+  assert.equal(at([mk('PASS_ID', later, '.example.com')]), null, '域不对不算');
+  assert.equal(at([mk('cna', later, '.pinduoduo.com')]), null, '匿名 cookie 不是凭证');
+});
+
 await test('cookie 读不到时不冒充：退用网址必须单独标注成 url 弱判据', () => {
   const p = P.platformOf('taobao');
   const weak = P.judgeLogin([], p.homeUrl, p, { cookieReadOk: false });
@@ -453,6 +469,11 @@ await test('排期算法：时间归一 / 越界夹住 / 顺序去重', () => {
   assert.equal(n.groupSize, 50, '每组最多 50 个');
   assert.deepEqual(n.order, ['a'], '顺序去重、去掉空值');
   assert.equal(n.lastDay, '', '坏日期清空（否则"今天跑过"会一直成立）');
+  // 保活停留：默认 8 秒；越界夹住（0 = 关闭，最多 120 秒）
+  assert.equal(SCH.normalizeSchedule({}).keepaliveSec, 8, '默认保活 8 秒');
+  assert.equal(SCH.normalizeSchedule({ keepaliveSec: 0 }).keepaliveSec, 0, '0 = 光检测不保活');
+  assert.equal(SCH.normalizeSchedule({ keepaliveSec: 999 }).keepaliveSec, 120, '最多 120 秒');
+  assert.equal(SCH.normalizeSchedule({ keepaliveSec: -5 }).keepaliveSec, 0);
 });
 
 await test('排期算法：每组 N 个共享一个时间点，暂停的店铺照样占位', () => {
@@ -506,12 +527,13 @@ await test('GET /schedule 带排期；PUT /schedule 落盘并在 /state 里给�
   assert.equal(g.json.schedule.enabled, false, '默认不开');
   assert.equal(g.json.schedule.rows.length, 2);
   const put = await call('PUT', '/shop-accounts/schedule', {
-    enabled: true, startTime: '9:5', groupIntervalMin: 15, groupSize: 1,
+    enabled: true, startTime: '9:5', groupIntervalMin: 15, groupSize: 1, keepaliveSec: 0,
     order: [b.json.account.id, a.json.account.id],
   });
   assert.equal(put.status, 200);
   assert.equal(put.json.schedule.startTime, '09:05', '时间会被归一');
   assert.equal(put.json.schedule.groupSizeMode, 'manual');
+  assert.equal(put.json.schedule.keepaliveSec, 0, '保活停留要能存下来（0 = 关闭）');
   assert.deepEqual(put.json.schedule.rows.map((r) => r.id), [b.json.account.id, a.json.account.id], '按 order 排队');
   assert.deepEqual(put.json.schedule.rows.map((r) => r.time), ['09:05', '09:20']);
   const s = await call('GET', '/shop-accounts/state');
@@ -555,13 +577,16 @@ await test('tickSchedule：到点才跑、结果写回 lastCheck、同一时间�
   const [hh, mm] = first.time.split(':').map(Number);
   const now = new Date(2026, 9, 19, hh, mm, 30);
   const calls = [];
-  const checkFn = async (acc) => {
+  const gotOpts = [];
+  const checkFn = async (acc, o) => {
     calls.push(acc.id);
+    gotOpts.push(o);
     return { ok: true, loggedIn: true, evidence: 'cookie', reason: '假检测' };
   };
   const r1 = await host.tickSchedule({ now, memGB: 8, log: { info() {}, warn() {} }, checkFn });
   assert.equal(r1.ran.length, 1, '第一组只有一个店铺到点');
   assert.deepEqual(calls, [first.id]);
+  assert.equal(gotOpts[0].keepaliveSec, 0, '上一步把保活存成 0，定时检测就该传 0 下去');
   const r2 = await host.tickSchedule({ now, memGB: 8, log: { info() {}, warn() {} }, checkFn });
   assert.equal(r2.ran.length, 0, '同一个时间点跑过就不再跑（重启也一样）');
   assert.deepEqual(calls, [first.id], '第二次连检测函数都不该调');
