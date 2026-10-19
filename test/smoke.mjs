@@ -320,6 +320,51 @@ await test('PUT /config 落盘并被 /state 读到', async () => {
   await call('PUT', '/shop-accounts/config', { portBase: 9222, openWorkTab: false });
 });
 
+await test('GET /state 带插件版本号；config 里带更新源目录（界面要显示 vX.Y.Z）', async () => {
+  const s = await call('GET', '/shop-accounts/state');
+  assert.equal(s.status, 200);
+  assert.match(String(s.json.version || ''), /^\d+\.\d+\.\d+$/, '状态里要带插件版本号');
+  assert.equal(typeof s.json.updateDir, 'string', '状态里要带自动探测到的更新源目录');
+  assert.equal(typeof s.json.config.updateDir, 'string', 'config 里要有 updateDir 字段');
+});
+
+await test('检测更新：源码目录不是 git 仓库时如实报错，不联网瞎猜', async () => {
+  const notRepo = path.join(TMP, 'not-a-repo');
+  fs.mkdirSync(notRepo, { recursive: true });
+  const put = await call('PUT', '/shop-accounts/config', { updateDir: notRepo });
+  assert.equal(put.status, 200);
+  const r = await call('GET', '/shop-accounts/update');
+  assert.equal(r.status, 200);
+  assert.equal(r.json.ok, false, '不是 git 仓库就不能假装能更新');
+  assert.match(r.json.error, /不是 git 仓库/);
+  assert.match(String(r.json.localVersion || ''), /^\d+\.\d+\.\d+$/, '报错也要把本地版本号带上');
+  const post = await call('POST', '/shop-accounts/update', {});
+  assert.equal(post.status, 500);
+  assert.match(post.json.error, /不是 git 仓库/);
+  await call('PUT', '/shop-accounts/config', { updateDir: '' });
+});
+
+await test('更新覆盖：syncFromSource 只搬运行文件，源码 == 目标时跳过（不自己踩自己）', () => {
+  const src = path.join(TMP, 'fake-src');
+  const dst = path.join(TMP, 'fake-installed');
+  fs.mkdirSync(path.join(src, 'lib'), { recursive: true });
+  fs.writeFileSync(path.join(src, 'lib', 'index.js'), 'export const x = 1;\n');
+  fs.writeFileSync(path.join(src, 'package.json'), JSON.stringify({ name: 'x', version: '9.9.9' }));
+  fs.mkdirSync(path.join(dst, 'lib'), { recursive: true });
+  fs.writeFileSync(path.join(dst, 'lib', 'index.js'), 'export const x = 0;\n');
+  const r = host.syncFromSource(src, dst);
+  assert.equal(r.sameDir, false);
+  assert.ok(r.copied >= 2, '至少要搬 lib 和 package.json');
+  assert.match(fs.readFileSync(path.join(dst, 'lib', 'index.js'), 'utf8'), /x = 1/, '拷贝要真的覆盖旧文件');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dst, 'package.json'), 'utf8')).version, '9.9.9');
+  const same = host.syncFromSource(src, src);
+  assert.equal(same.sameDir, true);
+  assert.equal(same.copied, 0);
+  assert.equal(host.cmpVersion('0.4.0', '0.3.10'), 1);
+  assert.equal(host.cmpVersion('0.3.3', '0.3.3'), 0);
+  assert.equal(host.cmpVersion('0.3.2', '0.3.10'), -1);
+});
+
 await test('POST /accounts 建号（不传 profileDir → 不启动任何浏览器）', async () => {
   const r = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '测试店', note: '备注' });
   assert.equal(r.status, 200);

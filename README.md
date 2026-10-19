@@ -35,6 +35,23 @@ DSH 的一个插件：**统一管理电商平台的店铺/账号登录态**。�
 > 不会再拉起第二只 Chrome（Chrome 是单实例，同档案再启一次只会把 URL 转给已有窗口然后自己退出，
 > 而调试端口仍被老实例占着 —— 老版本在这里会变成"点了没反应"）。没开着的店铺才会启动新窗口。
 
+## 更新插件（检测 / 一键更新）
+
+「浏览器设置」面板里多了一张「版本与更新」卡片：
+
+- **当前版本**：现在跑着的这份代码的版本号。
+- **更新源目录**：本插件的 git 源码仓库（留空 = 自动猜：自己在 git 仓库里就用自己；否则看
+  profile 的 `package.json` 里 `"dsh-plugin-shop-accounts": "file:D:/..."` 这类依赖反推）。
+- **检测更新**：`git fetch` 后比较三样东西 —— 现在跑着的版本、源码仓库当前提交的版本、GitHub 上
+  （`origin/main`）的版本；落后几个提交也会一并显示。只查询，不动任何文件。
+- **更新到最新**：源码仓库 `git merge --ff-only origin/main`（有未提交改动会拒绝，不会替你提交），
+  然后把 `lib/` `package.json` `README.md` `test/` 覆盖到 profile 里这份安装拷贝。
+
+> **覆盖完要重启 DSH Desktop**：宿主启动时就把插件代码读进内存了，换文件不会热更新。
+> 界面会在更新成功后提示「重启 DSH Desktop 生效」。
+
+安全边界：只跑 `git -C <更新源目录> fetch/merge` 和文件拷贝，不执行任何远端代码；拖的是你自己的仓库。
+
 ## 支持的平台（都是商家端）
 
 | 平台 | 登录页（新增店铺时打开的） | 「打开」落到的工作台 | 登录态认哪个 cookie |
@@ -215,6 +232,18 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
 - 真机验过两条分支：拼多多老档案 → `登录已失效，请重新登录`（2.7s）；另建一份空档案（无 `lastLoginAt`）
   → `未登录，请前往登录页登录`（3.1s），两者都被按回同一个登录页 URL。
 - `test/smoke.mjs` 加断言钉住这两句话，并禁止「多半/也许/似乎/疑似/可能」这类猜测措辞。
+
+## 本机验证记录（2026-10-19 晚：检测 / 一键更新 / v0.4.0）
+
+- 新增「版本与更新」卡片：**检测更新**（`git fetch` 后比较跑着的版本 / 源码 HEAD / GitHub `origin/main`，
+  显示落后几个提交）和 **更新到最新**（`merge --ff-only` + 覆盖 `lib/ package.json README.md test/`）。
+- 本地三件套回归（`shop-accounts-diag/update-local.mjs`，bare 远端 ← 落后 1 提交的克隆 ← 更旧的安装拷贝，
+  不联网不碰真目录）：检测 → `localVersion 0.9.0 / remoteVersion 1.1.0 / behind 1 / needsUpdate true`；
+  更新 → `merged true / copied 2 / 安装拷贝 package.json 变 1.1.0 / lib 代码被覆盖 / restartRequired true`；
+  再点一次 → `updated false, upToDate true`，不谎报需要重启；工作区有未提交改动 → 拒绝合并；17 项全过。
+- 真机路径（`shop-accounts-diag/update.mjs`，打真实 `/update` 路由）：已装拷贝 0.3.3 → 检测出源码 0.4.0
+  → 一键更新把 0.4.0 覆盖进 profile 副本 → 再检测 `upToDate`。
+- smoke 补了 3 条：`/state` 带版本号、非 git 目录时如实报错（不联网瞎猜）、`syncFromSource` 覆盖与自踩保护 → 35 项全过。
 
 ## 已知边界
 
