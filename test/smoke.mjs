@@ -768,10 +768,12 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   // 第二行文案是用户照参考软件给的原文，不许再改回长句；「下次 …」也不许再塞进来（那样就三行了）。
   assert.ok(clientSrc.includes("'适用于全部店铺，含已暂停任务；错过时间不补跑。'"), '横幅第二行要用参考原文');
   assert.equal(/\.sa-schedsub'[^)]*[^)]*下次 /.test(clientSrc), false, '「下次 …」不该在第二行里，应放悬停提示');
-  // ⑩ 数字输入必须有 ± 步进按钮（用户反馈「每组店铺数打字没反应」——不猜输入法，给鼠标入口）。
+  // ⑩ 数字输入：用 type=number（浏览器自带上下箭头 + 过滤），但**不要再加自定义 −/+ 按钮**
+  //    （v0.6.3 加过，用户嫌「又有上下又有加减」，v0.6.4 去掉了）。
   assert.ok(/function NumberField\(props\)/.test(clientSrc), '数字输入要有个统一的 NumberField');
   assert.ok(/type: 'number'/.test(clientSrc), '数字框用 type=number 交给浏览器过滤（自己 replace 会吞掉全角数字）');
-  assert.ok(/className: 'sa-numbtn'/.test(clientSrc), '要渲染 − / + 步进按钮');
+  assert.equal(/sa-numbtn/.test(clientSrc), false, '数字框旁边不该再有自定义 − / + 按钮');
+  assert.equal(/'−'/.test(clientSrc), false, 'NumberField 里不该再渲染加减号按钮');
   assert.ok(/h\(NumberField, \{\s*value: size/.test(src), '「每组店铺数」必须走 NumberField');
 });
 

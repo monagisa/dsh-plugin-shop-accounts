@@ -444,6 +444,16 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
   它会把全角数字直接吞掉，正是「按了没反应」的一种可能。
 - `test/smoke.mjs` 样式契约加一节（NumberField 存在、`type:'number'`、`sa-numbtn`、「每组店铺数」必须用它），47 项全过。
 
+## 本机验证记录（2026-10-19 晚：去掉数字框的加减按钮 / v0.6.4）
+
+- v0.6.3 给「组间隔 / 每组店铺数 / 保活停留」加的 `− / +` 按钮，和 `type=number` 自带的上下箭头同时在，
+  用户反馈「现在又有上下又有加减，把加减去掉吧」→ 删掉自定义按钮，`NumberField` 回归成一个
+  `<input type="number">`（原生上下箭头可点、键盘 ↑↓ 也管用，浏览器自己过滤非法字符）。
+- 顺带删掉 `.sa-num` / `.sa-numinput` / `.sa-numbtn` 三组样式和「也可以点 − / + 调」的提示。
+- `test/smoke.mjs` 断言反过来钉住：`sa-numbtn` 与 `'−'` 都不许再出现，但 `type:'number'` 必须还在 → 47 项全过。
+- 渲染复核（`preview.mjs --dialog --type=每组店铺数=3`）：输入框可输入，值 3，`/schedule/preview`
+  请求体 `groupSize:3` 正常。
+
 ## 已知边界
 
 - **不代登录、不破验证码**：扫码/短信/滑块都由你在真实窗口里完成。
