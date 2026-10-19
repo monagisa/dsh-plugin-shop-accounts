@@ -500,6 +500,26 @@ await test('__ModuleLoader__.load 的 id = 包名，factory 返回 exports 三�
   assert.ok(rendered && typeof rendered.type === 'function', '注册的组件工厂没给出页面组件');
 });
 
+await test('「更新到最新」按钮只在检测出有新版本时才可点（没检测/检测失败/已最新都灰着）', () => {
+  // 把客户端里那句可用性判断原样取出来跑 —— 免得测试自己另写一份逻辑，跟实现一起跑偏。
+  const m = clientSrc.match(/var canApply = (Boolean\(updInfo[^;]*\));/);
+  assert.ok(m, '客户端里找不到 canApply 的可用性判断');
+  const canApply = new Function('updInfo', 'return ' + m[1]);
+
+  assert.equal(canApply(null), false, '还没检测过 → 不能点');
+  assert.equal(canApply(undefined), false, '还没检测过 → 不能点');
+  assert.equal(canApply({ ok: false, error: '更新源目录不是 git 仓库' }), false, '检测失败 → 不能点');
+  assert.equal(canApply({ ok: true, upToDate: true, needsUpdate: false }), false, '已是最新 → 不能点');
+  assert.equal(canApply({ ok: true, needsUpdate: true, behind: 2 }), true, '落后 2 个提交 → 才能点');
+  assert.equal(canApply({ ok: true, needsUpdate: true, remoteVersion: '0.9.0' }), true, 'GitHub 版本更新 → 才能点');
+
+  assert.ok(/disabled: Boolean\(updBusy\) \|\| !canApply/.test(clientSrc), '更新按钮要同时受 busy 和 canApply 约束');
+  assert.ok(
+    /function runUpd\(\) \{[\s\S]{0,400}?needsUpdate\)\) return;/.test(clientSrc),
+    '更新动作本身也要挡一道 —— 别只靠 disabled，按钮灰着但函数还能被调',
+  );
+});
+
 await test('客户端打出的每个动作，宿主都真的接了（两边写歪会当场露馅）', async () => {
   // 动作名不写死在测试里，而是从客户端源码里扫出来 —— 否则「客户端加了新动作、宿主忘了加路由」
   // 这种错，测试和实现会一起错下去。

@@ -46,6 +46,8 @@ DSH 的一个插件：**统一管理电商平台的店铺/账号登录态**。�
   （`origin/main`）的版本；落后几个提交也会一并显示。只查询，不动任何文件。
 - **更新到最新**：源码仓库 `git merge --ff-only origin/main`（有未提交改动会拒绝，不会替你提交），
   然后把 `lib/` `package.json` `README.md` `test/` 覆盖到 profile 里这份安装拷贝。
+  **只有「检测更新」的结果里确实有新版本时这个按钮才可点**——没检测过、检测失败、已是最新，它都是灰的
+  （要更新就一步一步来：先检测，确认有新东西，再点更新；不靠手滑）。
 
 > **覆盖完要重启 DSH Desktop**：宿主启动时就把插件代码读进内存了，换文件不会热更新。
 > 界面会在更新成功后提示「重启 DSH Desktop 生效」。
@@ -244,6 +246,15 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
 - 真机路径（`shop-accounts-diag/update.mjs`，打真实 `/update` 路由）：已装拷贝 0.3.3 → 检测出源码 0.4.0
   → 一键更新把 0.4.0 覆盖进 profile 副本 → 再检测 `upToDate`。
 - smoke 补了 3 条：`/state` 带版本号、非 git 目录时如实报错（不联网瞎猜）、`syncFromSource` 覆盖与自踩保护 → 35 项全过。
+
+## 本机验证记录（2026-10-19 晚：「更新到最新」按需变灰 / v0.4.1）
+
+- 用户要求：更新按钮只在**检测出有新版本**时才能点。此前它只受「忙不忙」约束，没检测过也能按。
+- 实现：`ConfigPanel` 里加 `var canApply = Boolean(updInfo && updInfo.ok !== false && updInfo.needsUpdate)`；
+  「更新到最新」`disabled: Boolean(updBusy) || !canApply`；`runUpd()` 开头也自查同一条件（按钮灰着但函数还能被调的情况要堵住）；
+  没检测过时多一行提示「先点『检测更新』…」，检测失败（`ok:false`）时同样灰。
+- 更新成功后的返回里 `needsUpdate:false`，按钮随即自动变灰，不会让人重复按。
+- `test/smoke.mjs` 补 1 条源码级断言（按钮可用性必须由 `needsUpdate` 决定、disabled 同时受 busy/canApply 约束、`runUpd` 里有函数内自查）→ 36 项全过。
 
 ## 已知边界
 
