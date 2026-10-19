@@ -758,6 +758,13 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   assert.ok(/--dsw-alias-label-secondary/.test(src), '小字颜色要走 label-secondary');
   // ⑧ 行里「详细配置」要和上面的排期胶囊对齐居中（用户原话「不居中，太奇怪」）。
   assert.ok(/\.sa-schedcell\{[^}]*align-items:center/.test(src), '定时检测列的胶囊和链接要居中');
+  // ⑨ 顶部排期横幅按参考软件的样子：左边两行（粗标题 + 淡说明）、右边一个描边胶囊按钮、整体一行不折行。
+  assert.ok(/\.sa-schedbar\{[^}]*justify-content:space-between/.test(src), '横幅要左右两端对齐（文字在左、按钮在右）');
+  assert.equal(/\.sa-schedbar\{[^}]*flex-wrap:wrap/.test(src), false, '横幅不该折行，按钮要跟文字同一行（参考图就是一行）');
+  assert.ok(/\.sa-schedmain\{[^}]*flex-direction:column/.test(src), '横幅左侧文字要是上下两行');
+  assert.ok(/\.sa-schedsub\{[^}]*label-secondary/.test(src), '第二行说明要用淡一点的颜色');
+  assert.ok(/\.sa-schedpill\{[^}]*border-radius:999px/.test(src), '「调整排期」要是胶囊按钮');
+  assert.ok(/'sa-schedpill', onClick: function \(\) \{ setSchedOpen\(true\); \}/.test(clientSrc), '横幅上的「调整排期」要用胶囊样式');
 });
 
 await test('账号管理页在「有排期数据」时也能渲染出来：横幅 / 定时检测列 / 调整排期弹窗', () => {

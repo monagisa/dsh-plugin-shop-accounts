@@ -414,6 +414,21 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
   `normalizeSchedule` 的 `keepaliveSec` 归一（默认 8、0 保留、最多 120）、`PUT /schedule` 能存 `keepaliveSec`、
   `tickSchedule` 把 `keepaliveSec` 传给检测函数。
 
+## 本机验证记录（2026-10-19 晚：排期横幅贴合参考样式 / v0.6.1）
+
+用户发了参考软件的横幅截图（左边粗标题 + 淡说明两行、右边一个描边胶囊「调整排期」、整体一行）说「样式尽量贴合这个」。
+
+- 改前：横幅 `flex-wrap:wrap`，窄一点「调整排期」就被挤到第二行；按钮用的是普通 `.sa-btn`（实底），
+  说明文字里塞了「下次 …」「（当前已关闭）」等一长串，跟参考图的两行结构差别明显。
+- 改后（`lib/client.js`）：横幅不再折行（`justify-content:space-between`，去掉 `flex-wrap`），
+  左侧 `.sa-schedmain` 上下两行——`.sa-schedtitle`（600 粗、13.5px）＋`.sa-schedsub`（11.5px、`label-secondary` 淡色），
+  右侧新增 `.sa-schedpill`（透明底 + 1px 描边 + `border-radius:999px` + hover 微亮）承载「调整排期」；
+  「（当前已关闭）」并进标题行末尾，「下次 …」并进说明行末尾。行内那个「开启·10:00」胶囊（`.sa-schedbtn`）不动。
+- `test/smoke.mjs` 的样式契约测试加一节（竖排两行、不折行、胶囊按钮、按钮用 `sa-schedpill`）；
+  47 项仍然全过。
+- `shop-accounts-diag/preview.mjs` 渲染三张对照图：`ui-banner-wide.png`（1280 一行）、
+  `ui-banner-narrow.png`（590 折成两行但按钮仍在右侧）、`ui-banner-dark.png`（深色主题）。
+
 ## 已知边界
 
 - **不代登录、不破验证码**：扫码/短信/滑块都由你在真实窗口里完成。
