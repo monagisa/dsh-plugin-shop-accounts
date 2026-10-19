@@ -768,6 +768,11 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   // 第二行文案是用户照参考软件给的原文，不许再改回长句；「下次 …」也不许再塞进来（那样就三行了）。
   assert.ok(clientSrc.includes("'适用于全部店铺，含已暂停任务；错过时间不补跑。'"), '横幅第二行要用参考原文');
   assert.equal(/\.sa-schedsub'[^)]*[^)]*下次 /.test(clientSrc), false, '「下次 …」不该在第二行里，应放悬停提示');
+  // ⑩ 数字输入必须有 ± 步进按钮（用户反馈「每组店铺数打字没反应」——不猜输入法，给鼠标入口）。
+  assert.ok(/function NumberField\(props\)/.test(clientSrc), '数字输入要有个统一的 NumberField');
+  assert.ok(/type: 'number'/.test(clientSrc), '数字框用 type=number 交给浏览器过滤（自己 replace 会吞掉全角数字）');
+  assert.ok(/className: 'sa-numbtn'/.test(clientSrc), '要渲染 − / + 步进按钮');
+  assert.ok(/h\(NumberField, \{\s*value: size/.test(src), '「每组店铺数」必须走 NumberField');
 });
 
 await test('账号管理页在「有排期数据」时也能渲染出来：横幅 / 定时检测列 / 调整排期弹窗', () => {
