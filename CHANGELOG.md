@@ -3,6 +3,23 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数指 `node test/smoke.mjs` 的条数。
 
+## v0.6.7
+
+- **接着修「千牛保存了还是未登录」的第二层原因**：v0.6.6 让会话级 cookie 能落盘了，但真机第二次还是翻车。
+  这次在用户登录的窗口上挂 CDP 监听（`C:\Users\mo\cluade\shop-accounts-diag\watch-login.mjs`），
+  抓到了确切时间线：`08:09:41` 工作台已能打开，但**身份 cookie `unb` 要到工作台自己再页内跳一次才种下来**
+  （`08:09:41` 那一次就齐了；更早那次 `08:04` 用户一点保存就关窗，`unb` 根本没下来）。
+  也就是说：**用户点保存点早了**，关窗带走的是一个还没拿到身份的会话。
+- 修法：`finish` 关窗**之前**新增一道门 `waitForIdentityCookies` —— 按平台的 `identityCookies`
+  （淘宝 = `unb` + `sgcookie`）逐个核对，缺就每秒重读、最长等 20 秒；等 5 秒还不齐就
+  主动把窗口导回一次工作台（`navigatePageTo`）催站点下发；等到超时仍不齐 → **不关窗、回 `saved:false`**
+  并直说「还没拿到身份 cookie（unb）……等能看见店铺数据了再点一次」。
+- 验证：`node test/smoke.mjs` **51 项**（新增假时钟单测：缺 unb 时继续等、5 秒后催工作台、
+  一直不齐不放行并指名缺哪个、没身份要求的平台不空等）；真机 `check.mjs --action=finish` →
+  `saved:true`、`closed:true`、复核 `loggedIn:true`（matched 含 `unb`）、7257ms；
+  随后独立再跑一次静默检测（全新无头浏览器）仍 `loggedIn:true`、`cookieCount:85`、url 工作台 →
+  **登录态真的活过了关窗**。
+
 ## v0.6.6
 
 - **修「千牛登录完说保存了、状态也变了，下一秒打开还是未登录」**。真机查到的账：

@@ -643,6 +643,54 @@ await test('finish：关窗之后再验一次，验不过就不许说「已保�
   assert.match(indexSrc, /登录态没保住/, '要说清楚为什么没保存');
 });
 
+await test('关窗之前先等身份 cookie 到齐（淘宝 unb 比工作台晚几秒下来，等不到就别关窗）', async () => {
+  assert.match(indexSrc, /export async function waitForIdentityCookies\(/, '要有一层"等身份 cookie"的门');
+  const platform = { identityCookies: ['unb', 'sgcookie'] };
+  const craft = (matched) => ({ loggedIn: true, matched });
+  // 依次返回：缺 unb 若干次 → 齐了（凑够 5 秒以上，验证中途会催工作台）
+  const missingPoll = craft(['sgcookie', 'cookie2']);
+  const queue = [missingPoll, missingPoll, missingPoll, missingPoll, missingPoll, missingPoll, missingPoll, craft(['unb', 'sgcookie'])];
+  let reads = 0;
+  let nudges = 0;
+  let waited = 0;
+  const r = await host.waitForIdentityCookies(async () => {
+    const v = queue[Math.min(reads, queue.length - 1)];
+    reads += 1;
+    return v;
+  }, platform, {
+    first: queue[0],
+    timeoutMs: 20000,
+    pollMs: 1000,
+    now: () => waited,
+    sleepFn: async (ms) => { waited += ms; },
+    nudge: async () => { nudges += 1; },
+  });
+  assert.equal(r.ok, true, '身份 cookie 到齐后要放行：' + JSON.stringify(r));
+  assert.ok(reads >= 3, '中间没齐，必须继续等（实际读了 ' + reads + ' 次）');
+  assert.ok(nudges >= 1, '等了 5 秒还没齐要催一次工作台');
+
+  // 一直不齐 → 不许放行，并报出缺哪个
+  let waited2 = 0;
+  const bad = await host.waitForIdentityCookies(async () => craft(['sgcookie']), platform, {
+    first: craft(['sgcookie']),
+    timeoutMs: 3000,
+    pollMs: 1000,
+    now: () => waited2,
+    sleepFn: async (ms) => { waited2 += ms; },
+  });
+  assert.equal(bad.ok, false, '身份 cookie 一直不齐不能放行');
+  assert.deepEqual(bad.missing, ['unb'], '要指名道姓说缺哪个 cookie');
+
+  // 平台没有 identityCookies（比如拼多多）→ 不额外等
+  const plain = await host.waitForIdentityCookies(async () => craft([]), { identityCookies: [] }, {
+    first: craft([]),
+    now: () => 0,
+    sleepFn: async () => { throw new Error('不该睡'); },
+  });
+  assert.equal(plain.ok, true, '没有身份 cookie 要求的平台直接放行');
+  assert.equal(plain.waitedMs, 0);
+});
+
 // ── 4. 客户端 bundle 契约 ────────────────────────────────────────────────────
 
 section('4. 客户端 bundle 契约 lib/client.js');
