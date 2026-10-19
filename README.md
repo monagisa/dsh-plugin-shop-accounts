@@ -90,6 +90,17 @@ DSH 的一个插件：**统一管理电商平台的店铺/账号登录态**。�
 
 这三条就是 `test/smoke.mjs` 里逐条钉住的契约 —— 判错登录态的代价是上架脚本跑到一半要求登录。
 
+### 静默检测为什么要「等导航稳」
+
+浏览器没开时，检测会用一个**无头** Chrome 打开同一份档案探一次。这里有个坑（v0.3.0 的真 bug，2026-10-19 修）：
+把工作台 URL 作为启动参数丢给 Chrome，页面目标**一上来**就停在工作台 URL 上（实测 +377ms 就能看到，CDP +358ms 起来），
+而站点把人甩到登录页是 +632ms 的事。旧实现「看到平台域名就算稳」，于是判的是工作台 URL + 档案里还没被清掉的
+`PASS_ID` / `SUB_PASS_ID` → **明明掉线了也报「已登录」**；开着窗口时靠实时读 URL 还能发现，关着窗口就永远发现不了。
+
+现在 `settlePage()` 只认「导航真正结束」：`document.readyState === 'complete'` 且 URL 连续 1.5s 不再变化
+（资源一直不结束的站点，URL 稳定 4s 也认；总上限 12s），判据用的就是等稳后的那个 URL。
+`test/live-probe.mjs` 用本地页复现了同一时序（先渲染"工作台"，400ms 后 JS 跳 `/login`），把这条回归钉住。
+
 ## 上架流程怎么接
 
 ````powershell
@@ -116,7 +127,8 @@ node test/live-probe.mjs all  # 六个平台都过一遍（建议一个一个跑
 
 `live-probe.mjs` 会真的拉起一个**无头** Chrome（临时档案、不弹窗口、不碰店铺档案），验证
 「启动 → 调试端口起来 → `Network.getAllCookies` 能读（HttpOnly 的唯一正路）→ `Browser.close` 正常关掉」这条链路；
-带平台参数时还会用空档案打开该平台登录页，断言**不能**被误判成「已登录」。怀疑登录态判得不准时跑它。
+带平台参数时还会用空档案打开该平台登录页，断言**不能**被误判成「已登录」；另外每次都会跑一条「慢跳转」回归
+（本地页 400ms 后 JS 跳 `/login`，断言 `settlePage` 等的是最终那个 URL）。怀疑登录态判得不准时跑它。
 
 ## 安装
 
@@ -172,6 +184,22 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
 - 端口归属判定不用 CDP 的 `Browser.getBrowserCommandLine`：实测它必须配合 `--enable-automation`
   才返回命令行（`Command line not returned because --enable-automation not set.`），而那个开关会设置
   `navigator.webdriver`、登录站点有可能识别 —— 改成"自己起的浏览器自己登记（`runtime.json`）+ 进程命令行查询兜底"。
+
+## 本机验证记录（2026-10-19：修「关着窗口检测不出登录掉了」/ v0.3.1）
+
+- 根因不再是猜的：无头检测把工作台 URL 当启动参数，页面目标 +377ms 就停在工作台 URL 上，
+  站点 +632ms 才跳登录页；旧 `settlePage` 一看到平台域名就判稳 → 读的是工作台 URL +
+  档案里还没被清掉的 `PASS_ID` / `SUB_PASS_ID` → 报「已登录」。
+- 修法：`settlePage` 等 `readyState === 'complete'` 且 URL 稳定 1.5s（资源不结束则稳定 4s 也认，上限 12s），
+  并把等稳后的 URL 直接交给 `judgeLogin`（`readLoginFrom(port, platform, preferUrl)`）。
+- 真机回归（两个真档案、浏览器都没开，改前都报假的 `loggedIn:true`）：
+  拼多多 → `loggedIn:false` / `evidence:login-page` / url `https://mms.pinduoduo.com/login/?redirectUrl=...`，耗时 ~2.7s；
+  淘宝 → `loggedIn:false` / `evidence:login-page` / url `https://loginmyseller.taobao.com/?...`，耗时 ~2.6s。
+- `node test/smoke.mjs` → 32 项全过；`node test/live-probe.mjs pdd` → 全过，新增的「慢跳转」回归
+  （本地页 400ms 后 JS 跳 `/login`）实测 `settlePage` 等到最终 URL、耗时 2098ms —— 旧实现会在第一次
+  poll（~200ms）就返回工作台 URL，这条断言能直接钉住回归。
+- 生效方式：宿主在启动时把插件代码加载进内存，改完要**重启 DSH Desktop**（改 profile 的
+  `node_modules/dsh-plugin-shop-accounts` 副本也一样）。
 
 ## 已知边界
 
