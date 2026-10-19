@@ -775,6 +775,8 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   assert.equal(/sa-numbtn/.test(clientSrc), false, '数字框旁边不该再有自定义 − / + 按钮');
   assert.equal(/'−'/.test(clientSrc), false, 'NumberField 里不该再渲染加减号按钮');
   assert.ok(/h\(NumberField, \{\s*value: size/.test(src), '「每组店铺数」必须走 NumberField');
+  // ⑪ 行内「开启·12:00」胶囊不许带 title 悬停提示（用户嫌浮一层说明文字挡视线；说明留在弹窗里）。
+  assert.equal(clientSrc.includes('到点自动做一次静默检测'), false, '行内定时胶囊不该再有悬停提示文案');
 });
 
 await test('账号管理页在「有排期数据」时也能渲染出来：横幅 / 定时检测列 / 调整排期弹窗', () => {
