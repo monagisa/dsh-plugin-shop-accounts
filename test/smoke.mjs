@@ -727,6 +727,12 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   assert.ok(/\.sa-c-port\{display:none;?\}/.test(src), '窄的时候把「调试端口」列收起来');
   assert.ok(/className: 'sa-c-port'/.test(clientSrc), '端口列的格子要有 sa-c-port 类，隐藏才能命中');
   assert.ok(/sa-port-inline/.test(clientSrc), '收起来的端口要并到店铺名下面那行显示，别丢信息');
+  // ⑦ 小字对比度：浅色主题 --dsw-alias-label-caption = #adb2b8（对白底约 2:1，用户说「看不清」），
+  //    改用 --dsw-alias-label-secondary（浅色 #61666b ≈5.8:1，深色 #cfd3d6 也够）。别再换回 caption。
+  assert.ok(!/--dsw-alias-label-caption/.test(src), '说明性小字要用 label-secondary，不能用 caption（浅色主题下几乎看不见）');
+  assert.ok(/--dsw-alias-label-secondary/.test(src), '小字颜色要走 label-secondary');
+  // ⑧ 行里「详细配置」要和上面的排期胶囊对齐居中（用户原话「不居中，太奇怪」）。
+  assert.ok(/\.sa-schedcell\{[^}]*align-items:center/.test(src), '定时检测列的胶囊和链接要居中');
 });
 
 await test('账号管理页在「有排期数据」时也能渲染出来：横幅 / 定时检测列 / 调整排期弹窗', () => {

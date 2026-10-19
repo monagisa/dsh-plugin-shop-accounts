@@ -354,6 +354,23 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
 - `test/smoke.mjs` 样式契约加断言：`.sa-list` 必须有 `container-type:inline-size`、必须有 `@container (max-width:700px)`、
   窄态要隐藏 `.sa-c-port` 且端口信息要在 `.sa-port-inline` 里补回来 → **46 项全过**。
 
+## 本机验证记录（2026-10-19 晚：小字对比度 + 居中 / v0.5.4）
+
+用户看完 v0.5.3 的截图又提两点：「这个详细配置太奇怪，不居中」「灰色的字和背景太像了，看不清楚」。
+
+- 不居中的真因：`.sa-schedcell` 是 `align-items:flex-start`，排期胶囊和它下面的「详细配置」各靠左，
+  在 86px 的窄列里看着像错位。改成 `align-items:center`（探针实测：胶囊 250–325、链接 265–309，列中心 288，两者都居中）。
+- 看不清的真因（这次有数字）：说明性小字全用 `--dsw-alias-label-caption`，而 DSH **浅色主题**里它是
+  `#adb2b8`（neutral-bluish-400），对白底对比度只有 **2.0:1**（正文最低要求 4.5:1）。
+  改用 `--dsw-alias-label-secondary`：浅色 `#61666b`（bluish-700）→ **5.8:1**，深色 `#cfd3d6`（bluish-300）→ **12.1:1**。
+  影响 `.sa-sub` / `.sa-note` / `.sa-hint` / `.sa-rowhead` / `.sa-empty` / `.sa-dlabel` / `.sa-dmeta` / `.sa-handle`。
+- 「详细配置」链接本身从 `opacity:.75` 提到 `.9`，保留下划线 + `text-underline-offset:2px`，一眼能看出可点。
+- 验证工具升级：`preview.mjs` 加了**对比度探针**（读 `getComputedStyle().color`，向上找第一个不透明背景，
+  按 WCAG 公式算 ratio）和 `--dark`（整套深色 token）。实测浅色 5.8:1 / 深色 12.1:1；
+  截图 `ui-narrow.png`（浅色）与 `ui-dark.png`（深色）。
+- `test/smoke.mjs` 样式契约加断言：代码里不许再出现 `--dsw-alias-label-caption`、必须有 `label-secondary`、
+  `.sa-schedcell` 必须 `align-items:center` → **46 项全过**。
+
 ## 已知边界
 
 - **不代登录、不破验证码**：扫码/短信/滑块都由你在真实窗口里完成。
