@@ -647,6 +647,19 @@ await test('finish：关窗之后再验一次，验不过就不许说「已保�
   assert.match(indexSrc, /登录态没保住/, '要说清楚为什么没保存');
 });
 
+await test('cookie 罐本地备份：点 X 关窗会丢一批 cookie（实测 86→42、unb 没了），要能补回来', async () => {
+  // 真机证据（2026-10-19 08:24→08:25 UTC 的 debug.log）：用户点窗口红叉后重开，
+  // 档案里只剩 42 个 cookie、`unb` 直接消失 → 站点按回登录页。
+  const cdpSrc = fs.readFileSync(path.join(ROOT, 'lib/cdp.mjs'), 'utf8');
+  assert.match(indexSrc, /dsh-session-cookies\.json/, '罐子要落在档案目录里');
+  assert.match(indexSrc, /export function saveSessionCookies\(/, '要能存罐子');
+  assert.match(indexSrc, /export async function restoreSessionCookies\(/, '要能补罐子');
+  assert.match(indexSrc, /await restoreSessionCookies\(probePort, account\)/, '静默检测启动后要先补罐子再开页面');
+  assert.match(indexSrc, /const missing = cookies\.filter\(\(c\) => !have\.has\(/, '只补档案里缺的，别拿旧值覆盖新的同名 cookie');
+  assert.match(indexSrc, /await rememberLiveCookies\(account\)/, '关窗之前要把活着的罐子存一份');
+  assert.match(cdpSrc, /Network\.setCookies/, '补罐子要走 CDP Network.setCookies');
+});
+
 await test('关窗之前先等身份 cookie 到齐（淘宝 unb 比工作台晚几秒下来，等不到就别关窗）', async () => {
   assert.match(indexSrc, /export async function waitForIdentityCookies\(/, '要有一层"等身份 cookie"的门');
   const platform = { identityCookies: ['unb', 'sgcookie'] };

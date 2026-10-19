@@ -3,6 +3,19 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数指 `node test/smoke.mjs` 的条数。
 
+## v0.6.10
+
+- **cookie 罐本地备份 + 启动补回**：解决「点窗口红叉关掉 → 再检测就未登录」（千牛）。
+  真机 debug.log 证据（2026-10-19 08:24→08:25 UTC）：关窗前浏览器里有 86 个 cookie、`unb` 在；
+  用户点红叉后重开，档案里只剩 42 个、`unb` 消失 → 站点直接按回登录页。
+- 做法：读到「已登录」时把整罐 cookie 存到 `<档案目录>/dsh-session-cookies.json`（只在本机，含会话级 cookie 值）；
+  每次启动浏览器（静默/定时/点「打开」）先走 CDP `Network.setCookies` 把**档案里缺的那些**补回去，再打开页面；
+  **只补缺的**，不覆盖档案里已有的同名 cookie（档案里的更新）。
+- `lib/cdp.mjs` 新增 `setCookies(port, cookies)`；`lib/index.js` 新增 `saveSessionCookies` / `restoreSessionCookies` /
+  `rememberLiveCookies`，接入静默检测、手动检测、finish 关窗前、open 起窗后；`debug.log` 多记 `restore` 事件。
+- 验证：`shop-accounts-diag/cookie-backup.mjs` 8 项全过（存罐子 → 会话级 cookie 被过期 → 补回 → 页面认；
+  档案里的新值不会被旧备份覆盖）；smoke 52 项。
+
 ## v0.6.9
 
 - **加真机诊断日志**：`<数据目录>/debug.log`（默认 `C:\Users\mo\.dsh\shop-accounts\debug.log`）按时间顺序记下
