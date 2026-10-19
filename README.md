@@ -336,6 +336,24 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
 - `test/smoke.mjs` 样式契约加断言：不许再出现 `sa-pmove` / `'↑'` / `'↓'`；`data-drag="1"` 不许用半透明
   opacity（只能是 1）、必须有实底 background、必须调 `setDragImage` → **46 项全过**。
 
+## 本机验证记录（2026-10-19 晚：窄窗口自适应 / v0.5.3）
+
+用户装 v0.5.2 后截图问「怎么是这样的」：DSH 窗口窄（内容区 ~590px）时，表格右侧的「操作」列被顶到屏幕外，
+搜索框和排期横幅也一起往右溢出，看着像整页错位。
+
+- 真因：`.sa-rowhead,.sa-row` 写死 `min-width:660px`，6 列在窄面板里硬撑。`.sa-list` 虽然有 `overflow-x:auto`，
+  但页面里其它块（横幅、搜索框、顶栏按钮）跟着这个宽度走，用户看到的是「整页往右跑」，而不是「表格自己能滚」。
+- 修法：给 `.sa-list` 加 `container-type:inline-size`（顺带拿到 inline-size containment，内容再宽也撑不出页面横向滚动）；
+  加 `@container (max-width:700px)`：网格换成 5 列
+  `minmax(110px,1.7fr) 52px minmax(84px,1.1fr) minmax(74px,1fr) 122px` + `min-width:0`，
+  隐藏「调试端口」列（`.sa-c-port`），端口改用 `.sa-port-inline` 并到店铺名下面那行（`· 端口 :9225`，不丢信息），
+  平台标签加 `white-space:nowrap`（否则 52px 列会把「拼多多」拆成两行）。
+- 可视化验证：`preview.mjs` 新增 `--width=` / `--height=`（默认 1280×900），590×660 与 460×660 各渲一遍，
+  探针 `pageOverflowX` 都是 0；590 时六列自动变五列、操作按钮完整可见、弹窗也完整；
+  1280 时仍是 6 列（含调试端口）。截图：`shop-accounts-diag/ui-narrow.png`、`ui-wide.png`、`ui-dialog-narrow.png`。
+- `test/smoke.mjs` 样式契约加断言：`.sa-list` 必须有 `container-type:inline-size`、必须有 `@container (max-width:700px)`、
+  窄态要隐藏 `.sa-c-port` 且端口信息要在 `.sa-port-inline` 里补回来 → **46 项全过**。
+
 ## 已知边界
 
 - **不代登录、不破验证码**：扫码/短信/滑块都由你在真实窗口里完成。

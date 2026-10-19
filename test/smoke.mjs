@@ -721,6 +721,12 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   assert.ok(!/data-drag="1"\]\{[^}]*opacity:(?:0(?:\.\d+)?|\.\d+)/.test(src), '拖起来的行不能靠半透明表达（opacity 只能是 1）');
   assert.ok(/data-drag="1"\]\{[^}]*background:/.test(src), '拖起来的行要实底高亮');
   assert.ok(/setDragImage/.test(clientSrc), '要设空拖影（setDragImage），否则浏览器会画半透明浮层');
+  // ⑥ 窄面板（用户窗口窄时真机截图里右侧「操作」列直接跑出屏幕）：表格要按自身宽度收列，不能硬撑 660px。
+  assert.ok(/\.sa-list\{[^}]*container-type:inline-size/.test(src), '表格容器要能按自身宽度做 container query');
+  assert.ok(/@container \(max-width:700px\)/.test(src), '窄的时候要少一列，否则整页横向滚动');
+  assert.ok(/\.sa-c-port\{display:none;?\}/.test(src), '窄的时候把「调试端口」列收起来');
+  assert.ok(/className: 'sa-c-port'/.test(clientSrc), '端口列的格子要有 sa-c-port 类，隐藏才能命中');
+  assert.ok(/sa-port-inline/.test(clientSrc), '收起来的端口要并到店铺名下面那行显示，别丢信息');
 });
 
 await test('账号管理页在「有排期数据」时也能渲染出来：横幅 / 定时检测列 / 调整排期弹窗', () => {
