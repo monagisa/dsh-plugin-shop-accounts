@@ -765,6 +765,9 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   assert.ok(/\.sa-schedsub\{[^}]*label-secondary/.test(src), '第二行说明要用淡一点的颜色');
   assert.ok(/\.sa-schedpill\{[^}]*border-radius:999px/.test(src), '「调整排期」要是胶囊按钮');
   assert.ok(/'sa-schedpill', onClick: function \(\) \{ setSchedOpen\(true\); \}/.test(clientSrc), '横幅上的「调整排期」要用胶囊样式');
+  // 第二行文案是用户照参考软件给的原文，不许再改回长句；「下次 …」也不许再塞进来（那样就三行了）。
+  assert.ok(clientSrc.includes("'适用于全部店铺，含已暂停任务；错过时间不补跑。'"), '横幅第二行要用参考原文');
+  assert.equal(/\.sa-schedsub'[^)]*[^)]*下次 /.test(clientSrc), false, '「下次 …」不该在第二行里，应放悬停提示');
 });
 
 await test('账号管理页在「有排期数据」时也能渲染出来：横幅 / 定时检测列 / 调整排期弹窗', () => {

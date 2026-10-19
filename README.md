@@ -428,6 +428,8 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
   47 项仍然全过。
 - `shop-accounts-diag/preview.mjs` 渲染三张对照图：`ui-banner-wide.png`（1280 一行）、
   `ui-banner-narrow.png`（590 折成两行但按钮仍在右侧）、`ui-banner-dark.png`（深色主题）。
+- **v0.6.2**：第二行文案按用户给的参考原话定死为「适用于全部店铺，含已暂停任务；错过时间不补跑。」；
+  原来跟在后面的「· 下次 …」挪到横幅悬停提示（`title`），这样横幅永远是参考图那种两行结构。
 
 ## 已知边界
 
