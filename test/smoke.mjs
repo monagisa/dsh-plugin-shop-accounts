@@ -689,6 +689,34 @@ await test('「更新到最新」按钮只在检测出有新版本时才可点�
   );
 });
 
+await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / 行可拖拽（真机截图里踩过的坑）', () => {
+  // 去掉 // 注释再断言：注释里会提到不该用的旧写法（比如 menu-surface-fill），别被它误伤。
+  const src = clientSrc.replace(/\/\/[^\n]*/g, '');
+  const pick = (re) => {
+    const m = src.match(re);
+    assert.ok(m, '客户端里找不到：' + re);
+    return m[0];
+  };
+  // ① 行里现在渲染 6 个格子（店铺名/平台/定时检测/登录状态/调试端口/操作），网格也必须是 6 列。
+  //    少一列的话第 6 格会换行，整张表错位 —— 上一版就是这个症状。
+  pick(/grid-template-columns:minmax\(120px,1\.6fr\) 54px minmax\(96px,1fr\) minmax\(84px,1fr\) 60px 132px/);
+  // ② 弹窗底色绝对不能用 --dsw-menu-surface-fill：它是**带 alpha 的菜单底色**
+  //    （浅色 #f8f9fa94 / 深色 #43454a73），弹窗会把底下列表透上来，字叠一起看不清。
+  const dialog = pick(/\.sa-dialog\{[\s\S]*?\}/);
+  assert.ok(!/dsw-menu-surface-fill/.test(dialog), '弹窗底色必须不透明，不能用 menu-surface-fill');
+  assert.ok(/dsw-alias-bg-base/.test(dialog), '弹窗底色要用实色的 --dsw-alias-bg-base');
+  // ③ 弹窗正文自己滚、按钮固定在底部；预览列表不许被 flex 压成一条线（以前压到 4px，行全看不见）。
+  assert.ok(/\.sa-dialog\{[\s\S]*?overflow:hidden/.test(dialog), '弹窗本体不滚，交给正文滚，否则底部按钮会被挤出视野');
+  assert.equal((clientSrc.match(/className: 'sa-dialog-body'/g) || []).length, 2, '两个弹窗都要包一层可滚动的正文区');
+  assert.ok(/\.sa-plist\{[^}]*flex:0 0 auto/.test(clientSrc), '预览列表不能被 flex-shrink 压扁');
+  assert.ok(/\.sa-scroll\{[^}]*flex:0 0 auto/.test(clientSrc), '滚动区不能被 flex-shrink 压扁');
+  // ④ 排期预览要能拖拽排序：行上必须挂 drag 事件（HTML5 drag&drop），并且有拖拽手柄。
+  assert.ok(/onDragStart/.test(clientSrc), '预览行要挂 onDragStart');
+  assert.ok(/onDrop/.test(clientSrc), '预览行要挂 onDrop');
+  assert.ok(clientSrc.includes("'⠿'"), '预览行要显示拖拽手柄 ⠿');
+  assert.ok(/function reorder\(from, to\)/.test(clientSrc), '拖拽和 ↑↓ 必须共用一套 reorder');
+});
+
 await test('账号管理页在「有排期数据」时也能渲染出来：横幅 / 定时检测列 / 调整排期弹窗', () => {
   // 用桩 React 把整页"渲"一遍（不碰浏览器、不碰 DOM）：只验证组件树不炸、关键文案在。
   // 第一个 useState 喂进假的 /state 数据，第八个（schedOpen）喂 true 让弹窗也渲一次。

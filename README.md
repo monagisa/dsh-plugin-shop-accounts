@@ -296,6 +296,28 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
   `evidence: login-page`（未登录），`lastCheckAt`/`lastSchedAt` 都写回，同一点再 tick 不重复，
   23:59 不补跑 → 25 项全过（本机 15.8GB → 自动每组 1 个）。
 
+## 本机验证记录（2026-10-19 晚：拖拽排序 + 界面修正 / v0.5.1）
+
+用户装 v0.5.0 后截图反馈三个问题：「做拖拽吧，而且上面的字都是看不清的，下面的表格样式也变了」。全部定位到真因，不是调参：
+
+- **表格错位**：行里早就是 6 个格子（多了「定时检测」列），但 `.sa-rowhead,.sa-row` 的网格还是 5 列
+  （`minmax(0,1.7fr) 54px minmax(86px,1fr) 60px 146px`）→ 第 6 格换行、整张表错位。
+  改成 6 列 `minmax(120px,1.6fr) 54px minmax(96px,1fr) minmax(84px,1fr) 60px 132px` + `min-width:660px`（窄了横向滚）。
+- **字看不清**：弹窗底色用的是 `--dsw-menu-surface-fill`，而 DSH 主题里它是**带 alpha 的菜单底色**
+  （浅色 `#f8f9fa94` / 深色 `#43454a73`），弹窗半透明 → 底下列表文字透上来叠一起。
+  改成实色的 `--dsw-alias-bg-base`，并留注释提醒别再换回去。
+- **弹窗按钮被挤出视野**：`.sa-dialog` 原来是整体 `overflow:auto`。改成弹窗 `overflow:hidden` +
+  正文 `.sa-dialog-body` 自己滚 + 底部按钮固定，窗口矮时「保存排期」也不会跑到看不见的地方。
+- **预览列表被压成一条线**：`.sa-plist` 在弹窗 flex 列里被 `flex-shrink` 压到 4px（行全看不见）。
+  给 `.sa-plist` / `.sa-scroll` 加 `flex:0 0 auto`，按内容长，太高自己滚。
+- **拖拽排序**：排期预览每行可拖（HTML5 drag&drop，带 `⠿` 手柄、拖起来时目标行描边），
+  ↑↓ 按钮保留当无障碍兜底；拖拽和箭头共用同一个 `reorder(from,to)`，不写两套顺序逻辑。
+- **可视化验证**（新增 `shop-accounts-diag/preview.mjs`）：不开 DSH、不用真 Host，本地起个服务返回
+  「桩 React + 真 client.js」，用挪到屏幕外的真实 Chrome 窗口（1280×900）渲染整页和弹窗，
+  `Page.captureScreenshot` 存图 → 看图确认没重叠、6 列对齐、预览 3 行都在、手柄可见。
+- `test/smoke.mjs` 加一条「样式契约」：6 列网格、弹窗不许用 menu-surface-fill、两个弹窗都有可滚正文、
+  预览列表/滚动区不许被 flex 压扁、行上必须有 drag 事件与 `⠿` 手柄、拖拽与箭头共用 `reorder` → **46 项全过**。
+
 ## 已知边界
 
 - **不代登录、不破验证码**：扫码/短信/滑块都由你在真实窗口里完成。
