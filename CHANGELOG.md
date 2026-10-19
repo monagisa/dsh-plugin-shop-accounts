@@ -1,0 +1,133 @@
+# 变更历史
+
+> 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
+> 数字都当真跑出来的看。自检项数指 `node test/smoke.mjs` 的条数。
+
+## v0.6.5
+
+- 去掉行内「开启·HH:MM」胶囊的悬停提示（`title` 里那串「到点自动做一次静默检测…」浮出来挡视线）。
+- 验证：smoke 47 项（新增断言：源码里不许再出现那句 title 文案）。
+
+## v0.6.4
+
+- 去掉数字框的自定义 `− / +` 按钮：`type=number` 自带上下箭头，两个并存显得重复。
+  `NumberField` 回归成一个 `<input type="number">`（原生箭头可点、键盘 ↑↓ 可用、浏览器自己过滤非法字符）。
+- 顺带删掉 `.sa-num` / `.sa-numinput` / `.sa-numbtn` 三组样式。
+- 验证：smoke 47 项（断言反过来钉住 `sa-numbtn` 与 `'−'` 不许再出现）；渲染复核输入框可输入、值 3、预览请求 `groupSize:3`。
+
+## v0.6.3
+
+- 用户反馈「每组店铺数调不了 —— 打字没反应」。先用可视化探针排除了遮挡/禁用/逻辑问题
+  （输入框中心命中自己、模拟打字后值变 3、预览请求体 `groupSize:3`），最终改成 `NumberField`：
+  `type=number` + `− / +` 步进按钮，并去掉手写的 `replace(/[^\d]/g,'')`（它会把全角数字直接吞掉）。
+- 验证：smoke 47 项。
+
+## v0.6.2
+
+- 排期横幅第二行文案按用户给的参考原话定死：「适用于全部店铺，含已暂停任务；错过时间不补跑。」
+  「· 下次 …」挪到横幅悬停提示，保证横幅永远两行。
+- 验证：smoke 断言第二行含该原文且不许出现「下次 」；截图 `ui-banner-wide.png`。
+
+## v0.6.1
+
+- 排期横幅贴合参考样式：不再折行（`space-between`），左侧两行（`.sa-schedtitle` 粗 / `.sa-schedsub` 淡），
+  右侧描边胶囊按钮 `.sa-schedpill` 承载「调整排期」。
+- 验证：smoke 47 项；渲染 1280（一行）/ 590（折两行但按钮在右）/ 深色三张对照图。
+
+## v0.6.0
+
+- 新增**保活（尽量续期）**：定时检测判「已登录」后让页面再留 `keepaliveSec`（默认 8 秒，0 = 关闭）再复查。
+- 新增 `tokenExpiryOf(cookies, platform)`：取平台会话 cookie 里最晚的到期时间，详情页显示「凭证到期」。
+- 实测证据（拼多多真档案）：`--keepalive=8` → 10898ms、`loggedIn:true`、`keptAliveSec:8`、
+  `tokenExpiry:2027-01-27T03:47:18Z`；18 秒后再测 → `tokenExpiry:…03:47:36Z` ——
+  每次访问工作台站点都把身份 cookie 重发成「当时 + 100 天」，**访问本身就在续签**。
+  淘宝（已掉线）走保活路径 → 2776ms、不做无谓停留、仍判登录页。
+- 边界：纸面到期 ≠ 会话可用（掉线店铺 cookie 常还躺一年）；保活不保证永不掉线。
+- 验证：smoke 46 → 47 项。
+
+## v0.5.4
+
+- 修「详细配置不居中」：`.sa-schedcell` 改 `align-items:center`。
+- 修「灰色小字看不清」：说明性小字从 `--dsw-alias-label-caption` 换成 `--dsw-alias-label-secondary` ——
+  浅色主题下前者 `#adb2b8` 对白底只有 **2.0:1**，后者 `#61666b` → **5.8:1**（深色 `#cfd3d6` → **12.1:1**）。
+- 验证：`preview.mjs` 加对比度探针（getComputedStyle + WCAG 公式）实测 5.8:1 / 12.1:1；smoke 46 项。
+
+## v0.5.3
+
+- 修窄窗口错位：DSH 窗口窄（内容区 ~590px）时「操作」列被顶出屏幕、整页右溢。
+  给 `.sa-list` 加 `container-type:inline-size`，加 `@container (max-width:700px)`：6 列自动变 5 列、
+  隐藏「调试端口」列（端口并到店铺名下面），`min-width` 归零。
+- 验证：`preview.mjs` 新增 `--width/--height` + overflow 探针，590 与 460 宽 `pageOverflowX` 均为 0；smoke 46 项。
+
+## v0.5.2
+
+- 去掉排期预览的 ↑↓ 按钮（只留拖拽）。
+- 拖动中的行不再半透明：`opacity:1` + 实底 `color-mix(in srgb, #2f9e5f 16%, var(--dsw-alias-bg-base))` + 绿色内描边；
+  并用 `dataTransfer.setDragImage(1×1 空白 canvas)` 干掉浏览器自带的半透明拖影。
+- 验证：`preview.mjs --dialog --drag` 派发真 `DragEvent` 读到 `data-drag='1'/'2'`、`opacity:"1"`、实色底；smoke 46 项。
+
+## v0.5.1
+
+用户反馈「做拖拽吧，上面的字看不清，下面的表格样式也变了」，三处真因：
+
+- **表格错位**：行里已有 6 个格子，网格还是 5 列 → 改成 6 列 `minmax(120px,1.6fr) 54px minmax(96px,1fr) minmax(84px,1fr) 60px 132px`。
+- **字看不清**：弹窗底色用了带 alpha 的 `--dsw-menu-surface-fill`（浅色 `#f8f9fa94` / 深色 `#43454a73`），
+  底下列表透上来 → 改实色 `--dsw-alias-bg-base`。
+- **弹窗按钮被挤出视野 / 预览列表被压扁**：`.sa-dialog` 改 `overflow:hidden` + 正文 `.sa-dialog-body` 自己滚；
+  `.sa-plist` / `.sa-scroll` 加 `flex:0 0 auto`。
+- **拖拽排序**：预览行可拖（`⠿` 手柄、目标行描边）。
+- 新增可视化验证工具 `shop-accounts-diag/preview.mjs`：本地起服务 + 桩 React + 真 client.js，
+  用挪到屏幕外的真实 Chrome（1280×900）渲染并截图。
+- 验证：smoke 45 → 46 项（样式契约）。
+
+## v0.5.0
+
+- 新增**定时检测（排期）**：每天定点把全部店铺排成一队做静默检测，结果写回、列表状态自动刷新。
+- 新增 `lib/schedule.mjs`（纯函数排期算法：`normalizeSchedule` / `planSchedule` / `dueRows` / `nextRun` / `markRan` …），
+  宿主 `scheduleView()` / `tickSchedule()`（**先记账再执行**，避免失败后每 20 秒重试把无头 Chrome 起爆）、
+  20 秒心跳；路由 `GET/PUT /schedule`、`POST /schedule/preview`、`POST /accounts/:id/schedule`。
+- 界面：排期横幅、「定时检测」列、调整排期弹窗（起始时间/组间隔/每组店铺数/总开关/预览排序）。
+- 验证：smoke 45 项（含整页与弹窗的桩 React 渲染）；真机 `schedule-check.mjs` 25 项全过
+  （真起无头 Chrome 跑 tick、空档案如实未登录、写回 `lastCheckAt`/`lastSchedAt`、同点不重复、23:59 不补跑）。
+
+## v0.4.1
+
+- 「更新到最新」按钮改为**只有检测出新版本时才可点**：`canApply = updInfo.ok !== false && updInfo.needsUpdate`，
+  `disabled: busy || !canApply`，`runUpd()` 内再做一次自查。更新成功后 `needsUpdate:false`，按钮自动变灰。
+- 验证：smoke 36 项（源码级断言）；期间 GitHub 443 一度不通，插件 `/update` 如实返回 `ok:false`，按钮保持灰。
+
+## v0.4.0
+
+- 新增**版本与更新**卡片：检测更新（`git fetch` 后比较本地版本 / 源码 HEAD / `origin/main`，显示落后几个提交）、
+  更新到最新（`merge --ff-only` + 覆盖 `lib/ package.json README.md test/`）。
+- 验证：本地三件套回归 17 项（bare 远端 ← 落后 1 提交的克隆 ← 更旧的安装拷贝）；真机把 0.3.3 安装副本更新到 0.4.0；
+  smoke 35 项。
+
+## v0.3.3
+
+- 登录态文案收紧成一句话：登过掉线 → **登录已失效，请重新登录**（状态列显示「登录已失效」）；
+  从没登过 → **未登录，请前往登录页登录**。判据用 `account.lastLoginAt`（不用 cookie 罐里有没有残留）。
+- 顺带查清一件事：用**有头**窗口 + 正常 UA（`Chrome/155`，非 `HeadlessChrome`）打开同一份拼多多档案，
+  同样被按回登录页、cookie 还是 22 个 —— 会话确实被站点作废，与无头无关。
+- 验证：两条分支都真机跑过（老档案 2.7s / 空档案 3.1s）；smoke 断言钉住这两句话并禁「多半/也许/似乎/疑似/可能」。
+
+## v0.3.1
+
+- 修 **「浏览器关着时检测不出登录掉了」**（v0.3.0 的真 bug）：无头检测把工作台 URL 当启动参数，
+  页面目标 +377ms 就停在工作台 URL 上，站点 +632ms 才跳登录页；旧 `settlePage` 一看到平台域名就算稳
+  → 判的是工作台 URL + 罐里没清掉的 `PASS_ID`/`SUB_PASS_ID` → 报「已登录」。
+- 修法：`settlePage` 等 `readyState === 'complete'` 且 URL 稳定 1.5s（资源不结束则 4s 也认，上限 12s），
+  把等稳后的 URL 交给 `judgeLogin`（`readLoginFrom(port, platform, preferUrl)`）。
+- 验证：两个真档案（改前都报假的 `loggedIn:true`）→ 拼多多 `evidence:'login-page'` ~2.7s、淘宝同 ~2.6s；
+  `live-probe.mjs` 新增「慢跳转」回归（本地页 400ms 后 JS 跳 `/login`）实测等到最终 URL、2098ms；smoke 32 项。
+
+## v0.3.0 及更早（2026-10-14 首版基线）
+
+- 一店一档案 + 固定调试端口；有头窗口登录、后台轮询判定、点「完成」自动关窗。
+- 六个商家端平台的登录页/工作台/身份 cookie 判据（见 README 平台表）。
+- 实测结论：天猫商家就是千牛（`tmall.seller.taobao.com` 不存在）；京东登录态看 `pt_key`/`pt_pin`；
+  1688 未登录时 `__cn_logon__=false`（卡值）；抖店未登录页就有 `passport_csrf_token`（已从判据移除）。
+- 空档案登录页六个平台都判未登录，没有误判。
+- 端口归属不用 `Browser.getBrowserCommandLine`（它要配合 `--enable-automation`，会设置 `navigator.webdriver`），
+  改成「自己起的浏览器自己登记（`runtime.json`）+ 进程命令行查询兜底」。
+- 验证：smoke 32 项；`live-probe.mjs` 六平台各自单跑全过（Chrome 154.0.8037.99）。
