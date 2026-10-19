@@ -3,6 +3,16 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数指 `node test/smoke.mjs` 的条数。
 
+## v0.6.9
+
+- **加真机诊断日志**：`<数据目录>/debug.log`（默认 `C:\Users\mo\.dsh\shop-accounts\debug.log`）按时间顺序记下
+  `open` / `close` / `check` / `finish` 四类动作，每条带当时的 URL 和「关键 cookie 快照」
+  （`sessionCookies` + `identityCookies` + `QNWORKBENCH_SESSION`，只记名字/域/到期，**不记值**）、
+  `finish` 的结果与未保存原因、身份 cookie 门等了多久、缺哪个。超过 512KB 自动重开。
+- 起因：复现路径是「登录完 → 点打开工作台 → 关掉 → 再点检测 → 失效」，光靠聊天问不出哪一步把 `unb` 弄丢了，
+  所以把每一步的现场落盘，下一次直接看时间线定位。
+- 验证：smoke 51 项；`check.mjs` 跑 `silent-check` / `finish` 后 `debug.log` 里能看到对应条目（含 cookie 快照）。
+
 ## v0.6.8
 
 - **诊断加强：界面能识破「文件更新了、但 DSH 没重启」**。`/state` 新增 `loadedVersion`（模块加载那一刻
