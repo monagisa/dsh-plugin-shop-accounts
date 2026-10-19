@@ -340,6 +340,10 @@ await test('GET /state 带插件版本号；config 里带更新源目录（界�
   const s = await call('GET', '/shop-accounts/state');
   assert.equal(s.status, 200);
   assert.match(String(s.json.version || ''), /^\d+\.\d+\.\d+$/, '状态里要带插件版本号');
+  // loadedVersion 是「本次启动真正加载进内存的版本」，界面拿它跟磁盘上的 version 比，
+  // 才能识破「文件覆盖了、DSH 没重启」这种假更新（2026-10-19 千牛那种反复）。
+  assert.match(String(s.json.loadedVersion || ''), /^\d+\.\d+\.\d+$/, '状态里要带本次启动加载的版本号');
+  assert.equal(s.json.loadedVersion, s.json.version, '自检里没有"文件更新了没重启"的情况，两个版本号应相同');
   assert.equal(typeof s.json.updateDir, 'string', '状态里要带自动探测到的更新源目录');
   assert.equal(typeof s.json.config.updateDir, 'string', 'config 里要有 updateDir 字段');
 });
