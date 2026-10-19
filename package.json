@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-shop-accounts",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "type": "module",
   "description": "DSH 插件：电商平台店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688，都是商家端）—— 一个店铺一份 Chrome 登录档案，登录一次长期复用，上架时直接挑选",

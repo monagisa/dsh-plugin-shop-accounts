@@ -176,9 +176,9 @@ await test('停在登录页 → 有 cookie 也不判已登录（站点不认这�
   const v = P.judgeLogin(cookies, p.loginUrl, p);
   assert.equal(v.loggedIn, false, JSON.stringify(v));
   assert.equal(v.evidence, 'login-page', '要如实说明是「被按回登录页」，而不是「没读到 cookie」');
-  assert.match(v.reason, /重新登录/, '判定是确定的，就直接说清楚「得重新登录」');
+  assert.equal(v.reason, '登录已失效，请重新登录', '登录页 + 罐里有旧 cookie → 一句话说清掉线了，别写猜测');
+  assert.equal(P.judgeLogin([], p.loginUrl, p).reason, '未登录，请前往登录页登录', '罐里干干净净 → 就是还没登');
   assert.equal(/多半|也许|似乎|疑似|可能/.test(v.reason), false, '结论已定，原因里不该再留猜测措辞');
-  assert.match(v.reason, /不会顺手去清浏览器/, '要解释清楚「罐里还有 cookie」和「会话失效」不矛盾');
   assert.equal(P.looksLikeLoginPage(p.loginUrl, p), true);
   assert.equal(P.looksLikeLoginPage(p.homeUrl, p), false);
 });
