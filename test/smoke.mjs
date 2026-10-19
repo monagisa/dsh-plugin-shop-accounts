@@ -714,7 +714,13 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   assert.ok(/onDragStart/.test(clientSrc), '预览行要挂 onDragStart');
   assert.ok(/onDrop/.test(clientSrc), '预览行要挂 onDrop');
   assert.ok(clientSrc.includes("'⠿'"), '预览行要显示拖拽手柄 ⠿');
-  assert.ok(/function reorder\(from, to\)/.test(clientSrc), '拖拽和 ↑↓ 必须共用一套 reorder');
+  assert.ok(/function reorder\(from, to\)/.test(clientSrc), '拖拽必须走统一的 reorder');
+  // ⑤ 只留拖拽：预览行不许再有 ↑↓ 按钮；拖动中的那行不许变透明（用户点名要「不透明」）。
+  assert.ok(!/sa-pmove/.test(src), '预览行不该再有 ↑↓ 按钮的结构/样式');
+  assert.ok(!/'↑'|'↓'/.test(src), '预览行不该再渲染上下箭头按钮');
+  assert.ok(!/data-drag="1"\]\{[^}]*opacity:(?:0(?:\.\d+)?|\.\d+)/.test(src), '拖起来的行不能靠半透明表达（opacity 只能是 1）');
+  assert.ok(/data-drag="1"\]\{[^}]*background:/.test(src), '拖起来的行要实底高亮');
+  assert.ok(/setDragImage/.test(clientSrc), '要设空拖影（setDragImage），否则浏览器会画半透明浮层');
 });
 
 await test('账号管理页在「有排期数据」时也能渲染出来：横幅 / 定时检测列 / 调整排期弹窗', () => {

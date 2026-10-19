@@ -311,12 +311,30 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
 - **预览列表被压成一条线**：`.sa-plist` 在弹窗 flex 列里被 `flex-shrink` 压到 4px（行全看不见）。
   给 `.sa-plist` / `.sa-scroll` 加 `flex:0 0 auto`，按内容长，太高自己滚。
 - **拖拽排序**：排期预览每行可拖（HTML5 drag&drop，带 `⠿` 手柄、拖起来时目标行描边），
-  ↑↓ 按钮保留当无障碍兜底；拖拽和箭头共用同一个 `reorder(from,to)`，不写两套顺序逻辑。
+  ↑↓ 按钮当时保留当无障碍兜底（v0.5.2 已按用户要求删掉，见下节）；拖拽和箭头共用同一个 `reorder(from,to)`，不写两套顺序逻辑。
 - **可视化验证**（新增 `shop-accounts-diag/preview.mjs`）：不开 DSH、不用真 Host，本地起个服务返回
   「桩 React + 真 client.js」，用挪到屏幕外的真实 Chrome 窗口（1280×900）渲染整页和弹窗，
   `Page.captureScreenshot` 存图 → 看图确认没重叠、6 列对齐、预览 3 行都在、手柄可见。
 - `test/smoke.mjs` 加一条「样式契约」：6 列网格、弹窗不许用 menu-surface-fill、两个弹窗都有可滚正文、
   预览列表/滚动区不许被 flex 压扁、行上必须有 drag 事件与 `⠿` 手柄、拖拽与箭头共用 `reorder` → **46 项全过**。
+
+## 本机验证记录（2026-10-19 晚：去掉 ↑↓、拖拽不透明 / v0.5.2）
+
+用户看完 v0.5.1 的截图又提两点：「这个上下箭头去掉，拖动时是透明的，改成不透明的」。
+
+- **去掉 ↑↓**：`.sa-pitem` 网格从 `16px 52px 56px 1fr auto 56px` 改为 `16px 52px 56px 1fr auto`，
+  删掉 `.sa-pmove` 样式、`move(i, dir)` 函数和行内两个箭头按钮；排序只走拖拽，提示语也去掉「也可以用 ↑↓」。
+- **拖动中的行不透明**：原来那行用 `opacity:.4` 表达，看着像整行被抠掉了。改成
+  `opacity:1` + 实底 `color-mix(in srgb, #2f9e5f 16%, var(--dsw-alias-bg-base))` + 绿色内描边；
+  落点那行用 `data-drag="2"` 的灰色描边。
+- **干掉浏览器自带的半透明拖影**：`onDragStart` 里 `dataTransfer.setDragImage(1×1 空白 canvas, 0, 0)`。
+  HTML5 拖拽时浏览器会在光标下方画一张半透明的行快照，用户看到的「透明」主要来自它，不设就治不好。
+- 验证：`preview.mjs --dialog --drag` 用真 `DragEvent` + `DataTransfer`，第 1 行 dispatch dragstart、第 3 行 dragover，
+  等 400ms（桩 React 异步重渲）再读属性 → `data-drag='1'` / `'2'`、`opacity:"1"`、
+  底色 `color(srgb 0.86949 0.939137 0.899608)`（实色）、阴影含 `rgba(47,158,95,.75) inset`；
+  截图 `shop-accounts-diag/ui-drag.png` 里箭头已消失、第 1 行绿色实底、第 3 行描边。
+- `test/smoke.mjs` 样式契约加断言：不许再出现 `sa-pmove` / `'↑'` / `'↓'`；`data-drag="1"` 不许用半透明
+  opacity（只能是 1）、必须有实底 background、必须调 `setDragImage` → **46 项全过**。
 
 ## 已知边界
 
