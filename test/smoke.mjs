@@ -618,6 +618,31 @@ await test('tickSchedule：跳过正在等登录的店铺，不打断用户手�
   assert.ok(r.skipped.some((x) => /等登录/.test(x.reason)), '跳过原因要说得清楚：' + JSON.stringify(r.skipped));
 });
 
+// ── 3.6 登录态要能活过「关窗再开」（千牛那次：会话级 cookie 关窗即丢） ──────
+
+section('3.6 关窗之后登录态还在不在（会话级 cookie）');
+
+const chromeSrc = fs.readFileSync(path.join(ROOT, 'lib/chrome.mjs'), 'utf8');
+const indexSrc = fs.readFileSync(path.join(ROOT, 'lib/index.js'), 'utf8');
+
+await test('启动参数带 --restore-last-session（否则会话级 cookie 关窗就丢，淘宝 unb 就是这种）', () => {
+  // 实测（C:\Users\mo\cluade\shop-accounts-diag\session-cookie.mjs）：不加 → 会话 cookie 丢；
+  // 只写 Preferences 的 session.restore_on_startup=1 → 也丢；加这个命令行开关 → 留得住。
+  assert.match(chromeSrc, /'--restore-last-session'/, '没有这个开关，登录态活不过关窗');
+});
+
+await test('静默检测自己开干净标签，并关掉恢复出来的旧标签（否则会挑中上次的登录页）', () => {
+  assert.match(indexSrc, /urls: \[\]/, '静默检测不能再让 Chrome 顺带恢复旧标签当"当前页"');
+  assert.match(indexSrc, /await newPage\(probePort, platform\.homeUrl\)/, '要自己开一个干净标签');
+  assert.match(indexSrc, /await closePage\(probePort, p\.id\)/, '别的页面目标要关掉，只留自己这个');
+});
+
+await test('finish：关窗之后再验一次，验不过就不许说「已保存」', () => {
+  assert.match(indexSrc, /const verified = await checkAccount\(/, '关窗后必须复核');
+  assert.match(indexSrc, /saved: false/, '复核不过时不能回 saved:true');
+  assert.match(indexSrc, /登录态没保住/, '要说清楚为什么没保存');
+});
+
 // ── 4. 客户端 bundle 契约 ────────────────────────────────────────────────────
 
 section('4. 客户端 bundle 契约 lib/client.js');

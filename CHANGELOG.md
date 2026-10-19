@@ -3,6 +3,21 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数指 `node test/smoke.mjs` 的条数。
 
+## v0.6.6
+
+- **修「千牛登录完说保存了、状态也变了，下一秒打开还是未登录」**。真机查到的账：
+  淘宝卖家登录靠的 `cookie2` / `_tb_token_` 是**会话级 cookie**（cookie 库里 `is_persistent=0`），
+  Chrome 默认**关窗就丢**；而 `QNWORKBENCH_SESSION`、`sgcookie` 是持久 cookie、留下来了 ——
+  可缺了会话级那两个，站点照样把你按回登录页。所以「保存时窗口里已登录」和「档案里存着登录态」是两件事。
+- 修法 ①：`launchBrowser` 一律加 `--restore-last-session`，Chrome 才会把会话级 cookie 落盘并在下次启动读回
+  （实测：不加 → 丢；只写 Preferences 的 `session.restore_on_startup=1` → 也丢；加这个开关 → 留得住）。
+- 修法 ②：这个开关会顺带恢复上次的标签页，静默检测改成「自己开一个干净标签 → 关掉其它页面目标 →
+  只认这个标签页」（`settlePage` 新增 `opts.targetId`），免得挑中恢复出来的旧登录页。
+- 修法 ③：`finish`（保存登录态）关窗之后**再静默复核一次**，复核不过就 `saved:false` 并说明原因，
+  不再出现「说保存了、其实是假的」。
+- 验证：`node test/smoke.mjs` 50 项；`C:\Users\mo\cluade\shop-accounts-diag\session-cookie-plugin.mjs`
+  用插件自己的启动器实测「会话 cookie 活过关窗 ✅」；真机静默检测照旧（拼多多已登录 / 淘宝未登录如实报）。
+
 ## v0.6.5
 
 - 去掉行内「开启·HH:MM」胶囊的悬停提示（`title` 里那串「到点自动做一次静默检测…」浮出来挡视线）。
