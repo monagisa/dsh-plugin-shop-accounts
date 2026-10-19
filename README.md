@@ -35,6 +35,22 @@ DSH 的一个插件：**统一管理电商平台的店铺/账号登录态**。�
 > 不会再拉起第二只 Chrome（Chrome 是单实例，同档案再启一次只会把 URL 转给已有窗口然后自己退出，
 > 而调试端口仍被老实例占着 —— 老版本在这里会变成"点了没反应"）。没开着的店铺才会启动新窗口。
 
+## 定时检测（排期）
+
+列表上方有一条排期横幅：「每天 09:05 起 · 每组 2 个店铺，组间隔 30 分钟」，右边是 **调整排期**。
+到点它会对店铺做一次**静默检测**（无头 Chrome 探一次、不弹窗），结果写回 `lastCheck`，
+于是列表里的「登录状态」自己就跟着刷新 —— 不用人一个个点「检测」。规则：
+
+- **每天从起始时间开始，把全部店铺排成一队**，每 `每组店铺数` 个一组，组与组之间隔 `组间隔` 分钟；
+  同一组里的店铺共用同一个时间点（所以预览里会出现两行同一个时间）。
+- **店铺自己的开关只管「到点跑不跑」，不影响它占的时间点**：暂停一家店不会让后面的店铺提前。
+- **每组店铺数留空 = 自动**：内存 ≤16GB 为 1，>16GB 为 2（一次只起一只无头 Chrome，别把机器顶爆）。
+- **错过不补跑**：只有到点后 2 分钟内才执行。机器睡了一觉、隔天才开，就跳过，不在半夜补一堆检测。
+- **同一天同一个时间点只跑一次**（记账在 `config.schedule.lastSlots`，重启也不会重复）。
+- 正在**等登录**、或者**浏览器正开着**的店铺直接跳过 —— 定时检测不打断你手里的活。
+- 宿主每 20 秒看一次排期（`setInterval` + `unref`，不拖住宿主退出）；界面在排期开着时每 20 秒自己刷新一次。
+- 检测失败也会记下来（`lastSchedError`），前端行内显示「上次失败」，悬停看原因。
+
 ## 更新插件（检测 / 一键更新）
 
 「浏览器设置」面板里多了一张「版本与更新」卡片：
@@ -179,6 +195,7 @@ lib/platforms.mjs   六个平台的登录页/主页/工作页、身份 cookie、
 lib/cdp.mjs         极简 CDP 客户端（裸 WebSocket，无第三方依赖）
 lib/chrome.mjs      找浏览器、选端口、拉起/关闭/探测，读写登录态
 lib/store.mjs       accounts.json / config.json / runtime.json 的原子读写与降级
+lib/schedule.mjs    定时检测的排期算法（纯函数：分组、时间点、到点、下次、记账）
 lib/index.js        宿主：webServer 路由 /shop-accounts/*、页面用到的全部动作
 lib/client.js       客户端 bundle：设置页「账号管理」整页 UI
 cordis.patch.yml    插件挂载点（id: shop-accounts）
@@ -255,6 +272,29 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
   没检测过时多一行提示「先点『检测更新』…」，检测失败（`ok:false`）时同样灰。
 - 更新成功后的返回里 `needsUpdate:false`，按钮随即自动变灰，不会让人重复按。
 - `test/smoke.mjs` 补 1 条源码级断言（按钮可用性必须由 `needsUpdate` 决定、disabled 同时受 busy/canApply 约束、`runUpd` 里有函数内自查）→ 36 项全过。
+
+## 本机验证记录（2026-10-19 晚：定时检测排期 / v0.5.0）
+
+- 用户给了别家软件的截图（「账号管理 / 定时采集 / 调整排期」），要同样的能力：**定时任务，更新店铺状态**。
+  本仓库里没有那套代码，按截图语义自己实现：定时 = 到点做一次静默检测，不采集商品、不打开窗口。
+- 新增 `lib/schedule.mjs`：排期算法全在这里（纯函数、零依赖，时钟由调用方传入，所以能拿固定时间点断言）——
+  `normalizeSchedule` / `planSchedule` / `dueRows` / `nextRun` / `markRan` / `groupSizeFor` / `resolveOrder`。
+  组内共享时间点、暂停的店照样占位、错过 2 分钟不补跑、同一天同一点只跑一次，都由它保证。
+- 宿主（`lib/index.js`）：`scheduleView()`（界面视图，带 `nextRunAt`/`autoGroupSize`/`memGB`）、
+  `tickSchedule()`（**先记账再执行**，否则失败后每 20 秒重试会把无头 Chrome 起爆；`checkFn` 可注入给自检）、
+  20 秒心跳（`setInterval` + `unref` + 卸载时 `clearInterval`）；路由 `GET/PUT /schedule`、
+  `POST /schedule/preview`（只试算）、`POST /accounts/:id/schedule`（单店开关）；`/state` 里每行带
+  `schedTime` / `schedEnabled` / `lastSchedAt` / `lastSchedError`。
+- 界面（`lib/client.js`）：列表上方排期横幅（每天几点起、每组几个、间隔、下次时间、总开关状态）、
+  「定时检测」列（行内 开启/暂停·时间点 + 详细配置）、「调整排期」弹窗（起始时间 / 组间隔 / 每组店铺数 /
+  总开关 / 已排序预览 ↑↓ / 取消 / 保存排期）。预览一律问宿主，界面不自己算第二套时间。
+- `test/smoke.mjs` 新增 9 条（排期算法 3 条 + 路由/preview/单店开关/`tickSchedule` 2 条 + 整页与弹窗渲染 1 条，
+  其余是路径契约）→ **45 项全过**。渲染那条用桩 React 把整页跑一遍：喂一份假的 `/state`（带排期）验证
+  横幅、定时检测列、上次失败标记都在；再把 `schedOpen` 喂 true，验证「调整排期」弹窗能渲染 —— 不靠浏览器就能挡住白屏。
+- 真机自检（`shop-accounts-diag/schedule-check.mjs`，真路由 + 真 tick）：3 家店 → 保存 09:05/每组 2 →
+  预览 07:00 不落盘 → 单店暂停后时间点不变 → **真 tick 起无头 Chrome 跑完 2 家店**，空档案如实报
+  `evidence: login-page`（未登录），`lastCheckAt`/`lastSchedAt` 都写回，同一点再 tick 不重复，
+  23:59 不补跑 → 25 项全过（本机 15.8GB → 自动每组 1 个）。
 
 ## 已知边界
 

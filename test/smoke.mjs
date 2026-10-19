@@ -424,6 +424,175 @@ await test('未知路由 404；坏 JSON 500（外层兜底不炸进程）', asyn
   assert.match(bad.json.error, /JSON/);
 });
 
+// ── 3.5 定时检测（排期算法 + 路由 + tick） ──────────────────────────────────
+
+section('3.5 定时检测 lib/schedule.mjs');
+
+const SCH = await import(pathToFileURL(path.join(ROOT, 'lib/schedule.mjs')).href);
+
+// tick 会跳过"正在等登录"的店铺 —— 自检里用已有的建号接口造出来的都是等登录状态，
+// 这里直接把临时账号表里的标记清掉（只动 TMP/data，不碰真实账号表）。
+function clearPending() {
+  const file = path.join(TMP, 'data', 'accounts.json');
+  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  for (const a of raw.accounts || []) a.pendingLogin = false;
+  fs.writeFileSync(file, JSON.stringify(raw, null, 2));
+}
+
+await test('排期算法：时间归一 / 越界夹住 / 顺序去重', () => {
+  assert.equal(SCH.normalizeStartTime('9:5'), '09:05');
+  assert.equal(SCH.normalizeStartTime('25:00'), '10:00', '非法小时回默认');
+  assert.equal(SCH.parseHm('10:30'), 630);
+  assert.equal(SCH.fmtHm(630), '10:30');
+  assert.equal(SCH.fmtHm(1470), '00:30', '超过一天的分钟数要绕回');
+  const n = SCH.normalizeSchedule({
+    startTime: 'bad', groupIntervalMin: 0, groupSize: 999, order: ['a', 'a', ' '], lastDay: 'x',
+  });
+  assert.equal(n.startTime, '10:00');
+  assert.equal(n.groupIntervalMin, 1, '间隔最小 1 分钟');
+  assert.equal(n.groupSize, 50, '每组最多 50 个');
+  assert.deepEqual(n.order, ['a'], '顺序去重、去掉空值');
+  assert.equal(n.lastDay, '', '坏日期清空（否则"今天跑过"会一直成立）');
+});
+
+await test('排期算法：每组 N 个共享一个时间点，暂停的店铺照样占位', () => {
+  const accounts = [
+    { id: 'a1', name: 'A', platform: 'pdd', createdAt: '2026-10-01T00:00:00Z' },
+    { id: 'a2', name: 'B', platform: 'pdd', createdAt: '2026-10-02T00:00:00Z' },
+    { id: 'a3', name: 'C', platform: 'pdd', createdAt: '2026-10-03T00:00:00Z', schedEnabled: false },
+    { id: 'a4', name: 'D', platform: 'pdd', createdAt: '2026-10-04T00:00:00Z' },
+  ];
+  const p = SCH.planSchedule({
+    schedule: { enabled: true, startTime: '10:00', groupIntervalMin: 30, groupSize: 2 },
+    accounts, memGB: 8,
+  });
+  assert.equal(p.groupSize, 2);
+  assert.deepEqual(p.rows.map((r) => r.time), ['10:00', '10:00', '10:30', '10:30']);
+  assert.deepEqual(p.rows.map((r) => r.group), [0, 0, 1, 1]);
+  assert.equal(p.rows[2].enabled, false, '暂停的店铺到点不跑');
+  assert.equal(p.rows[2].active, false);
+  assert.equal(p.rows[2].time, '10:30', '但它照样占着 10:30，后面的不提前');
+  assert.equal(SCH.groupSizeFor({ groupSize: 0 }, 32), 2, '>16GB 自动每组 2 个');
+  assert.equal(SCH.groupSizeFor({ groupSize: 0 }, 8), 1);
+  assert.equal(SCH.groupSizeFor({ groupSize: 3 }, 8), 3, '填了就用你填的');
+  const ordered = SCH.resolveOrder(['a4'], accounts);
+  assert.equal(ordered[0].id, 'a4', '排过序的店铺排在最前');
+  assert.equal(ordered.length, 4);
+});
+
+await test('排期算法：到点才跑、错过不补跑、同一天同一个点只跑一次', () => {
+  const accounts = [
+    { id: 'a1', name: 'A', platform: 'pdd', createdAt: '2026-10-01T00:00:00Z' },
+    { id: 'a2', name: 'B', platform: 'pdd', createdAt: '2026-10-02T00:00:00Z' },
+  ];
+  const base = { enabled: true, startTime: '10:00', groupIntervalMin: 60, groupSize: 1 };
+  const at = (h, m, sec = 0) => new Date(2026, 9, 19, h, m, sec);
+  assert.equal(SCH.dueRows({ schedule: base, accounts, now: at(9, 59) }).length, 0, '还没到点');
+  assert.deepEqual(SCH.dueRows({ schedule: base, accounts, now: at(10, 1) }).map((r) => r.id), ['a1']);
+  assert.deepEqual(SCH.dueRows({ schedule: base, accounts, now: at(11, 1) }).map((r) => r.id), ['a2']);
+  assert.equal(SCH.dueRows({ schedule: base, accounts, now: at(12, 30) }).length, 0, '过了宽限就不补跑');
+  const ran = SCH.markRan(base, { accountIds: ['a1'], time: '10:00', now: at(10, 1) });
+  assert.equal(SCH.dueRows({ schedule: ran, accounts, now: at(10, 1) }).length, 0, '同一天同一个点跑过就不再跑');
+  const next = SCH.nextRun({ schedule: base, accounts, now: at(9, 0) });
+  assert.equal(next.time, '10:00');
+  assert.equal(SCH.nextRun({ schedule: { ...base, enabled: false }, accounts, now: at(9, 0) }), null, '总开关关着就没有下次');
+});
+
+await test('GET /schedule 带排期；PUT /schedule 落盘并在 /state 里给每个店铺算好时间点', async () => {
+  const a = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '排期店A' });
+  const b = await call('POST', '/shop-accounts/accounts', { platform: 'taobao', name: '排期店B' });
+  const g = await call('GET', '/shop-accounts/schedule');
+  assert.equal(g.status, 200);
+  assert.equal(g.json.schedule.enabled, false, '默认不开');
+  assert.equal(g.json.schedule.rows.length, 2);
+  const put = await call('PUT', '/shop-accounts/schedule', {
+    enabled: true, startTime: '9:5', groupIntervalMin: 15, groupSize: 1,
+    order: [b.json.account.id, a.json.account.id],
+  });
+  assert.equal(put.status, 200);
+  assert.equal(put.json.schedule.startTime, '09:05', '时间会被归一');
+  assert.equal(put.json.schedule.groupSizeMode, 'manual');
+  assert.deepEqual(put.json.schedule.rows.map((r) => r.id), [b.json.account.id, a.json.account.id], '按 order 排队');
+  assert.deepEqual(put.json.schedule.rows.map((r) => r.time), ['09:05', '09:20']);
+  const s = await call('GET', '/shop-accounts/state');
+  const byId = new Map(s.json.accounts.map((x) => [x.id, x]));
+  assert.equal(byId.get(b.json.account.id).schedTime, '09:05', '列表每行要能显示自己的时间点');
+  assert.equal(byId.get(a.json.account.id).schedTime, '09:20');
+  assert.equal(byId.get(a.json.account.id).schedEnabled, true, '店铺默认开启');
+  assert.equal(Boolean(s.json.schedule && s.json.schedule.enabled), true, '/state 里也要带排期（横幅用）');
+});
+
+await test('POST /schedule/preview 只试算不保存', async () => {
+  const before = await call('GET', '/shop-accounts/schedule');
+  const r = await call('POST', '/shop-accounts/schedule/preview', { startTime: '07:00', groupIntervalMin: 5, groupSize: 2 });
+  assert.equal(r.status, 200);
+  assert.equal(r.json.plan.startTime, '07:00');
+  assert.equal(r.json.plan.groupSize, 2);
+  assert.deepEqual(r.json.plan.rows.map((x) => x.time), ['07:00', '07:00'], '两个店铺一组 → 同一个时间点');
+  assert.equal(typeof r.json.autoGroupSize, 'number');
+  assert.equal(typeof r.json.memGB, 'number');
+  const after = await call('GET', '/shop-accounts/schedule');
+  assert.equal(after.json.schedule.startTime, before.json.schedule.startTime, '预览不能偷偷存盘');
+});
+
+await test('POST /accounts/:id/schedule 单店开关：暂停后到点不跑，但时间点不跳', async () => {
+  const s = await call('GET', '/shop-accounts/state');
+  const first = s.json.schedule.rows[0];
+  const r = await call('POST', '/shop-accounts/accounts/' + first.id + '/schedule', { enabled: false });
+  assert.equal(r.status, 200);
+  assert.equal(r.json.account.schedEnabled, false);
+  const after = await call('GET', '/shop-accounts/schedule');
+  const row = after.json.schedule.rows.find((x) => x.id === first.id);
+  assert.equal(row.enabled, false);
+  assert.equal(row.time, first.time, '暂停后时间点不变，后面的店铺不提前');
+  await call('POST', '/shop-accounts/accounts/' + first.id + '/schedule', { enabled: true });
+});
+
+await test('tickSchedule：到点才跑、结果写回 lastCheck、同一时间点不重复跑', async () => {
+  clearPending();
+  const s = await call('GET', '/shop-accounts/schedule');
+  const first = s.json.schedule.rows[0];
+  const [hh, mm] = first.time.split(':').map(Number);
+  const now = new Date(2026, 9, 19, hh, mm, 30);
+  const calls = [];
+  const checkFn = async (acc) => {
+    calls.push(acc.id);
+    return { ok: true, loggedIn: true, evidence: 'cookie', reason: '假检测' };
+  };
+  const r1 = await host.tickSchedule({ now, memGB: 8, log: { info() {}, warn() {} }, checkFn });
+  assert.equal(r1.ran.length, 1, '第一组只有一个店铺到点');
+  assert.deepEqual(calls, [first.id]);
+  const r2 = await host.tickSchedule({ now, memGB: 8, log: { info() {}, warn() {} }, checkFn });
+  assert.equal(r2.ran.length, 0, '同一个时间点跑过就不再跑（重启也一样）');
+  assert.deepEqual(calls, [first.id], '第二次连检测函数都不该调');
+  const st = await call('GET', '/shop-accounts/state');
+  const hit = st.json.accounts.find((a) => a.id === first.id);
+  assert.equal(Boolean(hit.lastCheck && hit.lastCheck.loggedIn), true, '结果要写回 lastCheck');
+  assert.ok(hit.lastCheckAt, '要带检测时间');
+  assert.ok(hit.lastSchedAt, '要记录定时检测时间');
+  assert.equal(hit.lastSchedError, '');
+});
+
+await test('tickSchedule：跳过正在等登录的店铺，不打断用户手里的登录', async () => {
+  const s = await call('GET', '/shop-accounts/schedule');
+  const rows = s.json.schedule.rows;
+  const second = rows[rows.length - 1];
+  const [hh, mm] = second.time.split(':').map(Number);
+  const now = new Date(2026, 9, 19, hh, mm, 10);
+  // 把最后这个店铺重新标成"等登录"
+  const file = path.join(TMP, 'data', 'accounts.json');
+  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  for (const a of raw.accounts) if (a.id === second.id) a.pendingLogin = true;
+  fs.writeFileSync(file, JSON.stringify(raw, null, 2));
+  let called = 0;
+  const r = await host.tickSchedule({
+    now, memGB: 8, log: { info() {}, warn() {} },
+    checkFn: async () => { called += 1; return { ok: true, loggedIn: true }; },
+  });
+  assert.equal(called, 0, '等登录的店铺不该被静默检测打断');
+  assert.ok(r.skipped.some((x) => /等登录/.test(x.reason)), '跳过原因要说得清楚：' + JSON.stringify(r.skipped));
+});
+
 // ── 4. 客户端 bundle 契约 ────────────────────────────────────────────────────
 
 section('4. 客户端 bundle 契约 lib/client.js');
@@ -448,7 +617,7 @@ await test('客户端 webServer 面只打自己这个前缀，没有裸 fetch �
 });
 
 await test('组件一律用 h(Component) 渲染，不能当普通函数调用（会算进父组件 hook 表 → 一点开就 Rendered more hooks 白屏）', () => {
-  for (const c of ['Toast', 'Field', 'AccountDialog', 'AccountDetail', 'ConfigPanel']) {
+  for (const c of ['Toast', 'Field', 'AccountDialog', 'AccountDetail', 'ConfigPanel', 'ScheduleDialog']) {
     const bare = new RegExp('(?<!function )(?<![\\w.])' + c + '\\s*\\(').exec(clientSrc);
     assert.equal(bare, null, c + ' 被当普通函数调用了：' + (bare ? bare[0] : ''));
   }
@@ -518,6 +687,97 @@ await test('「更新到最新」按钮只在检测出有新版本时才可点�
     /function runUpd\(\) \{[\s\S]{0,400}?needsUpdate\)\) return;/.test(clientSrc),
     '更新动作本身也要挡一道 —— 别只靠 disabled，按钮灰着但函数还能被调',
   );
+});
+
+await test('账号管理页在「有排期数据」时也能渲染出来：横幅 / 定时检测列 / 调整排期弹窗', () => {
+  // 用桩 React 把整页"渲"一遍（不碰浏览器、不碰 DOM）：只验证组件树不炸、关键文案在。
+  // 第一个 useState 喂进假的 /state 数据，第八个（schedOpen）喂 true 让弹窗也渲一次。
+  function renderPage({ withDialog }) {
+    let captured = null;
+    const sandbox = {
+      window: { __ModuleLoader__: { load: (entry) => { captured = entry; } } },
+      setTimeout, setInterval, clearInterval, console,
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(clientSrc, sandbox);
+    let usCalls = 0;
+    const fakeState = {
+      loading: false,
+      error: null,
+      data: {
+        version: '0.5.0', updateDir: '', dataDir: 'C:\\tmp', platforms: [],
+        schedule: {
+          enabled: true, startTime: '09:05', groupIntervalMin: 30, groupSize: 1,
+          groupSizeMode: 'manual', autoGroupSize: 1, memGB: 16, nextRunAt: '2026-10-19T01:05:00.000Z',
+          nextTime: '09:05', lastDay: '', canRun: true,
+          rows: [
+            { id: 'a1', name: '排期店A', platform: 'pdd', time: '09:05', group: 0, slotMinutes: 545, enabled: true, active: true },
+            { id: 'a2', name: '排期店B', platform: 'taobao', time: '09:35', group: 1, slotMinutes: 575, enabled: false, active: false },
+          ],
+        },
+        accounts: [
+          {
+            id: 'a1', name: '排期店A', platform: 'pdd', port: 9222, running: false, schedEnabled: true,
+            schedTime: '09:05', lastSchedAt: null, lastSchedError: '', lastLoginAt: null, lastCheckAt: null, lastCheck: null,
+          },
+          {
+            id: 'a2', name: '排期店B', platform: 'taobao', port: 9223, running: false, schedEnabled: false,
+            schedTime: '09:35', lastSchedAt: null, lastSchedError: '无头检测失败：超时', lastLoginAt: '2026-10-18T01:00:00.000Z',
+            lastCheckAt: '2026-10-19T01:00:00.000Z', lastCheck: { loggedIn: false, evidence: 'login-page', reason: '登录已失效，请重新登录' },
+          },
+        ],
+      },
+    };
+    const ReactStub = {
+      createElement: (type, props, ...kids) => ({
+        type,
+        props: Object.assign({}, props || {}, { children: kids.length === 1 ? kids[0] : kids }),
+      }),
+      useState: (init) => {
+        usCalls += 1;
+        if (usCalls === 1) return [fakeState, () => {}];
+        if (usCalls === 8 && withDialog) return [true, () => {}];
+        return [typeof init === 'function' ? init() : init, () => {}];
+      },
+      useEffect: () => {},
+      useRef: (init) => ({ current: init }),
+      useCallback: (fn) => fn,
+    };
+    const mod = captured.factory((name) => {
+      if (name === 'react') return ReactStub;
+      throw new Error('客户端 require 了不该 require 的模块：' + name);
+    });
+    let Comp = null;
+    mod.apply({
+      slots: {
+        inject: (name, cb) => cb(),
+        register: (opts, C) => { Comp = C; return () => {}; },
+      },
+    });
+    const tree = Comp();
+    const texts = [];
+    (function walk(node, depth) {
+      if (node == null || node === false || node === true || depth > 40) return;
+      if (typeof node === 'string' || typeof node === 'number') { texts.push(String(node)); return; }
+      if (Array.isArray(node)) { for (const n of node) walk(n, depth); return; }
+      if (typeof node !== 'object') return;
+      if (typeof node.type === 'function') { walk(node.type(node.props || {}), depth + 1); return; }
+      walk(node.props ? node.props.children : null, depth + 1);
+    })(tree, 0);
+    return { tree, text: texts.join(' | ') };
+  }
+
+  const page = renderPage({ withDialog: false });
+  assert.ok(!/render-error/.test(page.text), '页面渲染抛错了：' + page.text.slice(0, 400));
+  for (const want of ['定时检测', '调整排期', '每天 09:05 起 · 每组 1 个店铺，组间隔 30 分钟', '开启·09:05', '暂停·09:35', '上次失败']) {
+    assert.ok(page.text.includes(want), '列表页少了「' + want + '」：' + page.text.slice(0, 500));
+  }
+
+  const dlg = renderPage({ withDialog: true });
+  assert.ok(!/render-error/.test(dlg.text), '弹窗渲染抛错了：' + dlg.text.slice(0, 400));
+  for (const want of ['调整排期', '每日起始时间', '组间隔（分钟）', '每组店铺数', '开启定时检测', '保存排期', '取消']) {
+    assert.ok(dlg.text.includes(want), '弹窗少了「' + want + '」');
+  }
 });
 
 await test('客户端打出的每个动作，宿主都真的接了（两边写歪会当场露馅）', async () => {
