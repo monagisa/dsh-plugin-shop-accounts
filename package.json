@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-shop-accounts",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "private": true,
   "type": "module",
   "description": "DSH 鎻掍欢锛氱數鍟嗗钩鍙板簵閾鸿处鍙风鐞嗭紙鎷煎澶?/ 娣樺疂 / 澶╃尗 / 鎶栭煶 / 浜笢 / 1688锛岄兘鏄晢瀹剁锛夆€斺€?涓€涓簵閾轰竴浠界嫭绔嬬櫥褰曟。妗堬紝鐧诲綍涓€娆￠暱鏈熷鐢紝涓婃灦鏃剁洿鎺ユ寫閫夛紱娴忚鍣ㄤ紭鍏?ego lite锛堟瘡搴椾竴涓?profile + TaskSpace锛夛紝鏈畨瑁呮椂鍥為€€ Chrome CDP",

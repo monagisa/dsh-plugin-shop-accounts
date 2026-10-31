@@ -1456,7 +1456,7 @@ await test('Chrome 模式下设置页不出现 ego 专属 UI，ego 模式下才�
   assert.ok(chrome.includes('浏览器后端'), '设置页没渲出来：' + chrome.slice(0, 300));
   assert.ok(chrome.includes('Chrome'), '胶囊要显示 Chrome');
   assert.ok(!chrome.includes('ego-browser'), 'Chrome 模式不该出现 ego-browser 路径字段');
-  assert.ok(!chrome.includes('ego profile：'), 'Chrome 模式不该列 ego profile（那是 ego 模式的隐私信息）');
+  assert.ok(!chrome.includes('ego profile'), 'Chrome 模式不该列 ego profile（那是 ego 模式的隐私信息）');
   assert.ok(!chrome.includes('刷新 ego'), 'Chrome 模式不该有「刷新 ego」按钮');
   assert.ok(chrome.includes('切到「ego lite」才会用到它'), 'Chrome 模式要说明为什么没用 ego');
 
@@ -1464,12 +1464,12 @@ await test('Chrome 模式下设置页不出现 ego 专属 UI，ego 模式下才�
   const noEgo = renderSettings({ backend: 'chrome', egoAvailable: false });
   assert.ok(noEgo.includes('ego lite（未安装）'), '没装 ego 时后端选项要标「未安装」');
   assert.ok(noEgo.includes('没检测到 ego lite'), '没装 ego 时要说明只用 Chrome');
-  assert.ok(!noEgo.includes('ego profile：'), '没装 ego 时不该有 profile 列表');
+  assert.ok(!noEgo.includes('ego profile'), '没装 ego 时不该有 profile 列表');
 
   // ③ ego 模式：该有的都要有
   const egoMode = renderSettings({ backend: 'egolite', egoAvailable: true });
   assert.ok(egoMode.includes('ego-browser'), 'ego 模式要有 ego-browser 路径字段');
-  assert.ok(egoMode.includes('ego profile：'), 'ego 模式要列 profile');
+  assert.ok(egoMode.includes('ego profile'), 'ego 模式要列 profile');
   assert.ok(egoMode.includes('刷新 ego'), 'ego 模式要有「刷新 ego」按钮');
   assert.ok(egoMode.includes('1 个 profile'), 'ego 模式胶囊要带 profile 数量');
   assert.ok(egoMode.includes('用户配置 1'), 'ego 模式要能看见 profile 名字（才知道分配哪个）');
@@ -1522,7 +1522,7 @@ await test('设置页能选浏览器后端（auto/egolite/chrome），选了真�
   // 用户反馈：Chrome 模式下也不该到处是 ego 字样 → ego 专属 UI 必须挂在 egoOn 上
   assert.match(clientSrc, /var egoOn = backend === 'egolite'/, '要有「当前是否真的在用 ego」这个开关');
   assert.ok(/egoOn && h\(Field, \{ label: 'ego-browser' \}/.test(clientSrc), 'ego-browser 路径只在 ego 模式下显示');
-  assert.ok(/egoOn && h\('div', \{ style: subStyle \}, 'ego profile：'/.test(clientSrc), 'ego profile 列表只在 ego 模式下显示');
+  assert.ok(/egoOn && h\(Field, \{ label: 'ego profile' \}/.test(clientSrc), 'ego profile 列表只在 ego 模式下显示');
   assert.ok(/egoOn && h\('button'/.test(clientSrc), '「刷新 ego」按钮只在 ego 模式下显示');
   assert.ok(/chipText/.test(clientSrc) && /: 'Chrome'/.test(clientSrc), '胶囊在 Chrome 模式下只能显示 Chrome，不能显示 ego lite');
   // v0.7.4：路径/端口这类少数人才改的字段收进折叠块，设置页默认只留「后端 + 生效状态」
