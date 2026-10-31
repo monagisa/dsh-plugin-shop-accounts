@@ -8,13 +8,14 @@
 
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台）。
 
-- 版本：**0.8.2**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
-- 自检：`node test/smoke.mjs` → 63 项全过（不启动浏览器、不碰真实账号）
+- 版本：**0.8.5**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 自检：`node test/smoke.mjs` → 113 项全过（不启动浏览器、不碰真实账号）
 
 ---
 
 ## 目录
 
+- [最近更新](#最近更新)
 - [它能干什么](#它能干什么)
 - [安装](#安装)
 - [五分钟上手](#五分钟上手)
@@ -27,6 +28,33 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 - [数据放在哪](#数据放在哪)
 - [自检](#自检)
 - [已知边界](#已知边界)
+
+---
+
+## 最近更新
+
+### v0.8.5 —— 设置页「路径与高级选项」重排
+
+只动排版，接口与逻辑没变：
+
+- 去掉折叠块自带的底色 / 圆角 / 边框（它本来就在卡片里，再套一个框，展开后像两块面板叠着），
+  改成一条上发丝线 + 分组小标题（右侧拉一条发丝线到底）；
+- 标签列 104 → **88px 且顶对齐**，值列 252 → **304px**；长路径输入框补 `title`，悬停能看全；
+- 「Chrome / Edge」下面不再单独占一行「探测到：C:\…」（那一行把行高从 28px 撑到 64px，上下行全对不齐），
+  探测结果放进占位符；只有「没探测到」这种真要你动手时，才在值列下面多一行提示；
+- 两个勾选项（打开时 / 关闭时）和「信息」组的只读值也走「左标签右内容」网格，左边缘终于跟输入框对齐；
+- 分组小标题去掉 `text-transform:uppercase`（它会把「Chrome 回退」渲染成「CHROME 回退」）。
+
+### v0.8.3 / v0.8.4 —— 安全加固（两轮审查）
+
+- 不再给 CDP 传 `--remote-allow-origins=*` —— 任意网页在 DNS rebinding 之后可以借此读走全部登录态；
+- 递归删除、强杀浏览器、端口归属、cookie 读写全部收紧到「必须是这个店铺自己的档案 / 端口」；
+- HTTP 面加门禁：自定义头 + 拒绝跨站 + 写请求必须 `application/json` + `Host` 必须是 IP / localhost（反 DNS rebinding）；
+- 会话 cookie 备份改成**加密落盘**（Windows DPAPI 保护主密钥 + AES-256-GCM）；
+- 自更新只部署「校验过的上游 commit」：脏工作区拒绝、取不到版本号拒绝，`git` 一律禁用 `ext::` 传输并覆盖 hooks 配置；
+- 拼多多登录判据收紧：至少命中 2 个身份 cookie，且必须含 `PASS_ID` / `SUB_PASS_ID`。
+
+逐条原因与实测证据见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
@@ -124,6 +152,10 @@ dsh plugin --profile <profile名> add file:D:\path\to\dsh-plugin-shop-accounts
 - **Chrome 可执行文件**：留空 = 自动找 Chrome，没有就用 Edge。
 - **启动 ego**（仅当 ego 没在运行时出现）：只把 ego 的主程序拉起来，**不碰任何 TaskSpace**。
 - **刷新 ego**：重新读一遍 ego 的 profile / TaskSpace 列表（ego 没开着时读不到，会直接告诉你「没在运行」）。
+- **路径与高级选项**（默认收起，v0.8.5 重排）：分三组 ——
+  **路径**（ego-browser CLI / Chrome / Edge / 档案根目录）、
+  **Chrome 回退**（起始端口、打开时顺带开商品列表页、关闭时先让浏览器自己退出）、
+  **信息**（ego profile、数据目录）。少数人才改的东西都收在这里，设置页默认只留「后端 + 生效状态」。
 - 以及 **版本与更新** 卡片。
 
 > **插件不会为了「读一下状态」把 ego 整个拉起来。** 以前只要调一次 ego CLI，即便 ego 是关着的，
@@ -201,7 +233,8 @@ Chrome 默认**关窗就丢**。这就是「登录完点保存 → 关窗 → �
 那次关窗后档案从 86 个 cookie 掉到 42 个，`unb` 直接没了，下次启动就被按回登录页（v0.6.10 起兜底）。
 
 - 只要浏览器里读到「已登录」，就把整罐 cookie 存一份到档案目录的 `dsh-session-cookies.json`
-  （`<数据目录>/profiles/<账号>/dsh-session-cookies.json`，含会话级 cookie 的值，**只在本机**）。
+  （`<数据目录>/profiles/<账号>/dsh-session-cookies.json`，含会话级 cookie 的值。**v0.8.3 起加密**：
+  AES-256-GCM，主密钥由 Windows DPAPI（CurrentUser）保护 —— 换 Windows 账号、把文件拷到别的机器都解不开）。
 - 下次启动浏览器（静默检测、定时检测、点「打开」）时，先走 CDP `Network.setCookies` 把**档案里缺的那些**
   补回去，再打开页面。只补缺的、不覆盖已有的 —— 档案里已经有的同名 cookie 一定比备份新。
 - 这个文件会被「清空档案（重扫）」一并删掉；不想留就手动删，删了不影响功能（只是少了这层兜底）。
@@ -295,6 +328,7 @@ Chrome 默认**关窗就丢**。这就是「登录完点保存 → 关窗 → �
 | 运行期登记（哪个端口起的浏览器） | `%DSH_HOME%\shop-accounts\runtime.json` |
 | 登录态（Chrome 模式） | 每店一份 `user-data-dir`：`%DSH_HOME%\shop-accounts\profiles\<账号id>\` |
 | 登录态（ego 模式） | 在 **ego 自己的** `User Data` 里，按 `accounts.json` 里记的 `egoProfile` 对应；本插件不复制、不挪动 |
+| 会话 cookie 备份（加密） | `<数据目录>/profiles/<账号id>/dsh-session-cookies.json`：AES-256-GCM，主密钥由 Windows DPAPI（CurrentUser）保护 |
 | 调试端口 | Chrome 模式：从 `portBase`（默认 9222）起自动找空位，一店一端口；ego 模式没有端口 |
 
 整个数据目录可以用环境变量 `DSH_SHOP_ACCOUNTS_DIR` 搬走。
@@ -306,6 +340,7 @@ lib/platforms.mjs   六个平台的登录页/主页/工作页、身份 cookie、
 lib/cdp.mjs         极简 CDP 客户端（裸 WebSocket，无第三方依赖）
 lib/chrome.mjs      找浏览器、选端口、拉起/关闭/探测
 lib/ego.mjs          ego lite 后端（探测 CLI、在 ego 运行时里跑脚本、TaskSpace/profile、读 cookie）
+lib/secret.mjs       cookie 备份加密（DPAPI 保护主密钥 + AES-256-GCM；DPAPI 不可用时退明文并标注）
 lib/store.mjs       accounts.json / config.json / runtime.json 的原子读写与降级
 lib/schedule.mjs    排期算法（纯函数：分组、时间点、到点、下次、记账）
 lib/index.js        宿主：/shop-accounts/* 路由、自更新、定时心跳
@@ -318,7 +353,7 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
 ## 自检
 
 ```powershell
-node test/smoke.mjs            # 86 项：平台判据 / 持久化 / 宿主 HTTP 面 / 排期 / ego 后端 / 客户端契约
+node test/smoke.mjs            # 113 项：平台判据 / 持久化 / 宿主 HTTP 面 / 排期 / ego 后端 / 客户端契约 / 安全边界
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
