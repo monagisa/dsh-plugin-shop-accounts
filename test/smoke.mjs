@@ -13,6 +13,7 @@
  * 所有数据都落在临时目录（DSH_SHOP_ACCOUNTS_DIR），不碰用户真实的账号表。
  */
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -279,11 +280,17 @@ function fakeRes() {
   };
   return { res, done };
 }
-function fakeReq(method, reqUrl, body) {
+function fakeReq(method, reqUrl, body, headers) {
   const req = new EventEmitter();
   req.method = method;
   req.url = reqUrl;
   req.destroy = () => {};
+  // 默认带齐「本插件界面」的请求头：v0.8.3 起路由要求自定义头 + JSON Content-Type
+  req.headers = Object.assign({
+    'x-dsh-shop-accounts': '1',
+    'content-type': 'application/json',
+    'sec-fetch-site': 'same-origin',
+  }, headers || {});
   if (body !== undefined) {
     const raw = typeof body === 'string' ? body : JSON.stringify(body);
     process.nextTick(() => { req.emit('data', Buffer.from(raw, 'utf8')); req.emit('end'); });
@@ -308,9 +315,9 @@ await test('apply() 用 webServer 挂了一个 prefix 路由，路径与客户�
 });
 
 const handler = registered[0].handler;
-async function call(method, p, body) {
+async function call(method, p, body, headers) {
   const { res, done } = fakeRes();
-  handler(fakeReq(method, p, body), res);
+  handler(fakeReq(method, p, body, headers), res);
   await done;
   let json = null;
   try { json = JSON.parse(res.body); } catch { /* 非 JSON 就别解析 */ }
@@ -587,11 +594,12 @@ await test('tickSchedule：到点才跑、结果写回 lastCheck、同一时间�
     gotOpts.push(o);
     return { ok: true, loggedIn: true, evidence: 'cookie', reason: '假检测' };
   };
-  const r1 = await host.tickSchedule({ now, memGB: 8, log: { info() {}, warn() {} }, checkFn });
+  // appRunning 注入：这台机器装了 ego 但可能没开着，不注入的话「到点该跑」会变成「ego 没开→跳过」
+  const r1 = await host.tickSchedule({ now, memGB: 8, log: { info() {}, warn() {} }, checkFn, appRunning: async () => true });
   assert.equal(r1.ran.length, 1, '第一组只有一个店铺到点');
   assert.deepEqual(calls, [first.id]);
   assert.equal(gotOpts[0].keepaliveSec, 0, '上一步把保活存成 0，定时检测就该传 0 下去');
-  const r2 = await host.tickSchedule({ now, memGB: 8, log: { info() {}, warn() {} }, checkFn });
+  const r2 = await host.tickSchedule({ now, memGB: 8, log: { info() {}, warn() {} }, checkFn, appRunning: async () => true });
   assert.equal(r2.ran.length, 0, '同一个时间点跑过就不再跑（重启也一样）');
   assert.deepEqual(calls, [first.id], '第二次连检测函数都不该调');
   const st = await call('GET', '/shop-accounts/state');
@@ -617,9 +625,35 @@ await test('tickSchedule：跳过正在等登录的店铺，不打断用户手�
   const r = await host.tickSchedule({
     now, memGB: 8, log: { info() {}, warn() {} },
     checkFn: async () => { called += 1; return { ok: true, loggedIn: true }; },
+    appRunning: async () => true,
   });
   assert.equal(called, 0, '等登录的店铺不该被静默检测打断');
   assert.ok(r.skipped.some((x) => /等登录/.test(x.reason)), '跳过原因要说得清楚：' + JSON.stringify(r.skipped));
+});
+
+await test('tickSchedule：ego 关着也照常检测（后台无窗口读 cookie，不再跳过这个时间点）', async () => {
+  // 把后端强制成 egolite（egoliteCli 指到真实存在的文件即可），这样结论不依赖本机装没装 ego。
+  const before = S.readConfig();
+  S.writeConfig({ browser: 'egolite', egoliteCli: process.execPath });
+  try {
+    const s = await call('GET', '/shop-accounts/schedule');
+    const row = s.json.schedule.rows[0];
+    const [hh, mm] = row.time.split(':').map(Number);
+    const now = new Date(2026, 9, 20, hh, mm, 20); // 换一天，避免和上面那组时间点撞车
+    let called = 0;
+    const r = await host.tickSchedule({
+      now, memGB: 8, log: { info() {}, warn() {} },
+      checkFn: async () => { called += 1; return { ok: true, loggedIn: true }; },
+    });
+    assert.equal(called, 1, 'ego 关着也要真的去检测（走无窗口实例后台读 cookie）');
+    assert.equal(r.ran.length, 1, '到点就该跑，不该因为 ego 没开而跳过');
+    assert.ok(!r.skipped.some((x) => /ego lite 没在运行/.test(x.reason)), '不该再有「ego 没在运行」这种跳过理由');
+    const st = await call('GET', '/shop-accounts/state');
+    const hit = st.json.accounts.find((a) => a.id === row.id);
+    assert.equal(Boolean(hit.lastCheck && hit.lastCheck.loggedIn), true, '检测结果要写回 lastCheck');
+  } finally {
+    S.writeConfig({ browser: before.browser || 'auto', egoliteCli: before.egoliteCli || '' });
+  }
 });
 
 // ── 3.6 登录态要能活过「关窗再开」（千牛那次：会话级 cookie 关窗即丢） ──────
@@ -630,7 +664,7 @@ const chromeSrc = fs.readFileSync(path.join(ROOT, 'lib/chrome.mjs'), 'utf8');
 const indexSrc = fs.readFileSync(path.join(ROOT, 'lib/index.js'), 'utf8');
 
 await test('启动参数带 --restore-last-session（否则会话级 cookie 关窗就丢，淘宝 unb 就是这种）', () => {
-  // 实测（C:\Users\mo\cluade\shop-accounts-diag\session-cookie.mjs）：不加 → 会话 cookie 丢；
+  // 实测（<本地诊断脚本>）：不加 → 会话 cookie 丢；
   // 只写 Preferences 的 session.restore_on_startup=1 → 也丢；加这个命令行开关 → 留得住。
   assert.match(chromeSrc, /'--restore-last-session'/, '没有这个开关，登录态活不过关窗');
 });
@@ -706,6 +740,352 @@ await test('关窗之前先等身份 cookie 到齐（淘宝 unb 比工作台晚�
   });
   assert.equal(plain.ok, true, '没有身份 cookie 要求的平台直接放行');
   assert.equal(plain.waitedMs, 0);
+});
+
+// ── 3.7 ego lite 后端（纯函数 + 路由契约；绝不起浏览器） ─────────────────────
+
+section('3.7 ego lite 后端 lib/ego.mjs');
+
+const EG = await import(url('lib/ego.mjs'));
+const egoSrc = fs.readFileSync(path.join(ROOT, 'lib/ego.mjs'), 'utf8');
+
+await test('ego 空间用完要交还控制权（否则 ego 一直显示「agent 调试中」）', () => {
+  // ego 的 ownership：agent = agent 占着（界面显示「agent 调试中」）；task.handOff() 之后 = agentDelegatedToUser（用户控制）。
+  // 交还之后浏览器命令会被硬停，所以要 takeOverTaskSpace(id) 才收得回来 —— 顺序必须是「先收回、干活、最后交还」。
+  assert.match(egoSrc, /export async function egoHandOff/, '要导出 egoHandOff');
+  assert.match(egoSrc, /op === 'handoff'/, '运行时里要有 handoff 这个 op');
+  assert.match(egoSrc, /agentDelegatedToUser/, '要认得出「已交还给用户」这个 ownership');
+  assert.match(egoSrc, /takeOverTaskSpace/, '交还之后要能收回控制（否则下次读 cookie 会被硬停）');
+  // open 的最后一步必须是 handOff
+  // 注意：文件里 probe 的定义在 open 之前，所以 open 的切片终点要取后面的 reset（不能取 probe，
+  // 那会得到空字符串 —— 曾经因为重排过顺序把这条断言变成空断言）。
+  const openBlock = egoSrc.slice(egoSrc.indexOf("if (op === 'open')"), egoSrc.indexOf("if (op === 'reset')"));
+  assert.match(openBlock, /await handOff\(\)/, 'open 结尾要交还控制权');
+  // probe 不再碰用户那个空间：同 profile 另开一个临时空间读 cookie，读完 finish 掉。
+  // （在用户窗口里读就得 takeOver，会把正在用的人打断 —— v0.8.0 改成临时空间）
+  const probeBlock = egoSrc.slice(egoSrc.indexOf("if (op === 'probe')"), egoSrc.indexOf("if (op === 'open')"));
+  assert.match(probeBlock, /temp = await g\.taskSpace\(tempName/, 'probe 要另开临时空间');
+  // 顺序仍然是"读 cookie → finally 里收掉临时空间"（v0.8.1 前面多了一段「收掉上次残留的同名空间」，
+  // 所以不能再用第一个 finish 的下标来判断）
+  assert.match(probeBlock, /getAllCookies[\s\S]*finally[\s\S]*temp\.finish\(\{ keep: \[\] \}\)/,
+    'probe 要「先读 cookie、再收掉临时空间」');
+  // 允许用 takeOver 收"上次检测自己留下的、ownership=agent 的同名残留空间"，但不许接管用户的窗口
+  const staleGuard = probeBlock.indexOf("String(stale.ownership || '') === 'agent'");
+  assert.ok(staleGuard >= 0 && staleGuard < probeBlock.indexOf('takeOverTaskSpace'),
+    'takeOver 只能用在"收掉自己残留的临时空间"上，不能去接管用户的窗口');
+});
+
+await test('ego 探测只看文件在不在（不启动进程）；配了不存在的路径不会被当成可用', () => {
+  const cli = EG.resolveEgoCli('');
+  assert.ok(cli === null || typeof cli === 'string', 'resolveEgoCli 只能返回路径或 null');
+  if (cli) assert.ok(fs.existsSync(cli), '探测到的 CLI 必须真实存在：' + cli);
+  const fake = path.join(TMP, 'no-such-ego-browser.exe');
+  assert.notEqual(EG.resolveEgoCli(fake), fake, '配置里写了个不存在的路径，不能当成可用（应回退自动探测）');
+  // 真机没装 ego 时 cli 就是 null —— 下面的断言都按「装了没有」分支走，两种机器都能过
+});
+
+await test('backendFor：auto 装了 ego 就优先 ego；chrome / egolite 是硬选择，没装时明确回退', () => {
+  const cli = EG.resolveEgoCli('');
+  assert.equal(EG.backendFor({ browser: 'chrome' }), 'chrome', 'chrome 是硬选择，ego 在也只用 Chrome');
+  assert.equal(EG.backendFor({ browser: 'egolite', egoliteCli: cli || '' }), cli ? 'egolite' : 'chrome', 'egolite 没装要回退，而不是假装能用');
+  assert.equal(EG.backendFor({ browser: 'auto', egoliteCli: cli || '' }), cli ? 'egolite' : 'chrome', 'auto = 装了 ego 优先 ego');
+  assert.equal(EG.egoStatus({}).backend, EG.backendFor({}), '状态里的 backend 必须和 backendFor 一致');
+  assert.equal(typeof EG.egoStatus({}).cli, 'string');
+  assert.equal(typeof EG.egoStatus({}).app, 'string');
+});
+
+await test('TaskSpace 命名：默认「店铺-<店铺名>」，显式 egoSpace 优先，换行/制表符被洗掉', () => {
+  assert.equal(EG.spaceNameFor({ name: '店铺A' }), '店铺-店铺A');
+  assert.equal(EG.spaceNameFor({ name: '店铺A', egoSpace: '自定义空间' }), '自定义空间', '显式指定的空间名优先');
+  assert.equal(EG.spaceNameFor({ name: '店\n铺\tA' }), '店铺-店 铺 A', '换行/制表符不能带进空间名');
+  assert.equal(EG.spaceNameFor({ id: 'acc_pdd_1' }), '店铺-acc_pdd_1', '没名字就用 id 兜底');
+});
+
+await test('config：browser 只认 auto/egolite/chrome（大小写归一），其它值退回 auto', () => {
+  S.writeConfig({ browser: 'EGOLITE', egoliteCli: 'C:\\x\\ego-browser.exe', egoliteApp: 'C:\\x\\ego.exe' });
+  const c = S.readConfig();
+  assert.equal(c.browser, 'egolite', '大小写要归一');
+  assert.equal(c.egoliteCli, 'C:\\x\\ego-browser.exe');
+  assert.equal(c.egoliteApp, 'C:\\x\\ego.exe');
+  S.writeConfig({ browser: 'safari', egoliteCli: '', egoliteApp: '' });
+  assert.equal(S.readConfig().browser, 'auto', '不认识的浏览器名退回 auto');
+  assert.equal(S.readConfig().egoliteCli, '', '没填就是空字符串（界面直接绑 value，不能是 undefined）');
+  S.writeConfig({ browser: 'auto' });
+});
+
+await test('PUT /config 能切后端；/state 与 /config 都如实报当前后端', async () => {
+  const put = await call('PUT', '/shop-accounts/config', { browser: 'chrome' });
+  assert.equal(put.status, 200);
+  assert.equal(put.json.backend, 'chrome', '切到 chrome 要立刻生效');
+  const s = await call('GET', '/shop-accounts/state');
+  assert.equal(s.json.backend, 'chrome', '/state 要带当前后端，界面才知道显示哪套（端口 / 空间）');
+  assert.equal(typeof s.json.ego, 'object');
+  // running 是「ego 主程序在不在跑」的实测结果，界面靠它决定要不要显示「启动 ego」
+  assert.equal(typeof s.json.ego.running, 'boolean', '/state 的 ego 必须带 running（否则界面会瞎猜）');
+  const cfg = await call('GET', '/shop-accounts/config');
+  assert.equal(cfg.json.backend, 'chrome');
+  await call('PUT', '/shop-accounts/config', { browser: 'auto' });
+  const cli = EG.resolveEgoCli('');
+  assert.equal((await call('GET', '/shop-accounts/state')).json.backend, cli ? 'egolite' : 'chrome', 'auto 要按本机实际情况报');
+});
+
+await test('GET /ego 路由存在：返回可用性 + profile/space 列表（数组，读不到也是空数组）', async () => {
+  const r = await call('GET', '/shop-accounts/ego');
+  assert.equal(r.status, 200);
+  assert.equal(r.json.ok, true);
+  assert.equal(typeof r.json.backend, 'string');
+  assert.ok(r.json.ego && typeof r.json.ego.available === 'boolean', '要能告诉界面 ego 装没装');
+  assert.ok(Array.isArray(r.json.ego.profiles), 'profiles 必须是数组（界面直接 map）');
+  assert.ok(Array.isArray(r.json.ego.spaces), 'spaces 必须是数组');
+});
+
+await test('ego 后端的店铺：端口记 0、状态看空间在不在（不再拿端口当判据）', async () => {
+  const cli = EG.resolveEgoCli('');
+  await call('PUT', '/shop-accounts/config', { browser: cli ? 'egolite' : 'auto' });
+  const made = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: 'ego后端店' });
+  assert.equal(made.status, 200);
+  const s = await call('GET', '/shop-accounts/state');
+  const row = s.json.accounts.find((a) => a.id === made.json.account.id);
+  if (cli) {
+    assert.equal(row.backend, 'egolite');
+    assert.equal(row.port, 0, 'ego 后端没有本地调试端口，端口必须是 0 而不是瞎分一个');
+    assert.equal(row.cdpUrl, '', 'ego 后端不该给出 CDP 地址（ego 不暴露 CDP 端口）');
+    assert.ok(row.egoSpace.startsWith('店铺-'), '要有 TaskSpace 名，界面显示它');
+  } else {
+    assert.equal(row.backend, 'chrome');
+    assert.ok(row.port >= 9222, 'Chrome 后端照旧分端口');
+  }
+  await call('DELETE', '/shop-accounts/accounts/' + made.json.account.id, {});
+  await call('PUT', '/shop-accounts/config', { browser: 'auto' });
+});
+
+await test('ego 模式「完成」只存状态、不收掉空间（空间是独立窗口，不挡用户用浏览器）', () => {
+  // 用户原话：到 ego 就不用关窗口了，它单独一个 space，不影响我们使用浏览器。
+  const start = indexSrc.indexOf('async function egoFinishAccount');
+  assert.ok(start > 0, '找不到 egoFinishAccount');
+  const rest = indexSrc.slice(start + 10);
+  const end = rest.indexOf('\nasync function ');
+  const body = end > 0 ? rest.slice(0, end) : rest;
+  assert.ok(!/egoCloseAccount\s*\(/.test(body), '「完成」里不该再调用 egoCloseAccount —— 那会把用户看得见的空间收掉');
+  assert.match(body, /keptSpace: true/, '要明确告诉界面「空间留着没关」');
+  assert.match(body, /pendingLogin\s*[:=]\s*false/, '登录成功要清掉「等待登录」标记');
+  // 界面提示也要按后端分开说，不能对 ego 用户撒谎说「窗口已关闭」
+  const cliSrc = fs.readFileSync(path.join(ROOT, 'lib/client.js'), 'utf8');
+  assert.match(cliSrc, /r\.keptSpace \?/, '提示语要区分「空间留着」与「窗口已关闭」');
+});
+
+// ── 3.8 v0.8.0 ego 后端缺陷修复（全部是源码/路由契约，绝不起浏览器） ────────
+
+section('3.8 v0.8.0 ego 后端修复（不拉起浏览器 / 不抢用户窗口 / 不串号）');
+
+// clientSrc 正片段在 section 4 里才声明，这里单独读一份，避免 TDZ（Cannot access before initialization）。
+const clientSrcV8 = fs.readFileSync(path.join(ROOT, 'lib/client.js'), 'utf8');
+
+await test('ego 没在运行时不去起 CLI（否则整个浏览器会被拉起来）', () => {
+  assert.match(egoSrc, /export function egoAppRunning/, '要有「ego 主程序在不在跑」的探测');
+  assert.match(egoSrc, /ego_not_running/, '不在跑时要返回专门的 code');
+  assert.match(egoSrc, /LAUNCH_ALLOWED/, '只有少数 op（打开/重置）允许顺带拉起 ego');
+  const runStart = egoSrc.indexOf('export function runEgoOp');
+  assert.ok(runStart > 0, '找不到 runEgoOp');
+  const body = egoSrc.slice(runStart, runStart + 2500);
+  assert.ok(/egoAppRunning/.test(body), 'runEgoOp 开头就要判 ego 主程序在不在跑');
+  // 宿主侧：/state 与 /config 都要把 running 报给界面
+  assert.match(indexSrc, /running: false/, 'ego 没在跑时状态里要如实写 running:false');
+  assert.match(indexSrc, /egoInfoSync[\s\S]{0,600}running/, '同步兜底也要带 running 字段');
+});
+
+await test('POST /ego/start 只拉起主程序，界面有「启动 ego」按钮', () => {
+  assert.match(indexSrc, /p === '\/ego\/start'/, '要有 /ego/start 路由');
+  const seg = indexSrc.slice(indexSrc.indexOf("p === '/ego/start'"), indexSrc.indexOf("p === '/ego/start'") + 900);
+  assert.match(indexSrc, /egoLaunchApp/, '要用 egoLaunchApp（detached 拉起主程序），不是用 CLI 读状态顺带拉起');
+  assert.match(clientSrcV8, /'启动 ego'/, 'ego 没在跑时界面上要有「启动 ego」按钮');
+  assert.match(clientSrcV8, /api\('\/ego\/start'/, '按钮要真的打这个路由');
+});
+
+await test('同一个店铺的动作串行化（定时检测撞上手动操作时不能互抢空间）', () => {
+  assert.match(indexSrc, /function acquireAccountLock/, '要有可手动取的锁');
+  assert.match(indexSrc, /function withAccountLock/, '要有包装 helper');
+  const routeSeg = indexSrc.slice(indexSrc.indexOf('const lockable'), indexSrc.indexOf('const lockable') + 700);
+  assert.match(routeSeg, /releaseLock/, '路由层要取锁并用 finally 放锁');
+  assert.ok(routeSeg.includes("'open'") && routeSeg.includes("'check'") && routeSeg.includes("'finish'"),
+    '打开/检测/完成这些会碰 ego 的动作都要在锁的名单里');
+  // 定时检测也必须走同一把锁：锁被手动操作占着就跳过，不能两个 CLI 同时对同一空间 takeOver
+  const tickSeg = indexSrc.slice(indexSrc.indexOf('async function tickSchedule'), indexSrc.indexOf('async function tickSchedule') + 7000);
+  assert.match(tickSeg, /acquireAccountLock\(/, '定时检测要抢同一把锁');
+  assert.match(tickSeg, /wait: false/, '抢不到锁就跳过（不能把定时任务排在手动作后面干等）');
+  // 抢到锁之后才记账：预检跳过（ego 没开 / 浏览器开着 / 正在手动操作）不能消耗掉这个时间点
+  assert.ok(tickSeg.indexOf('acquireAccountLock(') < tickSeg.indexOf('markRan('),
+    '记账要在抢到锁之后（否则被跳过的店铺当天就再也不检测了）');
+});
+
+await test('ego 关着也能后台检测：无窗口实例读 cookie（不弹窗 / 不留进程 / 串行化）', () => {
+  const tickSeg = indexSrc.slice(indexSrc.indexOf('async function tickSchedule'), indexSrc.indexOf('async function tickSchedule') + 7000);
+  assert.ok(!/ego lite 没在运行/.test(tickSeg), '定时检测不该再拿「ego 没在跑」当跳过理由');
+  const checkSeg = indexSrc.slice(indexSrc.indexOf('async function egoCheckAccount'), indexSrc.indexOf('async function egoCheckAccount') + 4500);
+  assert.match(checkSeg, /egoOfflineCookies/, 'ego 关着时要走无窗口实例后台读 cookie');
+  assert.match(egoSrc, /export async function egoOfflineCookies/, 'ego.mjs 要有后台读 cookie 的实现');
+  assert.match(egoSrc, /--headless=new/, '必须无窗口（不能弹窗、不能恢复上次的窗口）');
+  assert.match(egoSrc, /--profile-directory=/, '要指定店铺自己的 profile（登录态按 profile 隔离）');
+  assert.match(egoSrc, /waitPortGone/, '读完要确认实例真的关掉了');
+  assert.match(egoSrc, /taskkill/, '端口没消失就按 PID 树强杀，别留后台进程');
+  assert.match(egoSrc, /offlineChain/, '同一个 User Data 同时只能一个实例（SingletonLock），必须串行化');
+  assert.match(egoSrc, /ego-running|ego_running/, 'ego 正开着时不要撞 SingletonLock（交给临时空间探测）');
+});
+
+await test('ego 模式下店铺重名要挡掉（重名 = 两个店铺共用一个空间 = 登录态串台）', () => {
+  const anchor = indexSrc.indexOf('const dup = loadAccounts().find');
+  assert.ok(anchor > 0, '新建账号时没有查重');
+  const createSeg = indexSrc.slice(anchor - 400, anchor + 900);
+  assert.match(createSeg, /backendFor\(cfg\) === 'egolite'/, '只在 ego 模式拦（Chrome 模式不占空间名）');
+  assert.match(indexSrc, /已经有同名店铺「\$\{nextName\}」/, '改名也要查重');
+  assert.match(indexSrc, /egoSpace = ''/, '改名后要清掉旧的空间名，让他按新名字重找');
+});
+
+await test('显式指定的 ego profile 不存在时要重新分配，而不是永久打不开', () => {
+  const seg = indexSrc.slice(indexSrc.indexOf('async function ensureEgoProfile'), indexSrc.indexOf('async function ensureEgoProfile') + 3000);
+  assert.match(seg, /ego-profile-gone/, 'profile 被删了要留一条调试记录');
+  assert.match(seg, /profiles\.some|profiles\.find/, '要真的去 profile 列表里核对还在不在');
+  assert.match(seg, /ego lite 没在运行/, 'ego 没在跑时要把话说清楚，别静默失败');
+});
+
+await test('重置登录态按平台域名删 cookie，不再整仓清空（会连坐清掉别的店铺）', () => {
+  assert.match(egoSrc, /Network\.deleteCookies/, '要按域名逐个删');
+  assert.match(egoSrc, /wholeJar/, '全都删不掉时才回退整仓清空，并把这件事报出来');
+  const hostSeg = indexSrc.slice(indexSrc.indexOf('async function egoResetAccount'), indexSrc.indexOf('async function egoResetAccount') + 2000);
+  assert.match(hostSeg, /cookieDomains/, '调用方要传平台域名');
+});
+
+await test('ego 的 TaskSpace 允许按 id 认（用户自建空间 name 是空串、id 是 0，只能靠 id 兜底）', () => {
+  assert.match(egoSrc, /function findEntry/, '要有按名字/id 找空间的函数');
+  const seg = egoSrc.slice(egoSrc.indexOf('function findEntry'), egoSrc.indexOf('function findEntry') + 900);
+  assert.match(seg, /Number\(spaceId\) > 0/, 'id=0 是用户自建空间的占位，不能拿来匹配');
+  assert.match(indexSrc, /egoSpaceExists\(space, a\.egoSpaceId\)|egoSpaceExists\(egoSpace, a\.egoSpaceId\)/, '/state 也要带 id 去认空间');
+  assert.match(indexSrc, /egoSpaceId: Number\(a\.egoSpaceId\) \|\| 0/, '账号行要带 egoSpaceId 给界面/工具');
+});
+
+await test('ego 模式重名店铺真的会被 400 挡掉（路由级实测，不只是源码断言）', async () => {
+  const cli = EG.resolveEgoCli('');
+  await call('PUT', '/shop-accounts/config', { browser: cli ? 'egolite' : 'auto' });
+  const first = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '重名测试店' });
+  assert.equal(first.status, 200, '第一家应该建得出来');
+  const second = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '重名测试店' });
+  if (cli) {
+    assert.equal(second.status, 400, 'ego 模式下重名必须被拒绝');
+    assert.match(String(second.json.error || ''), /同名店铺/, '错误里要说是重名，而不是含糊的失败');
+  } else {
+    assert.equal(second.status, 200, 'Chrome 模式不占空间名，允许重名 —— 老行为不能变');
+  }
+  // /state 里每个账号都要带 egoSpaceId（界面/工具靠它认空间）
+  const st = await call('GET', '/shop-accounts/state');
+  const rows = st.json.accounts.filter((a) => a.name === '重名测试店');
+  assert.ok(rows.length >= 1);
+  assert.equal(typeof rows[0].egoSpaceId, 'number', '/state 的账号行要带 egoSpaceId');
+  for (const r of rows) await call('DELETE', '/shop-accounts/accounts/' + r.id, {});
+  await call('PUT', '/shop-accounts/config', { browser: 'auto' });
+});
+
+await test('万一控制权没交还成功，有 /accounts/:id/handoff 可以手动补救', () => {
+  assert.match(indexSrc, /open\|close\|reset\|finish\|check\|reveal\|silent-check\|handoff\|schedule/, '动作路由里要有 handoff');
+  const seg = indexSrc.slice(indexSrc.indexOf("action === 'handoff'"), indexSrc.indexOf("action === 'handoff'") + 900);
+  assert.match(seg, /egoHandOff/, '要真的调 egoHandOff 去交还');
+  assert.match(seg, /Chrome 后端没有/, 'Chrome 后端要明确拒绝（没有这个概念）');
+  assert.match(seg, /appendDebug\('handoff'/, '要留一条调试记录，方便事后查为什么没交还');
+});
+
+await test('账号锁真并发下是互斥的（wait:false 直接让路，排队的逐个拿到，不会卡死）', async () => {
+  const seq = [];
+  // 1) 先占住
+  const release1 = await host.acquireAccountLock('lock-test-shop');
+  assert.equal(typeof release1, 'function', '拿锁要返回 release');
+  // 2) wait:false 应该立刻拿到 null（定时检测走这条，抢不到就跳过）
+  const noWait = await host.acquireAccountLock('lock-test-shop', { wait: false });
+  assert.equal(noWait, null, '锁被占时 wait:false 必须返回 null，不能等');
+  // 3) 三个排队的：放锁后必须**逐个**拿到，不能同时拿到
+  const waiters = [0, 1, 2].map(() => host.acquireAccountLock('lock-test-shop').then((rel) => {
+    seq.push('in');
+    return new Promise((r) => setTimeout(() => { seq.push('out'); rel(); r(); }, 5));
+  }));
+  setTimeout(() => { release1(); }, 10);
+  await Promise.all(waiters);
+  assert.deepEqual(seq, ['in', 'out', 'in', 'out', 'in', 'out'], '排队的必须一次一个，不能并发进临界区');
+  // 4) 全部放完后再拿一次仍然拿得到（锁没漏留成死锁）
+  const again = await host.acquireAccountLock('lock-test-shop', { wait: false });
+  assert.equal(typeof again, 'function', '放完锁之后必须能再拿到（不能留下僵尸锁）');
+  again();
+});
+
+// ── 3.9 v0.8.1 代码审查修掉的坑（每条都对应一个真实会踩到的场景）────────────────
+
+section('3.9 v0.8.1 审查修复（不建空窗口 / 失败不覆盖登录态 / 锁不泄漏 / 界面不重置）');
+
+// 客户端源码在这一段之后才有变量（第 4 节才定义 clientSrc），这里用一个局部读取
+const clientSrcV81 = fs.readFileSync(path.join(ROOT, 'lib/client.js'), 'utf8');
+const clientSrcOrLoad = () => clientSrcV81;
+
+await test('ego「关闭 / 交还控制权」不许为了关闭而先建一个空间出来', () => {
+  assert.match(egoSrc, /if \(!entry && \(op === 'close' \|\| op === 'handoff'\)\)/,
+    '空间不在就直接 alreadyClosed；否则每点一次关闭就多一个 agent 占着的空窗口（还会串到默认 profile）');
+  const closeIdx = egoSrc.indexOf("if (op === 'close')");
+  const guardIdx = egoSrc.indexOf("if (!entry && (op === 'close' || op === 'handoff'))");
+  assert.ok(guardIdx >= 0 && guardIdx < closeIdx, '守卫要在创建句柄（acquire）之前');
+});
+
+await test('检测失败（ok:false）不覆盖上一次的登录结论，只记 lastCheckError', () => {
+  assert.match(indexSrc, /function checkPatch\(check/, '要有统一的"结果→patch"收敛点');
+  assert.match(indexSrc, /check\.ok === false/, '要认出"这次没测成"');
+  assert.match(indexSrc, /lastCheckError/, '失败要单独记，不能写成 loggedIn:false');
+  // 三处入口（定时检测 / 检测路由 / 完成保存）都得走它
+  assert.ok((indexSrc.match(/checkPatch\(/g) || []).length >= 4, '至少要覆盖 定时检测 / 检测 / 完成 三条路径');
+  assert.ok(clientSrcOrLoad().includes('lastCheckError'), '界面要能显示"检测失败"，而不是被判成登录失效');
+});
+
+await test('ego 没在运行时，「打开 / 重置」能把它拉起来（白名单真的可达）', () => {
+  assert.match(indexSrc, /async function ensureEgoApp/, '要有"需要开窗口时才拉起 ego"的入口');
+  assert.match(indexSrc, /egoRunInfo\(account, \{ launch: true \}\)/, 'open / reset 要允许拉起');
+  const n = (indexSrc.match(/egoRunInfo\(account, \{ launch: true \}\)/g) || []).length;
+  assert.ok(n >= 2, 'open 和 reset 两个动作都要（实际 ' + n + ' 处）');
+  assert.match(indexSrc, /opts\.launch/, '只读动作（检测/关闭）不许拉起');
+});
+
+await test('请求体读一半客户端断开时，账号锁不会永久泄漏', () => {
+  assert.match(indexSrc, /req\.on\('aborted'/, '要兜底 aborted');
+  assert.match(indexSrc, /req\.on\('close'/, '要兜底 close');
+});
+
+await test('改名不会清掉用户手填的 egoSpace（比较对象是派生名）', () => {
+  assert.match(indexSrc, /const derived = '店铺-'/, '要拿派生名比较');
+  assert.ok(!/=== spaceNameFor\(account\)/.test(indexSrc), '不能拿 spaceNameFor 比（egoSpace 非空时它返回自己，条件恒真）');
+});
+
+await test('删账号时要把 ego 空间也收掉（别在 ego 里留孤儿窗口）', () => {
+  const delSeg = indexSrc.slice(indexSrc.indexOf("method === 'DELETE'"), indexSrc.indexOf("method === 'DELETE'") + 900);
+  assert.match(delSeg, /egoCloseAccount/, 'ego 后端删除账号要先收空间');
+});
+
+await test('agent 工具 list 的 index 用全表下标（带 platform 过滤时不指错店铺）', () => {
+  assert.match(indexSrc, /fullIndex/, '过滤后的下标会让「店铺B」指到别的店');
+});
+
+await test('/state 在 Chrome 模式下并发探测端口（店铺多时不至于比轮询还慢）', () => {
+  assert.match(indexSrc, /const portUp = new Map\(\)/, '要先并发探一遍端口');
+  assert.match(indexSrc, /Promise\.all\(ports\.map/, '端口探测要并发');
+});
+
+await test('Chrome 后端运行中检测：优先用"本平台且不像登录页"的标签页 URL', () => {
+  assert.match(indexSrc, /async function pickSiteUrl/, '多标签时要挑页面，不能拿第一个 https 标签');
+  assert.match(indexSrc, /readLoginFrom\(port, platform, await pickSiteUrl/, '运行中分支要传 preferUrl');
+  assert.match(indexSrc, /looksLikeLoginPage/, '要排除登录页标签');
+});
+
+await test('设置面板不能被父级轮询反复卸载重建（输入被回填、高级选项自动收起）', () => {
+  assert.ok(clientSrcOrLoad().indexOf('function ConfigPanel') < clientSrcOrLoad().indexOf('function ShopAccountsSection'),
+    'ConfigPanel 必须定义在 ShopAccountsSection 之外（否则每次重渲染都换组件身份）');
+  assert.match(clientSrcOrLoad(), /h\(ConfigPanel, \{[^}]*cfg: cfg/, '渲染处要用 props 传配置');
+});
+
+await test('详情页端口为 0 时不再渲染出字面量 0；排期弹窗不会把"自动每组数"回填成手填值', () => {
+  assert.ok(!/a\.port && h\('span'/.test(clientSrcOrLoad()), '0 && … 会被 React 当文本渲染出来');
+  assert.match(clientSrcOrLoad(), /groupSizeMode === 'auto'/, '自动模式要显示成空，不能回填解析后的数字');
 });
 
 // ── 4. 客户端 bundle 契约 ────────────────────────────────────────────────────
@@ -960,6 +1340,139 @@ await test('账号管理页在「有排期数据」时也能渲染出来：横�
   }
 });
 
+await test('Chrome 模式下设置页不出现 ego 专属 UI，ego 模式下才出现（用户问：用谷歌也会显示 ego lite 吗）', () => {
+  // 真把设置卡渲一遍（桩 React + 一个迷你 hook 运行时，不碰 DOM），再按后端看渲染出来的文案。
+  // 为什么要迷你 hook：ConfigPanel 的表单是 useEffect 里填的，`if (!form) return null` ——
+  // 只把 useState 打桩、不跑 effect，渲出来是空的，测了个寂寞。
+  function renderSettings({ backend, egoAvailable }) {
+    const patched = clientSrc.replace(
+      'var [showConfig, setShowConfig] = React.useState(false);',
+      'var [showConfig, setShowConfig] = React.useState(true);');
+    assert.notEqual(patched, clientSrc, '没找到 showConfig 的 useState —— 改过就同步改这个测试，否则它测的是没展开的设置页');
+    let captured = null;
+    const sandbox = {
+      window: { __ModuleLoader__: { load: (entry) => { captured = entry; } } },
+      setTimeout, setInterval, clearInterval, clearTimeout, console,
+      // 页面里的 effect 会去 api('/state') 拉数据；给它一个空的成功响应，别让测试等网络。
+      fetch: async () => ({ ok: true, status: 200, json: async () => ({}), headers: { get: () => null } }),
+      document: { addEventListener() {}, removeEventListener() {}, querySelector: () => null, createElement: () => ({ style: {}, appendChild() {} }) },
+      navigator: { userAgent: 'smoke' },
+      location: { href: 'http://127.0.0.1/', search: '' },
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(patched, sandbox);
+    const fakeState = {
+      loading: false, error: null,
+      data: {
+        version: '0.7.6', loadedVersion: '0.7.6', updateDir: '', dataDir: 'C:\\tmp',
+        platforms: [], accounts: [], backend,
+        config: {},
+        ego: {
+          available: egoAvailable, cli: 'C:\\tmp\\ego-browser.exe',
+          profiles: [{ id: 'Profile 3', name: '用户配置 1', isDefault: false }],
+        },
+        browser: { found: true, path: 'C:\\tmp\\chrome.exe' },
+      },
+    };
+    // ── 迷你 hook 运行时：每个组件按路径存槽位，渲染后跑 effect，状态变了就再渲一遍 ──
+    const hookStore = new Map();
+    let HOOK = null;
+    let dirtyAny = false;
+    const ReactStub = {
+      createElement: (type, props, ...kids) => ({
+        type, props: Object.assign({}, props || {}, { children: kids.length === 1 ? kids[0] : kids }),
+      }),
+      useState: (init) => {
+        const ctx = HOOK;
+        const key = 'us' + (ctx.us = (ctx.us || 0) + 1);
+        if (!(key in ctx.slots)) ctx.slots[key] = typeof init === 'function' ? init() : init;
+        return [ctx.slots[key], (v) => {
+          if (ctx.slots[key] !== v) { ctx.slots[key] = v; dirtyAny = true; }
+        }];
+      },
+      useEffect: (fn) => { HOOK.effects.push(fn); },
+      useRef: (init) => {
+        const ctx = HOOK;
+        const key = 'ref' + (ctx.ref = (ctx.ref || 0) + 1);
+        if (!(key in ctx.slots)) ctx.slots[key] = { current: init };
+        return ctx.slots[key];
+      },
+      useCallback: (fn) => fn,
+      useMemo: (fn) => fn(),
+    };
+    const mod = captured.factory((name) => {
+      if (name === 'react') return ReactStub;
+      throw new Error('客户端 require 了不该 require 的模块：' + name);
+    });
+    let Comp = null;
+    mod.apply({
+      slots: {
+        inject: (name, cb) => cb(),
+        register: (opts, C) => { Comp = C; return () => {}; },
+      },
+    });
+    const texts = [];
+    function runPass() {
+      texts.length = 0;
+      dirtyAny = false;
+      const effects = [];
+      function walk(node, depth, path) {
+        if (node == null || node === false || node === true || depth > 60) return;
+        if (typeof node === 'string' || typeof node === 'number') { texts.push(String(node)); return; }
+        if (Array.isArray(node)) { node.forEach((n, i) => walk(n, depth, path + '.' + i)); return; }
+        if (typeof node !== 'object') return;
+        if (typeof node.type === 'function') {
+          const ctx = { us: 0, ref: 0, slots: hookStore.get(path) || {}, effects: [] };
+          hookStore.set(path, ctx.slots);
+          const prev = HOOK;
+          HOOK = ctx;
+          let out;
+          try { out = node.type(node.props || {}); } finally { HOOK = prev; }
+          effects.push(...ctx.effects);
+          walk(out, depth + 1, path);
+          return;
+        }
+        walk(node.props ? node.props.children : null, depth + 1, path);
+      }
+      // 根组件本身也走一遍 hook 上下文；第一个 useState 喂假的 /state（Prom 组件里 state 是第一个）
+      const rootCtx = { us: 0, ref: 0, slots: hookStore.get('root') || {}, effects: [] };
+      rootCtx.slots.us1 = fakeState;
+      hookStore.set('root', rootCtx.slots);
+      HOOK = rootCtx;
+      let tree;
+      try { tree = Comp(); } finally { HOOK = null; }
+      effects.push(...rootCtx.effects);
+      walk(tree, 0, 'root');
+      for (const fn of effects) { try { fn(); } catch { /* effect 里的 api 失败不影响文案 */ } }
+    }
+    for (let pass = 0; pass < 6; pass++) { runPass(); if (!dirtyAny) break; }
+    return texts.join(' | ');
+  }
+
+  // ① Chrome + 装了 ego：只用 Chrome，ego 的字段/按钮/profile 列表都不该出现
+  const chrome = renderSettings({ backend: 'chrome', egoAvailable: true });
+  assert.ok(chrome.includes('浏览器后端'), '设置页没渲出来：' + chrome.slice(0, 300));
+  assert.ok(chrome.includes('Chrome'), '胶囊要显示 Chrome');
+  assert.ok(!chrome.includes('ego-browser'), 'Chrome 模式不该出现 ego-browser 路径字段');
+  assert.ok(!chrome.includes('ego profile：'), 'Chrome 模式不该列 ego profile（那是 ego 模式的隐私信息）');
+  assert.ok(!chrome.includes('刷新 ego'), 'Chrome 模式不该有「刷新 ego」按钮');
+  assert.ok(chrome.includes('切到「ego lite」才会用到它'), 'Chrome 模式要说明为什么没用 ego');
+
+  // ② Chrome + 没装 ego：选项标「未安装」，提示只说 Chrome
+  const noEgo = renderSettings({ backend: 'chrome', egoAvailable: false });
+  assert.ok(noEgo.includes('ego lite（未安装）'), '没装 ego 时后端选项要标「未安装」');
+  assert.ok(noEgo.includes('没检测到 ego lite'), '没装 ego 时要说明只用 Chrome');
+  assert.ok(!noEgo.includes('ego profile：'), '没装 ego 时不该有 profile 列表');
+
+  // ③ ego 模式：该有的都要有
+  const egoMode = renderSettings({ backend: 'egolite', egoAvailable: true });
+  assert.ok(egoMode.includes('ego-browser'), 'ego 模式要有 ego-browser 路径字段');
+  assert.ok(egoMode.includes('ego profile：'), 'ego 模式要列 profile');
+  assert.ok(egoMode.includes('刷新 ego'), 'ego 模式要有「刷新 ego」按钮');
+  assert.ok(egoMode.includes('1 个 profile'), 'ego 模式胶囊要带 profile 数量');
+  assert.ok(egoMode.includes('用户配置 1'), 'ego 模式要能看见 profile 名字（才知道分配哪个）');
+});
+
 await test('客户端打出的每个动作，宿主都真的接了（两边写歪会当场露馅）', async () => {
   // 动作名不写死在测试里，而是从客户端源码里扫出来 —— 否则「客户端加了新动作、宿主忘了加路由」
   // 这种错，测试和实现会一起错下去。
@@ -986,6 +1499,205 @@ await test('客户端打出的每个动作，宿主都真的接了（两边写�
   const wrongVerb = await call('GET', '/shop-accounts/accounts/' + id + '/open');
   assert.equal(wrongVerb.status, 405, '动作只收 POST');
   await call('DELETE', '/shop-accounts/accounts/' + id, {});
+});
+
+await test('设置页能选浏览器后端（auto/egolite/chrome），选了真的发给宿主；店铺行显示 ego 空间', () => {
+  assert.ok(clientSrc.includes('浏览器后端'), '设置页要有「浏览器后端」这一项');
+  for (const want of ["value: 'auto'", "value: 'egolite'", "value: 'chrome'"]) {
+    assert.ok(clientSrc.includes(want), '缺少后端选项：' + want);
+  }
+  assert.ok(/browser: form\.browser/.test(clientSrc), '保存设置必须把 browser 一起发上去，否则选了不生效');
+  assert.ok(/api\('\/ego'/.test(clientSrc), '「刷新 ego」按钮要走 GET /ego（否则读不到新 profile）');
+  assert.ok(/egoSpace/.test(clientSrc), '店铺行/详情要显示 ego 空间名，用户才知道开的是哪个窗口');
+  assert.ok(/egoliteCli/.test(clientSrc), '设置页要能填 ego-browser CLI 路径（自动探测不到时兜底）');
+  // 用户反馈：后端选项文案太长，不简洁 → 选项只留短词，解释挪到 title 和下面的提示行
+  for (const [val, label] of [['auto', '自动'], ['chrome', 'Chrome']]) {
+    assert.ok(clientSrc.includes(`h('option', { value: '${val}' }, '${label}')`), '后端选项应使用短文案：' + label);
+  }
+  assert.ok(clientSrc.includes("h('option', { value: 'egolite', disabled: !egoAvail }"), 'ego 没装时该选项要禁用，别让用户选了再报错');
+  assert.ok(clientSrc.includes("egoAvail ? 'ego lite' : 'ego lite（未安装）'"), '没装 ego 时选项要标「未安装」');
+  assert.ok(/title: '自动 = 有 ego 就用 ego/.test(clientSrc), '解释放在下拉框悬停提示里，不要塞进选项文案');
+  // 用户反馈：Chrome 模式下也不该到处是 ego 字样 → ego 专属 UI 必须挂在 egoOn 上
+  assert.match(clientSrc, /var egoOn = backend === 'egolite'/, '要有「当前是否真的在用 ego」这个开关');
+  assert.ok(/egoOn && h\(Field, \{ label: 'ego-browser' \}/.test(clientSrc), 'ego-browser 路径只在 ego 模式下显示');
+  assert.ok(/egoOn && h\('div', \{ style: subStyle \}, 'ego profile：'/.test(clientSrc), 'ego profile 列表只在 ego 模式下显示');
+  assert.ok(/egoOn && h\('button'/.test(clientSrc), '「刷新 ego」按钮只在 ego 模式下显示');
+  assert.ok(/chipText/.test(clientSrc) && /: 'Chrome'/.test(clientSrc), '胶囊在 Chrome 模式下只能显示 Chrome，不能显示 ego lite');
+  // v0.7.4：路径/端口这类少数人才改的字段收进折叠块，设置页默认只留「后端 + 生效状态」
+  assert.match(clientSrc, /h\('details', \{ className: 'sa-adv'/, '要有一个折叠的高级选项块');
+  assert.match(clientSrc, /h\('summary', \{ className: 'sa-advsum' \}, '路径与高级选项'\)/, '折叠块要有可点的标题');
+  // 间距不能只靠 class：内联 style 兜底（样式表没跟上时也不会挤成一坨）
+  assert.match(clientSrc, /className: 'sa-adv', style: advStyle/, '折叠块的内边距/间距要用内联样式兜底');
+  const advGap = /var advStyle = \{[\s\S]{0,300}?gap: '(\d+)px'/.exec(clientSrc);
+  assert.ok(advGap && Number(advGap[1]) >= 14, '折叠块里至少要有 14px 的行间距（现在 ' + (advGap && advGap[1]) + 'px）');
+  const groupGap = /var groupStyle = \{ display: 'flex', flexDirection: 'column', gap: '(\d+)px' \}/.exec(clientSrc);
+  assert.ok(groupGap && Number(groupGap[1]) >= 12, '分组内字段行距至少 12px（现在 ' + (groupGap && groupGap[1]) + 'px）');
+  assert.match(clientSrc, /groupDividerStyle/, '分组之间要有发丝分隔线，别糊成一片');
+  assert.match(clientSrc, /sa-group/, '路径/端口/信息要分组，别平铺成一片');
+  assert.match(clientSrc, /sa-grouplabel|groupLabelStyle/, '每个分组要有小标题');
+  const advAt = clientSrc.indexOf("className: 'sa-adv'");
+  for (const field of ['档案根目录', '起始端口', 'Chrome / Edge', 'ego-browser']) {
+    assert.ok(clientSrc.indexOf(field) > advAt, field + ' 应该收在折叠块里，不要摊在设置页外面');
+  }
+  assert.ok(clientSrc.indexOf('浏览器后端') < advAt, '「浏览器后端」要留在折叠块外面（最常用的那项）');
+});
+
+// ── 3.10 v0.8.3 安全加固（2026-10-31 审查） ─────────────────────────────────
+
+section('3.10 v0.8.3 安全加固');
+
+const chromeMod = await import(url('lib/chrome.mjs'));
+const cdpMod = await import(url('lib/cdp.mjs'));
+const egoMod = await import(url('lib/ego.mjs'));
+
+await test('不再把调试端口交给任意 Origin（源码里不许再出现 remote-allow-origins 参数）', () => {
+  // 注释里提到这个开关（解释为什么不用它）没关系；这里查的是"作为参数传出去"
+  const asArg = /['"]--remote-allow-origins/;
+  assert.ok(!asArg.test(chromeSrc), 'chrome.mjs 还在把 remote-allow-origins 传给 Chrome');
+  assert.ok(!asArg.test(egoSrc), 'ego.mjs 还在把 remote-allow-origins 传给 ego');
+});
+
+await test('导航地址只收 http(s)：命令开关/其它协议一律拒绝', () => {
+  assert.equal(chromeMod.safeNavUrl('https://mms.pinduoduo.com/home/'), 'https://mms.pinduoduo.com/home/');
+  assert.throws(() => chromeMod.safeNavUrl('--proxy-server=http://evil:8080'), /命令行开关/);
+  assert.throws(() => chromeMod.safeNavUrl('file:///C:/Windows/System32'), /http\/https/);
+  assert.throws(() => chromeMod.safeNavUrl('javascript:alert(1)'), /http\/https/);
+});
+
+await test('CDP 端口/WS 地址校验：不接受 host 注入与非本机地址', () => {
+  assert.equal(cdpMod.exactPort(9222), 9222);
+  assert.throws(() => cdpMod.exactPort('9222@evil.com'), /不是合法端口/);
+  assert.throws(() => cdpMod.exactPort(0), /不是合法端口/);
+  assert.equal(cdpMod.assertLocalWs('ws://127.0.0.1:9222/devtools/page/x', 9222), 'ws://127.0.0.1:9222/devtools/page/x');
+  assert.throws(() => cdpMod.assertLocalWs('ws://evil.com:9222/devtools/page/x', 9222), /不是本机地址/);
+  assert.throws(() => cdpMod.assertLocalWs('ws://127.0.0.1:9333/devtools/page/x', 9222), /端口/);
+});
+
+await test('档案目录边界：只有档案根目录内的目录才允许被递归删除/打开', () => {
+  const cfg = { profileRoot: path.join(TMP, 'profiles') };
+  assert.equal(S.isInsideProfileRoot(path.join(TMP, 'profiles', 'acc_x'), cfg), true);
+  assert.equal(S.isInsideProfileRoot(path.join(TMP, 'profiles'), cfg), false, '根目录本身不算');
+  assert.equal(S.isInsideProfileRoot(path.join(TMP, 'outside'), cfg), false);
+  assert.equal(S.isInsideProfileRoot(path.join(TMP, 'profiles', '..', 'outside'), cfg), false);
+  assert.equal(S.isInsideProfileRoot('', cfg), false);
+});
+
+await test('导入的档案目录必须是存在的绝对路径', () => {
+  assert.equal(S.normalizeImportedProfileDir(TMP), path.resolve(TMP));
+  assert.throws(() => S.normalizeImportedProfileDir('relative/dir'), /绝对路径/);
+  assert.throws(() => S.normalizeImportedProfileDir(path.join(TMP, 'no-such-dir-xyz')), /不存在/);
+  const file = path.join(TMP, 'not-a-dir.txt');
+  fs.writeFileSync(file, 'x');
+  assert.throws(() => S.normalizeImportedProfileDir(file), /不是文件夹/);
+});
+
+await test('ego profile 名称形状校验（不许路径分隔符 / .. / 换行）', () => {
+  assert.equal(egoMod.normalizeEgoProfileId('Profile 1'), 'Profile 1');
+  assert.throws(() => egoMod.normalizeEgoProfileId('..'), /不合法/);
+  assert.throws(() => egoMod.normalizeEgoProfileId('a/b'), /不合法/);
+  assert.throws(() => egoMod.normalizeEgoProfileId('a\nb'), /不合法/);
+});
+
+await test('HTTP 面：没有插件自定义头 / 跨站 / 非 JSON 写请求都被挡', async () => {
+  const noHeader = await call('GET', '/shop-accounts/state', undefined, { 'x-dsh-shop-accounts': '' });
+  assert.equal(noHeader.status, 403, '没有自定义头必须 403');
+  assert.equal(noHeader.json.ok, false);
+  const crossSite = await call('GET', '/shop-accounts/state', undefined, { 'sec-fetch-site': 'cross-site' });
+  assert.equal(crossSite.status, 403, '跨站请求必须 403');
+  const plain = await call('PUT', '/shop-accounts/config', { browser: 'chrome' }, { 'content-type': 'text/plain' });
+  assert.equal(plain.status, 415, '非 JSON Content-Type 必须 415（挡跨站简单请求）');
+});
+
+await test('reset / 删账号都不会递归删除档案根目录之外的目录', async () => {
+  const cfgPut = await call('PUT', '/shop-accounts/config', { browser: 'chrome' });
+  assert.equal(cfgPut.status, 200);
+  const created = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '安全测试店-1' });
+  assert.equal(created.status, 200, JSON.stringify(created.json));
+  const id = created.json.account.id;
+  const outside = fs.mkdtempSync(path.join(TMP, 'outside-'));
+  const keep = path.join(outside, 'keep.txt');
+  fs.writeFileSync(keep, 'keep');
+  const put = await call('PUT', '/shop-accounts/accounts/' + id, { profileDir: outside });
+  assert.equal(put.status, 200, JSON.stringify(put.json));
+  const reset = await call('POST', '/shop-accounts/accounts/' + id + '/reset', {});
+  assert.equal(reset.status, 500, '根目录外的档案目录要拒绝重置');
+  assert.equal(reset.json.ok, false);
+  assert.ok(fs.existsSync(keep), '根目录外的目录不能被删');
+  const del = await call('DELETE', '/shop-accounts/accounts/' + id, { deleteProfile: true });
+  assert.equal(del.status, 200);
+  assert.equal(del.json.deletedProfile, false, '删除账号也不能删根目录外的目录');
+  assert.ok(fs.existsSync(keep), '文件还在');
+});
+
+await test('新增账号：URL 只收 http(s)、profileDir 必须是存在的绝对路径', async () => {
+  const badUrl = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '安全测试店-2', url: '--proxy-server=http://evil:8080' });
+  assert.equal(badUrl.status, 400);
+  const badDir = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '安全测试店-3', profileDir: 'relative/dir' });
+  assert.equal(badDir.status, 400);
+  const ok = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '安全测试店-4', url: 'https://mms.pinduoduo.com/home/' });
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
+  assert.equal(ok.json.account.url, 'https://mms.pinduoduo.com/home/');
+  await call('DELETE', '/shop-accounts/accounts/' + ok.json.account.id, {});
+});
+
+await test('自更新按「已校验 commit」落地：版本不符中止、工作区脏文件不会被部署', async () => {
+  const repo = path.join(TMP, 'sync-repo');
+  fs.mkdirSync(path.join(repo, 'lib'), { recursive: true });
+  fs.writeFileSync(path.join(repo, 'lib', 'x.js'), 'export const x = 1;\n');
+  fs.writeFileSync(path.join(repo, 'package.json'), JSON.stringify({ name: 'sync-fixture', version: '0.1.0' }) + '\n');
+  const git = (...args) => spawnSync('git', args, { cwd: repo, encoding: 'utf8', windowsHide: true });
+  const init = git('init', '-q');
+  if (init.status !== 0) return; // 机器上没有 git 就跳过这项
+  git('add', '-A');
+  const commit = git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'init');
+  if (commit.status !== 0) return;
+
+  const t1 = path.join(TMP, 'sync-target-1');
+  const bad = host.syncFromSource(repo, t1, { ref: 'HEAD', expectVersion: '9.9.9' });
+  assert.ok(bad.error, '版本不一致必须中止：' + JSON.stringify(bad));
+  assert.ok(!fs.existsSync(path.join(t1, 'lib')), '中止时不能落任何文件');
+
+  const t2 = path.join(TMP, 'sync-target-2');
+  const good = host.syncFromSource(repo, t2, { ref: 'HEAD', expectVersion: '0.1.0' });
+  assert.ok(good.copied >= 2, '应该拷到 lib + package.json');
+  assert.match(fs.readFileSync(path.join(t2, 'lib', 'x.js'), 'utf8'), /x = 1/);
+
+  // 工作区被改脏：仍然只部署 commit 里的内容
+  fs.writeFileSync(path.join(repo, 'lib', 'x.js'), 'export const x = 2;\n');
+  const t3 = path.join(TMP, 'sync-target-3');
+  const dirty = host.syncFromSource(repo, t3, { ref: 'HEAD', expectVersion: '0.1.0' });
+  assert.ok(dirty.copied >= 2, JSON.stringify(dirty));
+  assert.match(fs.readFileSync(path.join(t3, 'lib', 'x.js'), 'utf8'), /x = 1/, '不能用工作区的脏文件覆盖');
+
+  const badRef = host.syncFromSource(repo, path.join(TMP, 'sync-target-4'), { ref: 'deadbeefdeadbeef' });
+  assert.ok(badRef.error, '不存在的 commit 必须失败而不是退化成拷工作区');
+
+  const notRepo = await host.checkUpdate({ updateDir: TMP });
+  assert.equal(notRepo.ok, false);
+  assert.match(notRepo.error, /不是 git 仓库/);
+});
+
+await test('git 报错里的凭据会被打码', () => {
+  const masked = host.maskSecrets('fatal: https://user:ghp_abcdefghijklmnopqrstuvwx@github.com/x.git failed');
+  assert.ok(!masked.includes('ghp_abcdefghijklmnopqrstuvwx'), 'token 必须被打码：' + masked);
+  assert.ok(masked.includes('github.com/x.git'), '主机与路径应保留');
+});
+
+await test('登录判据：pdd 单 cookie 不再算登录；URL 兜底按 host 后缀匹配', () => {
+  const pdd = P.platformOf('pdd');
+  const dom = '.pinduoduo.com';
+  const one = [{ name: 'mms_b84d1838', domain: dom, value: 'real-cookie-value' }];
+  assert.equal(P.judgeLogin(one, pdd.homeUrl, pdd).loggedIn, false, '只 1 个 cookie 不能算登录');
+  const two = one.concat([{ name: 'PASS_ID', domain: dom, value: 'real-cookie-value' }]);
+  assert.equal(P.judgeLogin(two, pdd.homeUrl, pdd).loggedIn, true, 'PASS_ID + mms 应该算登录');
+  // URL 兜底（cookieReadOk=false）不能被子串骗
+  assert.equal(P.judgeLogin([], 'https://pinduoduo.com.evil.com/', pdd, { cookieReadOk: false }).loggedIn, false);
+  assert.equal(P.judgeLogin([], 'https://mms.pinduoduo.com/home/', pdd, { cookieReadOk: false }).loggedIn, true);
+});
+
+await test('客户端请求都带插件自定义头（服务端才认）', () => {
+  assert.ok(clientSrc.includes("'X-DSH-Shop-Accounts': '1'"), 'client 必须带 X-DSH-Shop-Accounts 头');
+  assert.ok(indexSrc.includes("const REQ_HEADER = 'x-dsh-shop-accounts'"), 'index 必须校验这个头');
 });
 
 // ── 汇总 ────────────────────────────────────────────────────────────────────

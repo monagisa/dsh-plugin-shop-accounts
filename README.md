@@ -1,12 +1,15 @@
 # dsh-plugin-shop-accounts · 账号管理
 
-> 把电商卖家后台的登录态集中管起来：**一个店铺 = 一份独立的 Chrome 档案 + 一个固定的调试端口**。
-> 登录一次就长期复用，上架脚本直接连那个端口，不用重新登录。
+> 把电商卖家后台的登录态集中管起来：**一个店铺 = 一份独立的登录档案（ego lite 的 profile，或 Chrome 的 user-data-dir）**。
+> 登录一次就长期复用，上架脚本直接复用那份档案，不用重新登录。
+>
+> **浏览器优先 ego lite**：装了 ego 就用它（每店一个 profile + 一个 TaskSpace，自带多配置、不用自己造实例）；
+> 没装则回退 Chrome（每店一份档案 + 一个固定调试端口）。设置页可强制选后端。
 
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台）。
 
-- 版本：**0.6.5**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
-- 自检：`node test/smoke.mjs` → 47 项全过（不启动浏览器、不碰真实账号）
+- 版本：**0.8.2**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 自检：`node test/smoke.mjs` → 63 项全过（不启动浏览器、不碰真实账号）
 
 ---
 
@@ -31,9 +34,10 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 
 | 能力 | 说明 |
 | --- | --- |
-| 一店一档案 | 每个店铺独立 `user-data-dir` + 独立 CDP 端口（默认从 9222 起自动找空位），互不串 cookie |
-| 真实窗口登录 | 拉起的是**有头** Chrome，你正常扫码/密码/滑块；插件后台轮询，判成已登录后点「完成」自动关窗，登录态留在磁盘 |
-| 静默检测 | 不开窗口时用**无头** Chrome 探一次，判登录态并写回；约 2.6–3.1 秒/店 |
+| 一店一档案 | 每个店铺独立档案，互不串 cookie。ego 模式 = 一店一个 **profile** + 一个 **TaskSpace**；Chrome 模式 = 一店一个 `user-data-dir` + 一个 CDP 端口 |
+| 浏览器后端可选 | **auto**（默认：装了 ego 就用 ego）/ **egolite**（只用 ego）/ **chrome**（只用 Chrome）；ego 优先是因为它本来就为「人 + Agent 共用」设计，登录态和窗口都在它里面 |
+| 真实窗口登录 | 拉起的是**有头**浏览器，你正常扫码/密码/滑块；插件后台轮询，判成已登录后点「完成」，登录态留在档案里 |
+| 静默检测 | 不惊动你地探一次登录态并写回。Chrome 用无头实例（约 2.6–3.1 秒/店）；ego 在店铺自己的 TaskSpace 里读 cookie（会短暂开一下那个空间） |
 | 定时检测 | 每天定点把全部店铺排成一队依次体检，状态自己刷新，不用人一个个点 |
 | 保活 | 判已登录后让页面多停留几秒再复查，把「活跃」做足（站点访问本身就会续期凭证） |
 | 版本与更新 | 面板里检测 GitHub 新提交，一键快进合并 + 覆盖安装副本 |
@@ -43,7 +47,7 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 
 ## 安装
 
-**前置**：DSH Desktop；本机有 Chrome（没有则用 Edge 兜底）。
+**前置**：DSH Desktop；本机有 **ego lite**（推荐，装了自动优先用），或 Chrome（没有则用 Edge 兜底）。
 
 ### A. 从源码目录装（开发时推荐）
 
@@ -67,12 +71,18 @@ dsh plugin --profile <profile名> add file:D:\path\to\dsh-plugin-shop-accounts
 
 ## 五分钟上手
 
-1. **设置 → 账号管理 → + 新增店铺**：选平台、填店铺名（备注可选，端口留空 = 自动分配）。
-2. 点 **创建并去登录** → 弹出一个**真实 Chrome 窗口**。
+1. **设置 → 账号管理 → + 新增店铺**：选平台、填店铺名（备注可选；Chrome 模式下端口留空 = 自动分配）。
+2. 点 **创建并去登录** → 弹出真实浏览器窗口（ego 模式下是这个店铺自己的 **TaskSpace**）。
 3. 在里面登录到**卖家端**后台（各平台入口见[平台表](#支持的平台)）。
-4. 回到 DSH，行内状态会自己变成「已登录」→ 点该行的 **完成并关闭**（窗口自动关掉，登录态留在档案里）。
-5. 之后这个店铺就一直显示登录态：行内「调试端口」+「复制路径」就是给上架脚本用的两样东西。
+4. 回到 DSH，行内状态会自己变成「已登录」→ 点该行的 **完成并保存**（**ego 模式只存状态，那个 TaskSpace 留着不关** ——
+   空间是独立窗口，不挡你正常用浏览器；Chrome 模式才会关掉窗口。登录态都已落在档案里，想收掉空间再点「关闭」）。
+5. 之后这个店铺就一直显示登录态：行内给上架脚本用的两样东西 ——
+   **ego 模式**是「profile + 空间名」，**Chrome 模式**是「调试端口 + 复制路径」。
 6. （可选）点 **调整排期**，勾上「开启定时检测」，让插件每天自动体检一次。
+
+> ego 模式用哪几个 profile？插件会**自动给每个店铺分一个没被占用的 profile**（优先非默认那个）；
+> profile 用完了会明确报错，让你先在 ego 里新建一个「用户配置」—— ego 的 SDK 只能列出/使用已有 profile，不能新建。
+> 想让两家店共用一个 profile 也可以（拼多多和抖音互不打架），但** cookie 域重叠的平台（淘宝/天猫/1688）必须分开**。
 
 ## 界面说明
 
@@ -92,7 +102,7 @@ dsh plugin --profile <profile名> add file:D:\path\to\dsh-plugin-shop-accounts
 - **登录状态**：`已登录` / `登录已失效`（以前登过、现在掉线 → 需重新登录）/ `未登录`（从没登过）/
   `未检测` / `运行中·待检测` / `等待登录`。下面一行是「检测于 …」。
 - **定时检测**：行内胶囊 `开启·HH:MM` / `暂停·HH:MM`，点一下切换这家店跑不跑；下面的「详细配置」打开排期弹窗。
-- **操作**：`检测`（无头静默复核）、`管理`（进详情页）、以及按状态出现的 `去登录` / `完成并关闭`。
+- **操作**：`检测`（静默复核）、`管理`（进详情页）、以及按状态出现的 `去登录` / `完成并保存`。
 
 行内对话框里的其它动作：**打开**（把窗口重新拉到工作台）、**重扫**（清掉本地档案再打开登录页——
 站点在档案里留着半死会话、登录页直接跳回后台时用）、**关闭**、**复制路径**、**编辑**、**删除**（可选连档案目录一起删）。
@@ -108,12 +118,22 @@ dsh plugin --profile <profile名> add file:D:\path\to\dsh-plugin-shop-accounts
 
 ### 浏览器设置
 
-浏览器的可执行文件路径（留空 = 自动找 Chrome，没有就用 Edge）、数据目录，以及 **版本与更新** 卡片。
+- **浏览器后端**：`自动`（默认，装了 ego lite 就用 ego）/ `只用 ego lite` / `只用 Chrome`。
+  切完点「保存设置」立刻生效；下面那行会告诉你**当前实际用的是哪个**、探测到的 CLI 路径、以及 ego 里的 profile 列表。
+- **ego-browser CLI**：留空 = 自动探测（`~/.local/share/ego/active_version_dir/ego-browser.exe`）；探测不到时手填。
+- **Chrome 可执行文件**：留空 = 自动找 Chrome，没有就用 Edge。
+- **启动 ego**（仅当 ego 没在运行时出现）：只把 ego 的主程序拉起来，**不碰任何 TaskSpace**。
+- **刷新 ego**：重新读一遍 ego 的 profile / TaskSpace 列表（ego 没开着时读不到，会直接告诉你「没在运行」）。
+- 以及 **版本与更新** 卡片。
+
+> **插件不会为了「读一下状态」把 ego 整个拉起来。** 以前只要调一次 ego CLI，即便 ego 是关着的，
+> 也会把它连同上次几十个标签一起恢复（实测 5.7 秒、3 GB）—— 现在所有 CLI 调用前都先问「ego 主程序在不在跑」：
+> 没在跑就如实报 `running:false`，只有**你点「打开店铺」或「启动 ego」**才会拉起它。
 
 ## 定时检测（排期）
 
-列表上方那条横幅就是排期：到点对店铺做一次**静默检测**（无头 Chrome、不弹窗），结果写回，
-列表里的「登录状态」自己就跟着刷新。点 **调整排期** 设置：
+列表上方那条横幅就是排期：到点对店铺做一次**静默检测**（Chrome 后端拉无头实例、不弹窗；ego 后端在店铺自己的空间里只读 cookie），
+结果写回，列表里的「登录状态」自己就跟着刷新。点 **调整排期** 设置：
 
 | 字段 | 说明 |
 | --- | --- |
@@ -130,8 +150,13 @@ dsh plugin --profile <profile名> add file:D:\path\to\dsh-plugin-shop-accounts
 - **单店开关只管「跑不跑」，不影响它占的时间点** —— 暂停一家不会让后面的店铺提前。
 - **错过不补跑**：只有到点后 2 分钟内执行；机器睡了一觉、隔天才开就跳过，不在半夜补一堆检测。
 - **同一天同一个时间点只跑一次**（记账在 `config.schedule.lastSlots`，重启 DSH 也不会重复）。
-- **跳过两类店**：正在等你登录的（`pendingLogin`）、浏览器正开着端口上有 CDP 的 —— 不打断你手里的活。
-- 宿主每 20 秒看一次排期；界面在排期开着时每 20 秒刷新一次。一轮只起一只无头 Chrome，串行跑。
+- **跳过两类店**：正在等你登录的（`pendingLogin`）、Chrome 后端里浏览器正开着的 —— 不打断你手里的活。
+  ego 后端**不再因为「空间开着」跳过**（v0.8.0 起）：检测是在同一个 profile 下**另开一个临时空间**读 cookie，
+  读完就收掉，全程不接管你那个窗口，所以「点过完成的店永远不再检测」这个老问题没有了。
+  临时空间读不到（ego 没在跑）就跳过并记原因，**不会为了检测去启动 ego**。
+- 宿主每 20 秒看一次排期；界面在排期开着时每 20 秒刷新一次。Chrome 模式一轮只起一只无头实例、串行跑；
+  ego 模式在临时空间里读 cookie（约 2–3 秒，不开用户窗口）。同一家店的手动操作和定时检测**共用一把锁**，
+  撞上时定时检测让路（记「正在手动操作」），不会出现两个 ego CLI 同时对同一空间 takeOver/finish。
 - 检测失败记在 `lastSchedError`，行内显示「上次失败」，悬停看原因。
 
 ### 保活（尽量续期）
@@ -210,7 +235,7 @@ Chrome 默认**关窗就丢**。这就是「登录完点保存 → 关窗 → �
 
 | 平台 | 登录页（新增店铺时打开） | 「打开」落到的工作台 | 登录态认哪个 cookie |
 | --- | --- | --- | --- |
-| 拼多多 | `mms.pinduoduo.com/login` | 商家后台 / 商品列表 | `PASS_ID` / `SUB_PASS_ID` |
+| 拼多多 | `mms.pinduoduo.com/login` | 商家后台 / 商品列表 | 至少命中 2 个：`PASS_ID` / `SUB_PASS_ID` / `mms_b84d1838`，且必须有 `PASS_ID` 或 `SUB_PASS_ID`（v0.8.3 起） |
 | 淘宝 | `loginmyseller.taobao.com`（千牛） | `qn.taobao.com/home.htm` | `unb` / `sgcookie`（必须命中其一） |
 | 天猫 | `loginmyseller.taobao.com`（千牛） | `myseller.taobao.com/home.htm` | 同淘宝（一套账号体系） |
 | 抖音 | 抖店 `fxg.jinritemai.com/login/common` | `fxg.jinritemai.com/ffa/mshop/homepage/index` | `passport_assist_user` / `sessionid` / `sessionid_ss` / `passport_uid` |
@@ -222,13 +247,28 @@ Chrome 默认**关窗就丢**。这就是「登录完点保存 → 关窗 → �
 
 ## 和上架流程怎么接
 
-上架脚本（例如拼多多发品流程）复用某个账号时，要对上两样：
+上架脚本（例如拼多多发品流程）复用某个账号时，要看后端：
+
+**ego 模式（推荐）—— 传 profile，空间名可选**
+
+- 该店的 **profileId**：行内/详情页显示的那个 `Profile N`，接口里是 `egoProfile` 字段；
+  也可以让 Agent 直接查：`shop_accounts` 工具的 list 输出里就带 `egoProfile` / `egoSpace`。
+- 上架脚本用同一个 profile 打开它自己的 TaskSpace，**登录态就是通的**（cookie 存在 profile 级，
+  空间只是窗口）。拼多多插件的写法：
+  ```powershell
+  scripts\ego_launch.ps1 -Shop 店铺A -Profile "Profile 3" -Space "店铺-店铺A"
+  ```
+- 空间名传一致的话，你会在 ego 里看到**同一个窗口**；不传也行（脚本会自己开 `pdd-店铺A`），
+  只要 profile 对，登录态照样在。
+
+**Chrome 模式 —— 端口 + 档案路径**
 
 - **调试端口**：行内「调试端口」列显示的那个（脚本侧就是 `PDD_PORT` 之类）；
 - **浏览器档案**：行内「复制路径」复制到的目录（脚本侧 `-Profile <档案目录>` 或 `chrome_profile`）。
 
-行内显示 **CDP 可用** 说明这家店浏览器正开着 —— 上架脚本直接连这个端口，**不要再另起一个 Chrome**
-（同一份档案被两个实例抢会报错，也不符合「复用已登录 profile」的要求）。
+行内显示 **CDP 可用** 说明这家店浏览器正开着 —— Chrome 模式下上架脚本直接连这个端口，**不要再另起一个 Chrome**
+（同一份档案被两个实例抢会报错，也不符合「复用已登录 profile」的要求）。ego 模式没有 CDP 端口（ego 不对外开），
+上架脚本走 ego 自己的 SDK。
 
 ## 版本与更新
 
@@ -252,9 +292,10 @@ Chrome 默认**关窗就丢**。这就是「登录完点保存 → 关窗 → �
 | 东西 | 位置 |
 | --- | --- |
 | 店铺清单 / 配置 | `%DSH_HOME%\shop-accounts\accounts.json`、`config.json` |
-| 登录态（cookie 等） | 每店一份 Chrome `user-data-dir`：`%DSH_HOME%\shop-accounts\profiles\<账号id>\` |
 | 运行期登记（哪个端口起的浏览器） | `%DSH_HOME%\shop-accounts\runtime.json` |
-| 调试端口 | 从 `portBase`（默认 9222）起自动找空位，一店一端口 |
+| 登录态（Chrome 模式） | 每店一份 `user-data-dir`：`%DSH_HOME%\shop-accounts\profiles\<账号id>\` |
+| 登录态（ego 模式） | 在 **ego 自己的** `User Data` 里，按 `accounts.json` 里记的 `egoProfile` 对应；本插件不复制、不挪动 |
+| 调试端口 | Chrome 模式：从 `portBase`（默认 9222）起自动找空位，一店一端口；ego 模式没有端口 |
 
 整个数据目录可以用环境变量 `DSH_SHOP_ACCOUNTS_DIR` 搬走。
 
@@ -264,6 +305,7 @@ Chrome 默认**关窗就丢**。这就是「登录完点保存 → 关窗 → �
 lib/platforms.mjs   六个平台的登录页/主页/工作页、身份 cookie、域判据、判登录态
 lib/cdp.mjs         极简 CDP 客户端（裸 WebSocket，无第三方依赖）
 lib/chrome.mjs      找浏览器、选端口、拉起/关闭/探测
+lib/ego.mjs          ego lite 后端（探测 CLI、在 ego 运行时里跑脚本、TaskSpace/profile、读 cookie）
 lib/store.mjs       accounts.json / config.json / runtime.json 的原子读写与降级
 lib/schedule.mjs    排期算法（纯函数：分组、时间点、到点、下次、记账）
 lib/index.js        宿主：/shop-accounts/* 路由、自更新、定时心跳
@@ -276,7 +318,7 @@ test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时�
 ## 自检
 
 ```powershell
-node test/smoke.mjs            # 47 项：平台判据 / 持久化 / 宿主 HTTP 面 / 排期算法 / 客户端样式与渲染契约
+node test/smoke.mjs            # 86 项：平台判据 / 持久化 / 宿主 HTTP 面 / 排期 / ego 后端 / 客户端契约
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
@@ -288,11 +330,49 @@ node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个�
 ## 已知边界
 
 - **不代登录、不破验证码**：扫码/短信/滑块都由你在真实窗口里完成。
-- 一份 profile 同一时间只能被一个 Chrome 实例占用（插件先探测端口，不会硬起第二个）。
+- **ego 的 SDK 不能新建 profile**：只能列出/使用已有的。profile 用完了要你先在 ego 里建一个「用户配置」。
+- Chrome 模式：一份 profile 同一时间只能被一个 Chrome 实例占用（插件先探测端口，不会硬起第二个）。
+- ego 模式：ego **不对外开 CDP 端口**，所以上架脚本不能 `connectOverCDP`，只能走 ego 自己的 SDK（`ego-browser nodejs`）。
 - 不做多账号并发抢端口：端口按店铺固定分配，冲突时报错而不是静默换端口。
 - 只支持上面六家平台（都是商家端）；上架/发品页等有真实账号登录后再钉准，**不猜地址**。
+- **ego 的控制权是「借用」的**：插件每次操作完都会把窗口控制权交还给你（`task.handOff()`，失败会重试 3 次），
+  所以 ego 里不会一直显示「agent 调试中」；而**检测根本不需要借** —— 它在同一个 profile 下另开一个临时空间读 cookie，
+  读完就收，全程不碰你那个窗口（v0.8.0 起；旧版本是 takeOver 你的窗口再还，会打断你打字）。
+- **ego 关着也能检测（v0.8.2 起）**：检测时插件会**在后台起一个无窗口的 ego 实例**（`--headless=new`，
+  同一份 User Data、该店铺的 profile），通过 CDP 读 cookie 后立刻关掉 —— 不弹窗、不恢复上次的窗口，
+  实测约 1.6~2.1 秒、读完 0 残留进程。所以"检测/定时检测"不需要你先把 ego 打开。
+  但**「打开店铺」仍然会拉起 ego 主程序**（那本来就是要开窗口），拉起时 ego 会恢复它上次的窗口 —— 这是 ego 自己的行为。
+- **ego 模式检测不弹检测窗口**：ego 关着时走上面的无窗口实例（完全不可见）；ego 开着时在同一个 profile 下另开一个临时空间读 cookie，
+  会短暂多出一个空间标签（约 2–3 秒后自动收掉）。
+  ⚠️ 唯一的小概率冲突：如果**恰好在检测的那 1~2 秒里你手动点开了 ego**，Chrome 的单实例机制可能把你的启动合并进那个隐藏实例、导致窗口没出来；
+  再点一次即可。这是"共用同一份档案"的代价（ego 的 cookie 是 App-Bound 加密，复制档案解不出来，实测 0 个 cookie）。
+- **ego 的 profile 不能新建**：SDK 只能列出/使用已有 profile；用完了会明确报错。
+- **ego 重启后会话级 cookie 是否还在，没验证过**：Chrome 有 cookie 罐本地备份可以救「点红叉关窗」，
+  ego 没有同类备份（它把登录态存在 profile 里，正常退出应当落盘）。这条留作已知边界。
+- **ego 的 profile 不能新建**：SDK 只能列出/使用已有 profile；用完了会明确报错。
+- **重名店铺在 ego 模式下会被挡**：店铺名就是 TaskSpace 名（`店铺-<名字>`），重名会让两家店共用一个空间、登录态串台。
 - 定时检测排期跑在 DSH 宿主进程里：DSH 可以最小化，但**退出 DSH 就不跑了**。
-- 无头检测的 UA 是 `HeadlessChrome`，理论上会被站点识别（目前六家实测正常）；真要绕再单独改。
+- 无头检测（Chrome 模式）的 UA 是 `HeadlessChrome`，理论上会被站点识别（目前六家实测正常）；真要绕再单独改。
+
+## 安全边界（v0.8.3 起）
+
+这几条是故意做死的，改代码时别拆：
+
+- **HTTP 面只给本插件界面用**：所有 `/shop-accounts/*` 路由要求自定义头 `x-dsh-shop-accounts: 1`
+  （跨站要带它必先过 CORS 预检，而本服务从不回 ACAO），拒绝跨站 `Sec-Fetch-Site`，写请求必须是
+  `application/json`。所以「任意网页/局域网页面触发 reset、改配置、跑更新」这条路是关的。
+  （宿主 Desktop 另外还有 renderer token 门禁，插件不依赖它。）
+- **调试端口不对网页开放**：启动 Chrome/ego 时**不带** `--remote-allow-origins=*`。Chrome 只对带了
+  `Origin` 头的 CDP 连接做 allowlist 校验，而 Node 的 WebSocket 不发 Origin —— 不开这个开关照样能读 cookie，
+  开了就等于让任意网页在 DNS rebinding 之后读走全部登录态。实测 Chrome 156 可用。
+- **递归删除只在档案根目录内**：`reset`（清档案重登）/ 删账号 / 「在资源管理器里打开」都先过
+  `isInsideProfileRoot()`。`profileDir` 是可由「导入已有档案」指定的，不设这道关就等于给了"删任意目录"的原语。
+- **自更新只部署校验过的 commit**：先无条件 `git status --porcelain`（脏工作区一律拒绝），再用
+  `git archive <上游 commit>` 的内容落地（不是拷工作区），并校验 commit 里的版本号 = 远端版本号；
+  `git` 调用一律禁用 `ext::` 传输、覆盖 `core.fsmonitor` / `core.sshCommand`（防 `.git/config` 挂命令）。
+- **cookie 只存本平台域**：`dsh-session-cookies.json` 只保留该店铺平台的 cookie（按域后缀匹配），不抄整罐。
+- **端口归属只认「自己的」**：读/写 cookie 前先确认端口属于这个店铺的档案（运行期登记表 / 进程命令行），
+  查不到就不读不写；刚起的实例用进程命令行核对。CDP WebSocket 必须是 127.0.0.1 且端口一致。
 
 ## 许可
 
