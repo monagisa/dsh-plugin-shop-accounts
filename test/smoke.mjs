@@ -1580,6 +1580,10 @@ await test('档案目录边界：只有档案根目录内的目录才允许被�
   assert.equal(S.isInsideProfileRoot(path.join(TMP, 'outside'), cfg), false);
   assert.equal(S.isInsideProfileRoot(path.join(TMP, 'profiles', '..', 'outside'), cfg), false);
   assert.equal(S.isInsideProfileRoot('', cfg), false);
+  // 用户改过 profileRoot 之后，默认根（<数据目录>/profiles）下的老档案也要认，
+  // 否则自己的档案反而不能重置/删除
+  const moved = { profileRoot: path.join(TMP, 'moved-root') };
+  assert.equal(S.isInsideProfileRoot(path.join(TMP, 'data', 'profiles', 'acc_old'), moved), true);
 });
 
 await test('导入的档案目录必须是存在的绝对路径', () => {
