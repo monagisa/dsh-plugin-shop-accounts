@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -290,6 +291,7 @@ function fakeReq(method, reqUrl, body, headers) {
     'x-dsh-shop-accounts': '1',
     'content-type': 'application/json',
     'sec-fetch-site': 'same-origin',
+    host: '127.0.0.1:43120',
   }, headers || {});
   if (body !== undefined) {
     const raw = typeof body === 'string' ? body : JSON.stringify(body);
@@ -355,19 +357,19 @@ await test('GET /state 带插件版本号；config 里带更新源目录（界�
   assert.equal(typeof s.json.config.updateDir, 'string', 'config 里要有 updateDir 字段');
 });
 
-await test('检测更新：源码目录不是 git 仓库时如实报错，不联网瞎猜', async () => {
+await test('检测更新：更新源不是 git 仓库时如实报错（写入时就拦），不联网瞎猜', async () => {
   const notRepo = path.join(TMP, 'not-a-repo');
   fs.mkdirSync(notRepo, { recursive: true });
   const put = await call('PUT', '/shop-accounts/config', { updateDir: notRepo });
-  assert.equal(put.status, 200);
-  const r = await call('GET', '/shop-accounts/update');
-  assert.equal(r.status, 200);
-  assert.equal(r.json.ok, false, '不是 git 仓库就不能假装能更新');
-  assert.match(r.json.error, /不是 git 仓库/);
-  assert.match(String(r.json.localVersion || ''), /^\d+\.\d+\.\d+$/, '报错也要把本地版本号带上');
-  const post = await call('POST', '/shop-accounts/update', {});
-  assert.equal(post.status, 500);
-  assert.match(post.json.error, /不是 git 仓库/);
+  assert.equal(put.status, 400, '不是 git 仓库的目录不该被存进配置');
+  assert.match(put.json.error, /不是 git 仓库/);
+  // 跳过路由，直接调 checkUpdate：不依赖"自动探测到哪个源码目录"（那取决于本机环境，会 flaky）
+  const r = await host.checkUpdate({ updateDir: notRepo });
+  assert.equal(r.ok, false, '不是 git 仓库就不能假装能更新');
+  assert.match(String(r.error || ''), /不是 git 仓库/);
+  assert.match(String(r.localVersion || ''), /^\d+\.\d+\.\d+$/, '报错也要把本地版本号带上');
+  const applied = await host.applyUpdate({ updateDir: notRepo });
+  assert.equal(applied.ok, false);
   await call('PUT', '/shop-accounts/config', { updateDir: '' });
 });
 
@@ -443,11 +445,11 @@ await test('DELETE /accounts/:id 只删记录（不带 deleteProfile）', async 
   assert.equal(after.json.accounts.length, 0);
 });
 
-await test('未知路由 404；坏 JSON 500（外层兜底不炸进程）', async () => {
+await test('未知路由 404；坏 JSON 400（外层兜底不炸进程）', async () => {
   const nf = await call('GET', '/shop-accounts/nope');
   assert.equal(nf.status, 404);
   const bad = await call('POST', '/shop-accounts/accounts', '{ 半截 JSON');
-  assert.equal(bad.status, 500);
+  assert.equal(bad.status, 400);
   assert.match(bad.json.error, /JSON/);
 });
 
@@ -1702,6 +1704,227 @@ await test('登录判据：pdd 单 cookie 不再算登录；URL 兜底按 host �
 await test('客户端请求都带插件自定义头（服务端才认）', () => {
   assert.ok(clientSrc.includes("'X-DSH-Shop-Accounts': '1'"), 'client 必须带 X-DSH-Shop-Accounts 头');
   assert.ok(indexSrc.includes("const REQ_HEADER = 'x-dsh-shop-accounts'"), 'index 必须校验这个头');
+});
+
+// ── 3.11 v0.8.4 二次审查加固 ─────────────────────────────────────────────────
+
+section('3.11 v0.8.4 二次审查加固');
+const secretMod = await import(url('lib/secret.mjs'));
+
+await test('反 DNS rebinding：Host 是域名一律拒绝，IP/localhost 放行', async () => {
+  const evil = await call('GET', '/shop-accounts/state', undefined, { host: 'evil.example.com' });
+  assert.equal(evil.status, 403, '域名 Host 必须 403');
+  assert.match(evil.json.error, /DNS rebinding/);
+  const loop = await call('GET', '/shop-accounts/state', undefined, { host: '127.0.0.1:43120' });
+  assert.equal(loop.status, 200);
+  const lan = await call('GET', '/shop-accounts/state', undefined, { host: '192.168.1.5:43120' });
+  assert.equal(lan.status, 200, '局域网用 IP Host 访问要放行');
+  const v6 = await call('GET', '/shop-accounts/state', undefined, { host: '[::1]:43120' });
+  assert.equal(v6.status, 200);
+});
+
+await test('配置路径写入要校验：系统目录/盘根/非浏览器 exe 一律 400', async () => {
+  const win = await call('PUT', '/shop-accounts/config', { profileRoot: path.parse(TMP).root });
+  assert.equal(win.status, 400, '盘根不能当档案根目录');
+  const sys = await call('PUT', '/shop-accounts/config', { profileRoot: process.env.SystemRoot || 'C:\\Windows' });
+  assert.equal(sys.status, 400, '系统目录不能当档案根目录');
+  const exe = await call('PUT', '/shop-accounts/config', { browserPath: 'C:\\Windows\\System32\\cmd.exe' });
+  assert.equal(exe.status, 400, '非 Chromium 程序不能当浏览器路径');
+  const skip = await call('PUT', '/shop-accounts/config', { browserPath: 'C:\\nope\\chrome.exe' });
+  assert.equal(skip.status, 400, '不存在的路径要拒绝');
+  const okRoot = path.join(TMP, 'cfg-root');
+  fs.mkdirSync(okRoot, { recursive: true });
+  const ok = await call('PUT', '/shop-accounts/config', { profileRoot: okRoot });
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
+  assert.equal(ok.json.config.profileRoot, okRoot);
+  const reset = await call('PUT', '/shop-accounts/config', { profileRoot: '' });
+  assert.equal(reset.status, 200);
+});
+
+await test('删除只认「根目录下 + 目录名 = 账号 id」：把 profileRoot 改成别处也删不到', async () => {
+  const root = path.join(TMP, 'poison-root');
+  fs.mkdirSync(root, { recursive: true });
+  await call('PUT', '/shop-accounts/config', { profileRoot: root });
+  const created = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '投毒测试店' });
+  assert.equal(created.status, 200, JSON.stringify(created.json));
+  const id = created.json.account.id;
+  // 把账号的档案目录指向"根目录下但名字不是 id"的目录（模拟"把根指向 C:\Users\mo 后删同级目录"）
+  const victim = path.join(root, 'victim-dir');
+  fs.mkdirSync(victim, { recursive: true });
+  fs.writeFileSync(path.join(victim, 'keep.txt'), 'keep');
+  const put = await call('PUT', '/shop-accounts/accounts/' + id, { profileDir: victim });
+  assert.equal(put.status, 200, JSON.stringify(put.json));
+  const del = await call('DELETE', '/shop-accounts/accounts/' + id, { deleteProfile: true });
+  assert.equal(del.status, 200);
+  assert.equal(del.json.deletedProfile, false, '名字不是 id 的目录不能被删');
+  assert.ok(fs.existsSync(path.join(victim, 'keep.txt')), '文件还在');
+  await call('PUT', '/shop-accounts/config', { profileRoot: '' });
+});
+
+await test('junction/符号链接不能骗过档案根目录判定（按真实路径判）', () => {
+  const jroot = path.join(TMP, 'jroot');
+  const jtarget = path.join(TMP, 'jtarget');
+  fs.mkdirSync(jroot, { recursive: true });
+  fs.mkdirSync(path.join(jtarget, 'System32'), { recursive: true });
+  const link = path.join(jroot, 'j');
+  const made = spawnSync('cmd', ['/c', 'mklink', '/J', link, jtarget], { encoding: 'utf8', windowsHide: true });
+  if (made.status !== 0) return; // 建不了 junction（权限/文件系统）就跳过
+  assert.equal(S.isInsideProfileRoot(path.join(link, 'System32'), { profileRoot: jroot }), false,
+    'junction 必须按真实路径判，不能在词法上"看起来在根目录下"');
+});
+
+await test('导入目录不能是系统/用户/程序目录本身', () => {
+  assert.throws(() => S.normalizeImportedProfileDir(process.env.SystemRoot || 'C:\\Windows'), /不能当店铺档案目录/);
+  assert.throws(() => S.normalizeImportedProfileDir(os.homedir()), /不能当店铺档案目录/);
+  assert.throws(() => S.normalizeImportedProfileDir(path.parse(TMP).root), /不能当店铺档案目录/);
+  const sub = path.join(os.homedir(), 'AppData');
+  if (fs.existsSync(sub)) assert.equal(S.normalizeImportedProfileDir(sub), path.resolve(sub), '子目录仍然可以导入');
+});
+
+await test('账号 id 形状校验：坏 id 当"不存在"处理', async () => {
+  const bad = await call('GET', '/shop-accounts/accounts/' + encodeURIComponent('..'));
+  assert.equal(bad.status, 404);
+  const bad2 = await call('DELETE', '/shop-accounts/accounts/' + encodeURIComponent('acc_ok_1'), {});
+  assert.equal(bad2.status, 404, '库里没有这个 id 就是 404（形状合法但不存在）');
+});
+
+await test('自更新：上游没有 version 时拒绝更新（不能跳过校验照拷）', async () => {
+  const repo = path.join(TMP, 'sync-repo-noversion');
+  fs.mkdirSync(path.join(repo, 'lib'), { recursive: true });
+  fs.writeFileSync(path.join(repo, 'lib', 'x.js'), 'export const x = 1;\n');
+  fs.writeFileSync(path.join(repo, 'package.json'), JSON.stringify({ name: 'fixture' }) + '\n');
+  const git = (...args) => spawnSync('git', args, { cwd: repo, encoding: 'utf8', windowsHide: true });
+  if (git('init', '-q').status !== 0) return;
+  git('add', '-A');
+  if (git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'init').status !== 0) return;
+  const target = path.join(TMP, 'sync-target-noversion');
+  const noExpect = host.syncFromSource(repo, target, { ref: 'HEAD' });
+  assert.ok(noExpect.error, '没有 expectVersion 必须拒绝：' + JSON.stringify(noExpect));
+  assert.ok(!fs.existsSync(path.join(target, 'lib')), '拒绝时不能落文件');
+});
+
+await test('会话 cookie 文件默认加密（DPAPI 信封）；篡改后解不开；旧格式仍能读', () => {
+  const dataDir2 = path.join(TMP, 'secret-data');
+  fs.mkdirSync(dataDir2, { recursive: true });
+  const key = secretMod.sessionKey(dataDir2);
+  const payload = { savedAt: 'x', platform: 'pdd', total: 1, cookies: [{ name: 'PASS_ID', domain: '.pinduoduo.com', value: 'v1' }] };
+  const { sealed, encrypted } = secretMod.sealCookieJar(payload, key);
+  assert.deepEqual(secretMod.openCookieJar(JSON.parse(JSON.stringify(sealed)), key), payload, '加解密要能往返');
+  assert.equal(encrypted, secretMod.dpapiAvailable() && Boolean(key), 'Windows + DPAPI 可用时应当加密');
+  if (encrypted) {
+    assert.equal(sealed.enc, 'aes-gcm-dpapi');
+    assert.ok(!JSON.stringify(sealed).includes('PASS_ID'), '密文里不能出现明文 cookie 名/值');
+    const tampered = { ...sealed, data: Buffer.from('tampered-tampered').toString('base64') };
+    assert.equal(secretMod.openCookieJar(tampered, key), null, '篡改过的密文必须解不开（GCM 校验）');
+  }
+  // 旧版明文（v0.8.3 及更早）必须还能读
+  const legacy = { savedAt: 'x', platform: 'pdd', total: 1, cookies: [{ name: 'PASS_ID', domain: '.pinduoduo.com', value: 'v1' }] };
+  assert.deepEqual(secretMod.openCookieJar(legacy, key), legacy);
+});
+
+await test('落盘实测：saveSessionCookies 写出的文件里没有明文 cookie 值', () => {
+  const acc = { id: 'acc_pdd_enc0001', platform: 'pdd', profileDir: path.join(TMP, 'data', 'profiles', 'acc_pdd_enc0001') };
+  fs.mkdirSync(acc.profileDir, { recursive: true });
+  const ok = host.saveSessionCookies(acc, [{ name: 'PASS_ID', domain: '.pinduoduo.com', value: 'super-secret-value' }]);
+  assert.equal(ok, true);
+  const raw = fs.readFileSync(path.join(acc.profileDir, 'dsh-session-cookies.json'), 'utf8');
+  if (secretMod.dpapiAvailable() && secretMod.sessionKey(path.join(TMP, 'data'))) {
+    assert.ok(!raw.includes('super-secret-value'), '文件里不能出现明文 cookie 值：' + raw.slice(0, 120));
+  }
+  // 档案根目录之外的"导入目录"不做 cookie 备份（免得把带值 cookie 写到公共位置）
+  const outside = { id: 'acc_pdd_out0001', platform: 'pdd', profileDir: path.join(TMP, 'outside-dir') };
+  fs.mkdirSync(outside.profileDir, { recursive: true });
+  assert.equal(host.saveSessionCookies(outside, [{ name: 'PASS_ID', domain: '.pinduoduo.com', value: 'v' }]), false);
+});
+
+await test('egoSpace 形状校验（控制字符/超长）；凭据打码覆盖 Bearer 与 query token', () => {
+  assert.equal(egoMod.normalizeEgoSpace('  店铺 窗口  '), '店铺 窗口');
+  assert.throws(() => egoMod.normalizeEgoSpace('a\nb'), /控制字符/);
+  assert.throws(() => egoMod.normalizeEgoSpace('x'.repeat(61)), /太长/);
+  const masked = host.maskSecrets('Authorization: Bearer abcdefghijklmnop 与 https://x.test/cb?access_token=SECRET123&a=1');
+  assert.ok(!masked.includes('abcdefghijklmnop'), masked);
+  assert.ok(!masked.includes('SECRET123'), masked);
+  assert.ok(masked.includes('a=1'), '不相关的参数要保留');
+});
+
+await test('真实 HTTP 链路：门禁/状态码与假 req 一致（Host、头、Content-Type、非对象体）', async () => {
+  const server = http.createServer((rq, rs) => handler(rq, rs));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const port = server.address().port;
+  const send = (opts, body) => new Promise((resolve) => {
+    const r = http.request({ host: '127.0.0.1', port, path: opts.path, method: opts.method || 'GET', headers: opts.headers || {} }, (res) => {
+      let data = '';
+      res.on('data', (d) => { data += d; });
+      res.on('end', () => resolve({ status: res.statusCode, body: data }));
+    });
+    r.on('error', (e) => resolve({ status: 0, body: String(e) }));
+    if (body !== undefined) r.write(body);
+    r.end();
+  });
+  const H = { 'x-dsh-shop-accounts': '1', 'content-type': 'application/json' };
+  try {
+    assert.equal((await send({ path: '/shop-accounts/state', headers: H })).status, 200);
+    assert.equal((await send({ path: '/shop-accounts/state', headers: { ...H, host: 'evil.example.com' } })).status, 403, '域名 Host');
+    assert.equal((await send({ path: '/shop-accounts/state', headers: { 'content-type': 'application/json' } })).status, 403, '缺自定义头');
+    assert.equal((await send({ path: '/shop-accounts/config', method: 'PUT', headers: { 'x-dsh-shop-accounts': '1', 'content-type': 'text/plain' } }, '{"browser":"chrome"}')).status, 415, 'text/plain 写请求');
+    assert.equal((await send({ path: '/shop-accounts/config', method: 'PUT', headers: H }, '{"browser":"chrome"}')).status, 200);
+    const bad = await send({ path: '/shop-accounts/config', method: 'PUT', headers: H }, '"just-a-string"');
+    assert.equal(bad.status, 400, '非对象 JSON 体必须 400（不能 500）');
+    assert.equal((await send({ path: '/shop-accountsX/state', headers: H })).status, 404, '前缀边界');
+    assert.equal((await send({ path: '/shop-accounts/state', headers: { ...H, 'sec-fetch-site': 'cross-site' } })).status, 403, '跨站');
+  } finally {
+    await new Promise((r) => server.close(r));
+  }
+});
+
+// ── 3.12 v0.8.4 复审后的收尾 ─────────────────────────────────────────────────
+
+section('3.12 v0.8.4 复审收尾');
+
+await test('Host 白名单：IP / localhost. / 本机主机名放行，缺 Host 与域名拒绝', async () => {
+  const me = os.hostname();
+  assert.equal((await call('GET', '/shop-accounts/state', undefined, { host: me + ':43120' })).status, 200, '本机主机名应放行');
+  assert.equal((await call('GET', '/shop-accounts/state', undefined, { host: '127.1:43120' })).status, 200, '127.x 简写应放行');
+  assert.equal((await call('GET', '/shop-accounts/state', undefined, { host: 'localhost.' })).status, 200, 'localhost. 应放行');
+  assert.equal((await call('GET', '/shop-accounts/state', undefined, { host: '[::1]:43120' })).status, 200, 'IPv6 回环应放行');
+  assert.equal((await call('GET', '/shop-accounts/state', undefined, { host: '' })).status, 403, '缺 Host 必须拒绝');
+  assert.equal((await call('GET', '/shop-accounts/state', undefined, { host: 'my-pc.evil.example' })).status, 403);
+});
+
+await test('更新源目录必须「存在 + git 仓库 + package.json name 是本插件」', async () => {
+  const notRepo = await call('PUT', '/shop-accounts/config', { updateDir: TMP });
+  assert.equal(notRepo.status, 400);
+  assert.match(notRepo.json.error, /不是 git 仓库/);
+  // 造一个"是 git 仓库但不是本插件"的目录
+  const other = path.join(TMP, 'other-repo');
+  fs.mkdirSync(other, { recursive: true });
+  fs.writeFileSync(path.join(other, 'package.json'), JSON.stringify({ name: 'some-other-plugin', version: '9.9.9' }) + '\n');
+  const git = (...args) => spawnSync('git', args, { cwd: other, encoding: 'utf8', windowsHide: true });
+  if (git('init', '-q').status === 0) {
+    git('add', '-A');
+    if (git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'init').status === 0) {
+      const wrongName = await call('PUT', '/shop-accounts/config', { updateDir: other });
+      assert.equal(wrongName.status, 400, '不是本插件的仓库要拒绝');
+      assert.match(wrongName.json.error, /name=/);
+    }
+  }
+  await call('PUT', '/shop-accounts/config', { updateDir: '' });
+});
+
+await test('cookie 罐格式：未知版本/未知 enc 一律不认；解不开的密钥不被覆盖', () => {
+  const key = secretMod.sessionKey(path.join(TMP, 'secret-data'));
+  assert.equal(secretMod.openCookieJar({ v: 99, cookies: [] }, key), null, '未知版本必须拒收');
+  assert.equal(secretMod.openCookieJar({ enc: 'rot13', cookies: [] }, key), null, '未知 enc 必须拒收');
+  assert.equal(secretMod.openCookieJar({ v: 2, enc: 'aes-gcm-dpapi', cookies: [] }, key), null, '加密格式必须走解密，不能当明文收');
+  if (!secretMod.dpapiAvailable()) return;
+  const badDir = path.join(TMP, 'bad-key-data');
+  fs.mkdirSync(badDir, { recursive: true });
+  const keyFile = path.join(badDir, 'session-cookie.key');
+  const garbage = 'this-is-not-a-dpapi-blob';
+  fs.writeFileSync(keyFile, garbage);
+  secretMod.__resetKeyCache();
+  assert.equal(secretMod.sessionKey(badDir), null, '密钥解不开时应当退回明文而不是换一把新钥');
+  assert.equal(fs.readFileSync(keyFile, 'utf8'), garbage, '解不开的密钥文件绝不能被覆盖');
 });
 
 // ── 汇总 ────────────────────────────────────────────────────────────────────

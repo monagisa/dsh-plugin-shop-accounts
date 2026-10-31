@@ -3,6 +3,76 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数指 `node test/smoke.mjs` 的条数。
 
+## v0.8.4
+
+用户说「继续修」。这一版是**对 v0.8.3 加固本身的第二轮审查**（专挑"修得不彻底 / 修出问题"的地方），
+外加把上一版明确留的两项（cookie 明文落盘、ego 临时脚本）补掉。
+
+- **① 严重：信任锚能被同一个 API 改写**。删除判定原来只看"目录在 `profileRoot` 之下"，而 `profileRoot`
+  本身可以由 `PUT /config` 改 —— 把它改成 `C:\Users\mo` 再删同级目录就绕过了。
+  现在：`profileRoot` 写入要校验（绝对路径、不能是盘根/用户主目录/系统或程序目录）；删除要求
+  **「在档案根目录下 + 目录名正好等于账号 id」**（`deletableProfileDir()`），导入的目录一律不删。
+- **② 严重：导入目录会让全机浏览器被杀**。`killChromeForProfile()` 原来用"命令行包含这个子串"匹配，
+  `profileDir` 设成 `C:\Program Files` 时每只 Chrome/Edge 都命中 → 打开失败就强杀全部浏览器。
+  现在改成**解析 `--user-data-dir=` 再精确比较**；导入目录另外挡掉系统/用户/程序目录本身。
+- **③ 高：'unknown' 被偷偷提升成 'mine'**。端口归属查不到时，`openAccount` 复用分支会写一条
+  runtime 登记，之后这条陌生端口就永久被当成自己的。现在只有 `ownership === 'mine'` 才写登记表。
+- **④ 高：runtime.json 无穷期**。崩溃后过期条目仍算 mine。现在条目要求 8 小时内、`pid > 0` 时还要
+  进程真的活着（`process.kill(pid, 0)`）。
+- **⑤ 中：关闭/删账号/快照/存 cookie 没接归属三态**。CDP `Browser.close` 现在只在 `mine` 时发；
+  `snapshotAccount`/`rememberLiveCookies` 读 cookie 前也先过归属；删账号的强杀按精确 `--user-data-dir`。
+- **⑥ 中：会话 cookie 明文落盘**（上一版遗留）。新增 `lib/secret.mjs`：一条随机主密钥用 **Windows DPAPI
+  （CurrentUser）** 保护，cookie 罐用 **AES-256-GCM** 加密落盘（`{v:2, enc:'aes-gcm-dpapi'}`）。
+  DPAPI 只在"生成密钥/本进程首次解包"时调一次 PowerShell（实测 1.2s，之后走进程内缓存）；
+  解不开（换 Windows 账号/换机器）就重新生成密钥，旧备份读不出但不会崩；DPAPI 不可用时
+  **显式降级**成 `enc:'plain'`，功能不受影响。旧格式明文文件仍能读。
+- **⑦ 中：导入目录会被写 cookie 备份**。`saveSessionCookies/loadSessionCookies` 现在只对"档案根目录内"
+  的账号生效 —— 导入目录可能在 `C:\Users\Public` 这种位置，把带值 cookie 写进去等于扩大泄露面。
+- **⑧ 中：自更新版本校验可跳过**。commit 删掉 `package.json`（或没有 `version`）时原逻辑会"跳过校验照拷"。
+  现在取不到版本、或版本不一致，一律中止且不落任何文件。
+- **⑨ 低：`.git/config` 的 `core.hooksPath` 仍会执行**。`runGit` 再加 `-c core.hooksPath=`（空值），
+  连同已有的 `protocol.ext.allow=never`、`core.fsmonitor=`、`core.sshCommand=ssh`。
+- **⑩ 低：凭据打码不全**。补上 `Authorization: Bearer xxx`、query 里的 `token/api_key/secret/password/sig`、
+  `https://<token>@host`（无冒号 userinfo），并且 git 的 stdout 也打码。
+- **⑪ 低：路径判定没解 junction**。Windows 上 `profiles\j` 若是指向 `C:\Windows` 的 junction，
+  词法上"在根目录下"、物理上在根外。`isInsideProfileRoot()` 现在两边都走 `fs.realpathSync.native`。
+- **⑫ 低：坏账号 id 只是"承诺"**。`validAccountId()` 之前没人调用；现在 `findAccount()` 先校验形状，
+  坏 id 一律当"账号不存在"，不参与路径拼接。
+- **⑬ 低：ego 部分失败被当成功**。`reset` 只清掉一部分 cookie 时现在带 `partial:true`，且**不抹掉**
+  上一次的检测结论（否则界面说"未登录"、档案里其实还有 cookie）。
+- **⑭ 新增：Host 头反 DNS rebinding**。HTTP 路由要求 `Host` 是 IP 字面量或 `localhost`
+  —— rebinding 之后浏览器发的 Host 是攻击者域名，直接 403；局域网用 IP 访问仍然放行。
+- **⑮ 客户端真 bug**：`api()` 对"没 body 的 POST"（`/ego/start`）不带 `Content-Type`，被新门禁 415 拒了。
+  现在非 GET 一律带 `application/json` + `{}` 体。
+- **⑯ 配置里的 exe 路径要校验**：必须存在、且文件名像浏览器（chrome/msedge/brave/chromium…）或 ego 程序。
+  （"用户自己指定路径"仍是功能，但不再能指向任意 exe 让 `spawn` 去跑。）
+
+- **⑰ DPAPI 密钥的并发与覆盖**（复审发现）。密钥文件用**独占创建**（`wx`）+ 写后回读：两个 DSH 进程同时首启时，
+  后一个读回前一个写的密钥，不会各生成一把互相覆盖；**已有的密钥文件解不开时绝不覆盖**（一次 AV 锁 / 换 Windows
+  账号不应烧掉全部历史备份）——本进程退明文，文件原样留着，下次重启再试；读取失败还会重试 3 次（AV 扫描常短暂占用）。
+- **⑱ 登记表 `pid:0` 条目不可信**（复审发现）。`reused`/无头探测写的是 `pid:0`，原来在 8 小时内直接算 `mine`；
+  浏览器退出、端口被别人接手后，真 cookie 会被 `setCookies` 塞过去。现在只有 **pid>0 且进程活着** 才认登记表，
+  `pid:0` 一律回退到进程命令行核实（查不到就是 unknown，不读不写）。
+- **⑲ 更新源必须是"本插件的仓库"**（复审发现）。`updateDir` 之前只 `resolve`，`applyUpdate()` 会把任意仓库的
+  `lib/` 覆盖进安装目录（只要版本号更大）= 任意代码执行。现在写入配置和 `checkUpdate` 都校验：存在、是 git 仓库、
+  仓库根 `package.json` 的 `name === dsh-plugin-shop-accounts`、不在系统/程序目录里。
+- **⑳ Host 白名单修正**（复审发现）。之前只认"IP 字面量或 localhost"，用 `my-pc:43120`、`localhost.`、`127.1`、
+  `[fe80::1%eth0]` 打开界面会整个插件面 403。现在接受：IP 字面量（含简写/IPv6 zone）、`localhost`（含尾点）、
+  本机主机名（含 `.local`/`.lan`）；**缺 Host 直接 403**（HTTP/1.1 必有 Host，缺了只可能是裸客户端）。
+- **㉑ 可执行文件名用白名单**：`chrome.exe`/`msedge.exe`/`brave.exe`/… 与 `ego*.exe`，挡住 `chrome-evil.exe`、
+  `not-ego.exe` 这种前缀/子串骗法。
+- **㉒ cookie 罐格式校验**：只认 `v ∈ {1,2}`；加密格式必须**真解密**（不能把 `{enc:'aes-gcm-dpapi', cookies:[…]}`
+  当明文收）；`savedAt` 放回信封里（之前 `restoreSessionCookies` 想读它，加密后读不到）；导入目录里 v0.8.3 留下的
+  明文备份顺手清掉。
+- **㉓ 坏 JSON 请求体返回 400**（修一个自己引入的回归：`done` 标记在解析前置位，导致 `bail()` 直接返回、
+  请求永远没有响应 —— 二轮加固引入，本轮修）。请求体类错误统一带 status（400/413），不再一律 500。
+- **㉔ 杀进程比较前归一化路径**：PowerShell 里先用 `[IO.Path]::GetFullPath` 处理两边，尾随点/`\.\` 写法也能匹配上。
+
+**自检**：`node test/smoke.mjs` **99 → 113 项全过**（新增 14 项：Host 门禁三态/主机名/缺 Host、配置路径校验、
+"根目录下但名字不是 id"删不掉、junction 按真实路径判、导入目录挡系统目录、坏 id 当不存在、上游无 version 拒绝更新、
+DPAPI 加密往返+篡改检测+旧格式兼容+**密钥解不开不被覆盖**、落盘无明文、egoSpace 控制字符、凭据打码、
+**真实 HTTP 服务链路**（真 Node 解析：Host/自定义头/Content-Type/非对象体/前缀边界/跨站））。
+
 ## v0.8.3
 
 用户说「我的店铺账号管理插件，review 一下，最新版兼容了 ego，看看现在有没有漏洞」「全改了」。

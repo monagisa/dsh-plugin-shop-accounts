@@ -354,25 +354,35 @@ node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个�
 - 定时检测排期跑在 DSH 宿主进程里：DSH 可以最小化，但**退出 DSH 就不跑了**。
 - 无头检测（Chrome 模式）的 UA 是 `HeadlessChrome`，理论上会被站点识别（目前六家实测正常）；真要绕再单独改。
 
-## 安全边界（v0.8.3 起）
+## 安全边界（v0.8.3 起，v0.8.4 加强）
 
 这几条是故意做死的，改代码时别拆：
 
 - **HTTP 面只给本插件界面用**：所有 `/shop-accounts/*` 路由要求自定义头 `x-dsh-shop-accounts: 1`
   （跨站要带它必先过 CORS 预检，而本服务从不回 ACAO），拒绝跨站 `Sec-Fetch-Site`，写请求必须是
-  `application/json`。所以「任意网页/局域网页面触发 reset、改配置、跑更新」这条路是关的。
+  `application/json`；另外要求 `Host` 是 **IP 字面量或 localhost**（反 DNS rebinding：rebinding 之后
+  浏览器发来的 Host 是攻击者域名）。所以「任意网页/局域网页面触发 reset、改配置、跑更新」这条路是关的。
   （宿主 Desktop 另外还有 renderer token 门禁，插件不依赖它。）
 - **调试端口不对网页开放**：启动 Chrome/ego 时**不带** `--remote-allow-origins=*`。Chrome 只对带了
   `Origin` 头的 CDP 连接做 allowlist 校验，而 Node 的 WebSocket 不发 Origin —— 不开这个开关照样能读 cookie，
   开了就等于让任意网页在 DNS rebinding 之后读走全部登录态。实测 Chrome 156 可用。
-- **递归删除只在档案根目录内**：`reset`（清档案重登）/ 删账号 / 「在资源管理器里打开」都先过
-  `isInsideProfileRoot()`。`profileDir` 是可由「导入已有档案」指定的，不设这道关就等于给了"删任意目录"的原语。
+- **递归删除只认一种形状**：`<档案根目录>/<账号 id>`（`deletableProfileDir()`）。只判"在根目录下"不够 ——
+  `profileRoot` 本身可被设置改，所以还要求目录名正好是账号 id；**导入的目录永远不会被插件递归删除**。
+  路径判定两边都走 `realpath`，junction / 8.3 短名不能在词法上骗过它。
+- **强杀浏览器按 `--user-data-dir` 精确匹配**：不是"命令行包含这个子串"（否则 profileDir 是
+  `C:\Program Files` 时会把全机浏览器杀掉）。
+- **端口归属只认「自己的」**：读/写 cookie、`Browser.close`、cookie 备份之前都要确认端口属于这个店铺
+  （运行期登记表 8 小时内 + pid 存活，或进程命令行里的 `--user-data-dir`）；查不到就不读不写。
+  CDP WebSocket 必须是 127.0.0.1 且端口一致。
 - **自更新只部署校验过的 commit**：先无条件 `git status --porcelain`（脏工作区一律拒绝），再用
-  `git archive <上游 commit>` 的内容落地（不是拷工作区），并校验 commit 里的版本号 = 远端版本号；
-  `git` 调用一律禁用 `ext::` 传输、覆盖 `core.fsmonitor` / `core.sshCommand`（防 `.git/config` 挂命令）。
-- **cookie 只存本平台域**：`dsh-session-cookies.json` 只保留该店铺平台的 cookie（按域后缀匹配），不抄整罐。
-- **端口归属只认「自己的」**：读/写 cookie 前先确认端口属于这个店铺的档案（运行期登记表 / 进程命令行），
-  查不到就不读不写；刚起的实例用进程命令行核对。CDP WebSocket 必须是 127.0.0.1 且端口一致。
+  `git archive <上游 commit>` 的内容落地（不是拷工作区），且**必须**取到并匹配版本号（取不到就拒绝）；
+  `git` 调用一律禁用 `ext::` 传输、覆盖 `core.fsmonitor` / `core.sshCommand` / `core.hooksPath`
+  （防 `.git/config` 挂命令）。
+- **cookie 落盘是加密的**：`dsh-session-cookies.json` 用 AES-256-GCM 加密，主密钥由 **Windows DPAPI
+  （CurrentUser）** 保护 —— 换 Windows 账号或把文件拷到别的机器都解不开。文件里只保留该店铺平台域下的
+  cookie，且只有"档案根目录内"的账号才有备份（导入目录不写）。
+- **配置里的路径都要过校验**：`profileRoot` 不能是盘根/家目录/系统或程序目录；`browserPath`/`egoliteCli`/
+  `egoliteApp` 必须存在且文件名像对应程序；`updateDir` 必须是绝对路径。
 
 ## 许可
 
