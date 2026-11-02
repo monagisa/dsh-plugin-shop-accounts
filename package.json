@@ -1,9 +1,9 @@
 {
   "name": "dsh-plugin-shop-accounts",
-  "version": "0.8.5",
+  "version": "0.10.0",
   "private": true,
   "type": "module",
-  "description": "DSH 鎻掍欢锛氱數鍟嗗钩鍙板簵閾鸿处鍙风鐞嗭紙鎷煎澶?/ 娣樺疂 / 澶╃尗 / 鎶栭煶 / 浜笢 / 1688锛岄兘鏄晢瀹剁锛夆€斺€?涓€涓簵閾轰竴浠界嫭绔嬬櫥褰曟。妗堬紝鐧诲綍涓€娆￠暱鏈熷鐢紝涓婃灦鏃剁洿鎺ユ寫閫夛紱娴忚鍣ㄤ紭鍏?ego lite锛堟瘡搴椾竴涓?profile + TaskSpace锛夛紝鏈畨瑁呮椂鍥為€€ Chrome CDP",
+  "description": "DSH 插件：电商平台店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688，都是商家端）——一个店铺一份独立登录档案，登录一次长期复用，上架时直接挑选；浏览器优先 ego lite（每店一个 profile + TaskSpace），未安装时回退 Chrome CDP；v0.10.0 起支持 macOS（钥匙串加密密码、Finder 打开档案、.app 内浏览器路径）",
   "keywords": [
     "dsh-plugin",
     "dsh",
@@ -11,7 +11,8 @@
     "chrome",
     "cdp",
     "ego",
-    "egolite"
+    "egolite",
+    "macos"
   ],
   "license": "MIT",
   "main": "lib/index.js",
@@ -32,7 +33,10 @@
     "node": ">=22.19.0"
   },
   "scripts": {
-    "smoke": "node test/smoke.mjs"
+    "smoke": "node test/smoke.mjs",
+    "features": "node test/features-v090.mjs",
+    "platform": "node test/platform.mjs",
+    "test": "node test/smoke.mjs && node test/features-v090.mjs && node test/platform.mjs"
   },
   "dsh": {
     "manifestVersion": 1,
@@ -55,4 +59,3 @@
     }
   }
 }
-

@@ -395,7 +395,7 @@ await test('更新覆盖：syncFromSource 只搬运行文件，源码 == 目标�
 });
 
 await test('POST /accounts 建号（不传 profileDir → 不启动任何浏览器）', async () => {
-  const r = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '测试店', note: '备注' });
+  const r = await call('POST', '/shop-accounts/accounts', { loginName: 'u1', password: 'Test-P@ss1', platform: 'pdd', name: '测试店', note: '备注' });
   assert.equal(r.status, 200);
   assert.equal(r.json.account.platform, 'pdd');
   assert.equal(r.json.account.name, '测试店');
@@ -407,7 +407,7 @@ await test('POST /accounts 建号（不传 profileDir → 不启动任何浏览�
 });
 
 await test('未知平台 → 400 且说明允许值', async () => {
-  const r = await call('POST', '/shop-accounts/accounts', { platform: 'amazon', name: 'x' });
+  const r = await call('POST', '/shop-accounts/accounts', { loginName: 'u2', password: 'Test-P@ss1', platform: 'amazon', name: 'x' });
   assert.equal(r.status, 400);
   assert.match(r.json.error, /pdd/);
 });
@@ -420,17 +420,29 @@ await test('GET/PUT /accounts/:id 改名换端口', async () => {
   const p = await call('PUT', '/shop-accounts/accounts/' + id, { name: '改过的名字', note: '新备注', port: 9223 });
   assert.equal(p.json.account.name, '改过的名字');
   assert.equal(p.json.account.port, 9223);
-  // 「管理」详情页要写的那几个字段：店铺 URL / 账号 / 账号类型
+  // 「管理」详情页要写的那几个字段：店铺 URL / 账号 / 账号类型（v0.9.0 起是 seller/buyer 枚举，
+  // 老写法“商家账号”仍接受，但落库/读取时会归一成 'seller'）
   const d = await call('PUT', '/shop-accounts/accounts/' + id, {
     url: 'https://mms.pinduoduo.com/goods/goods_list', loginName: '韩品兰坊;阿荣', accountType: '商家账号',
   });
   assert.equal(d.json.account.url, 'https://mms.pinduoduo.com/goods/goods_list');
   assert.equal(d.json.account.loginName, '韩品兰坊;阿荣');
-  assert.equal(d.json.account.accountType, '商家账号');
+  assert.equal(d.json.account.accountType, 'seller');
   const ds = await call('GET', '/shop-accounts/state');
   assert.equal(ds.json.accounts[0].url, 'https://mms.pinduoduo.com/goods/goods_list');
   assert.equal(ds.json.accounts[0].loginName, '韩品兰坊;阿荣');
-  assert.equal(ds.json.accounts[0].accountType, '商家账号');
+  assert.equal(ds.json.accounts[0].accountType, 'seller');
+  // 买家账号可落库，并带上「只做浏览/采集、不做上架」的能力位
+  const b = await call('PUT', '/shop-accounts/accounts/' + id, { accountType: 'buyer' });
+  assert.equal(b.json.account.accountType, 'buyer');
+  const bs = await call('GET', '/shop-accounts/state');
+  const row = bs.json.accounts.find((a) => a.id === id);
+  assert.equal(row.accountType, 'buyer');
+  assert.equal(row.capabilities.upload, false);
+  assert.equal(row.capabilities.collection, true);
+  // 非法类型要 400
+  const bad = await call('PUT', '/shop-accounts/accounts/' + id, { accountType: 'vip' });
+  assert.equal(bad.status, 400);
   const miss = await call('GET', '/shop-accounts/accounts/acc_nope_1');
   assert.equal(miss.status, 404);
 });
@@ -533,8 +545,8 @@ await test('排期算法：到点才跑、错过不补跑、同一天同一个�
 });
 
 await test('GET /schedule 带排期；PUT /schedule 落盘并在 /state 里给每个店铺算好时间点', async () => {
-  const a = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '排期店A' });
-  const b = await call('POST', '/shop-accounts/accounts', { platform: 'taobao', name: '排期店B' });
+  const a = await call('POST', '/shop-accounts/accounts', { loginName: 'u3', password: 'Test-P@ss1', platform: 'pdd', name: '排期店A' });
+  const b = await call('POST', '/shop-accounts/accounts', { loginName: 'u4', password: 'Test-P@ss1', platform: 'taobao', name: '排期店B' });
   const g = await call('GET', '/shop-accounts/schedule');
   assert.equal(g.status, 200);
   assert.equal(g.json.schedule.enabled, false, '默认不开');
@@ -844,7 +856,7 @@ await test('GET /ego 路由存在：返回可用性 + profile/space 列表（数
 await test('ego 后端的店铺：端口记 0、状态看空间在不在（不再拿端口当判据）', async () => {
   const cli = EG.resolveEgoCli('');
   await call('PUT', '/shop-accounts/config', { browser: cli ? 'egolite' : 'auto' });
-  const made = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: 'ego后端店' });
+  const made = await call('POST', '/shop-accounts/accounts', { loginName: 'u5', password: 'Test-P@ss1', platform: 'pdd', name: 'ego后端店' });
   assert.equal(made.status, 200);
   const s = await call('GET', '/shop-accounts/state');
   const row = s.json.accounts.find((a) => a.id === made.json.account.id);
@@ -929,7 +941,7 @@ await test('ego 关着也能后台检测：无窗口实例读 cookie（不弹窗
   assert.match(egoSrc, /--headless=new/, '必须无窗口（不能弹窗、不能恢复上次的窗口）');
   assert.match(egoSrc, /--profile-directory=/, '要指定店铺自己的 profile（登录态按 profile 隔离）');
   assert.match(egoSrc, /waitPortGone/, '读完要确认实例真的关掉了');
-  assert.match(egoSrc, /taskkill/, '端口没消失就按 PID 树强杀，别留后台进程');
+  assert.match(egoSrc, /taskkill|killPidTree/, '端口没消失就按 PID 树强杀，别留后台进程（v0.10.0 起经平台层 killPidTree）');
   assert.match(egoSrc, /offlineChain/, '同一个 User Data 同时只能一个实例（SingletonLock），必须串行化');
   assert.match(egoSrc, /ego-running|ego_running/, 'ego 正开着时不要撞 SingletonLock（交给临时空间探测）');
 });
@@ -968,9 +980,9 @@ await test('ego 的 TaskSpace 允许按 id 认（用户自建空间 name 是空�
 await test('ego 模式重名店铺真的会被 400 挡掉（路由级实测，不只是源码断言）', async () => {
   const cli = EG.resolveEgoCli('');
   await call('PUT', '/shop-accounts/config', { browser: cli ? 'egolite' : 'auto' });
-  const first = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '重名测试店' });
+  const first = await call('POST', '/shop-accounts/accounts', { loginName: 'u6', password: 'Test-P@ss1', platform: 'pdd', name: '重名测试店' });
   assert.equal(first.status, 200, '第一家应该建得出来');
-  const second = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '重名测试店' });
+  const second = await call('POST', '/shop-accounts/accounts', { loginName: 'u7', password: 'Test-P@ss1', platform: 'pdd', name: '重名测试店' });
   if (cli) {
     assert.equal(second.status, 400, 'ego 模式下重名必须被拒绝');
     assert.match(String(second.json.error || ''), /同名店铺/, '错误里要说是重名，而不是含糊的失败');
@@ -1496,7 +1508,7 @@ await test('客户端打出的每个动作，宿主都真的接了（两边写�
   assert.match(bogus.json.error, /未知路由/);
 
   // 动作只收 POST（拿真账号试，才走得到方法校验那一层）
-  const created = await call('POST', '/shop-accounts/accounts', { platform: 'taobao', name: '契约店' });
+  const created = await call('POST', '/shop-accounts/accounts', { loginName: 'u8', password: 'Test-P@ss1', platform: 'taobao', name: '契约店' });
   const id = created.json.account.id;
   const wrongVerb = await call('GET', '/shop-accounts/accounts/' + id + '/open');
   assert.equal(wrongVerb.status, 405, '动作只收 POST');
@@ -1617,7 +1629,7 @@ await test('HTTP 面：没有插件自定义头 / 跨站 / 非 JSON 写请求都
 await test('reset / 删账号都不会递归删除档案根目录之外的目录', async () => {
   const cfgPut = await call('PUT', '/shop-accounts/config', { browser: 'chrome' });
   assert.equal(cfgPut.status, 200);
-  const created = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '安全测试店-1' });
+  const created = await call('POST', '/shop-accounts/accounts', { loginName: 'u9', password: 'Test-P@ss1', platform: 'pdd', name: '安全测试店-1' });
   assert.equal(created.status, 200, JSON.stringify(created.json));
   const id = created.json.account.id;
   const outside = fs.mkdtempSync(path.join(TMP, 'outside-'));
@@ -1636,11 +1648,11 @@ await test('reset / 删账号都不会递归删除档案根目录之外的目录
 });
 
 await test('新增账号：URL 只收 http(s)、profileDir 必须是存在的绝对路径', async () => {
-  const badUrl = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '安全测试店-2', url: '--proxy-server=http://evil:8080' });
+  const badUrl = await call('POST', '/shop-accounts/accounts', { loginName: 'u10', password: 'Test-P@ss1', platform: 'pdd', name: '安全测试店-2', url: '--proxy-server=http://evil:8080' });
   assert.equal(badUrl.status, 400);
-  const badDir = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '安全测试店-3', profileDir: 'relative/dir' });
+  const badDir = await call('POST', '/shop-accounts/accounts', { loginName: 'u11', password: 'Test-P@ss1', platform: 'pdd', name: '安全测试店-3', profileDir: 'relative/dir' });
   assert.equal(badDir.status, 400);
-  const ok = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '安全测试店-4', url: 'https://mms.pinduoduo.com/home/' });
+  const ok = await call('POST', '/shop-accounts/accounts', { loginName: 'u12', password: 'Test-P@ss1', platform: 'pdd', name: '安全测试店-4', url: 'https://mms.pinduoduo.com/home/' });
   assert.equal(ok.status, 200, JSON.stringify(ok.json));
   assert.equal(ok.json.account.url, 'https://mms.pinduoduo.com/home/');
   await call('DELETE', '/shop-accounts/accounts/' + ok.json.account.id, {});
@@ -1745,7 +1757,7 @@ await test('删除只认「根目录下 + 目录名 = 账号 id」：把 profile
   const root = path.join(TMP, 'poison-root');
   fs.mkdirSync(root, { recursive: true });
   await call('PUT', '/shop-accounts/config', { profileRoot: root });
-  const created = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '投毒测试店' });
+  const created = await call('POST', '/shop-accounts/accounts', { loginName: 'u13', password: 'Test-P@ss1', platform: 'pdd', name: '投毒测试店' });
   assert.equal(created.status, 200, JSON.stringify(created.json));
   const id = created.json.account.id;
   // 把账号的档案目录指向"根目录下但名字不是 id"的目录（模拟"把根指向 C:\Users\mo 后删同级目录"）

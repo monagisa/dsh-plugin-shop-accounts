@@ -5,11 +5,16 @@
 >
 > **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile + 一个 TaskSpace，无需手动创建实例）；
 > 未安装时回退至 Chrome（每店一份档案 + 一个固定调试端口）。设置页可指定后端。详见[更新说明](#更新说明)。
+>
+> **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 是 DPAPI），浏览器从 `/Applications` 探测，
+> 「在文件夹中显示」走 Finder。所有平台相关代码收在 `lib/platform/` 一处，业务代码不再判断操作系统。
 
-DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台）。
+DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台），
+另外支持给这些平台的 **C 端买家账号**建档（买家账号只做浏览/采集，不上架）。
 
-- 版本：**0.8.5**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
-- 自检：`node test/smoke.mjs` → 113 项全过（不启动浏览器、不碰真实账号）
+- 版本：**0.10.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、`node test/platform.mjs` → 12 项全过
+  （不启动浏览器、不碰真实账号；`npm test` 一次跑完）
 
 ---
 
@@ -32,6 +37,24 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 ---
 
 ## 更新说明
+
+### v0.9.0 – v0.10.0：存密码 / 账密登录 / 买家账号 / 数据采集 / macOS 适配
+
+这一区间是按逆向 Accio Work「设置 → 账号管理」的结论补齐的能力（对照证据见 CHANGELOG 对应版本）：
+
+- **密码库（v0.9.0）**：`<数据目录>/account-secrets.enc`，复用 cookie 罐那把主密钥 + AES-256-GCM。
+  密码**不写进 `accounts.json`、不进 `/state`、不进日志**，账号表只有「已保存 / 更新时间」。
+  没有可用密钥后端的平台（例如未适配的 Linux）**整库禁用，绝不退化成明文**。
+- **账密登录（v0.9.2 起语义对齐 Accio）**：新建店铺时「登录账号」「登录密码」都是**必填**；
+  点「打开店铺」就用保存的账密代填并提交，不需要再单独点「自动登录」按钮。
+  代填结果会明确回报（成功 / 需要验证码 / 找不到输入框），验证码与短信仍需你手动完成。
+- **卖家 / 买家账号（v0.9.0）**：`accountType` = `seller` / `buyer`，买家有独立登录入口；
+  能力位区分「能否上架」「能否填店铺 URL」「能否采集」——买家账号不做上架。
+- **数据采集（v0.9.0）**：只做**配置与调度**（选 5 个业务域、每天几点、最近 30 个完整自然日），
+  真正的抓取交给 agent/skill —— 平台改版时只改 skill，不用改插件。
+- **macOS 适配（v0.10.0）**：新增 `lib/platform/`，Windows 用 DPAPI + Program Files 探测 + PowerShell 进程匹配，
+  macOS 用**钥匙串**（`/usr/bin/security`）+ `/Applications` 的 `.app` + `ps` 解析 + `open`。
+  ⚠️ macOS 这一支**尚未真机验证**，验收清单见 CHANGELOG v0.10.0。
 
 ### v0.7.0 – v0.8.5：新增 ego lite 浏览器后端
 
@@ -361,7 +384,8 @@ Chrome 默认**关窗就丢**。这就是「登录完点保存 → 关窗 → �
 | 运行期登记（哪个端口起的浏览器） | `%DSH_HOME%\shop-accounts\runtime.json` |
 | 登录态（Chrome 模式） | 每店一份 `user-data-dir`：`%DSH_HOME%\shop-accounts\profiles\<账号id>\` |
 | 登录态（ego 模式） | 在 **ego 自己的** `User Data` 里，按 `accounts.json` 里记的 `egoProfile` 对应；本插件不复制、不挪动 |
-| 会话 cookie 备份（加密） | `<数据目录>/profiles/<账号id>/dsh-session-cookies.json`：AES-256-GCM，主密钥由 Windows DPAPI（CurrentUser）保护 |
+| 会话 cookie 备份（加密） | `<数据目录>/profiles/<账号id>/dsh-session-cookies.json`：AES-256-GCM，主密钥由**系统密钥后端**保护（Windows DPAPI / macOS 钥匙串） |
+| 密码库（v0.9 起） | `<数据目录>/account-secrets.enc`：同一把主密钥 + AES-256-GCM；密钥后端不可用时**整库禁用**（不存明文） |
 | 调试端口 | Chrome 模式：从 `portBase`（默认 9222）起自动找空位，一店一端口；ego 模式没有端口 |
 
 整个数据目录可以用环境变量 `DSH_SHOP_ACCOUNTS_DIR` 搬走。
@@ -369,27 +393,56 @@ Chrome 默认**关窗就丢**。这就是「登录完点保存 → 关窗 → �
 ### 目录结构
 
 ```
-lib/platforms.mjs   六个平台的登录页/主页/工作页、身份 cookie、域判据、判登录态
+lib/platforms.mjs   六个平台的登录页/主页/工作页、身份 cookie、域判据、判登录态（含卖家/买家变体）
+lib/platform/       平台适配层（v0.10.0）：win32 / darwin / unsupported + 统一入口
+                    —— 密钥后端、浏览器路径、进程匹配、打开目录、ego 路径都在这里
 lib/cdp.mjs         极简 CDP 客户端（裸 WebSocket，无第三方依赖）
-lib/chrome.mjs      找浏览器、选端口、拉起/关闭/探测
+lib/chrome.mjs      找浏览器、选端口、拉起/关闭/探测（路径与进程操作交给平台层）
 lib/ego.mjs          ego lite 后端（探测 CLI、在 ego 运行时里跑脚本、TaskSpace/profile、读 cookie）
-lib/secret.mjs       cookie 备份加密（DPAPI 保护主密钥 + AES-256-GCM；DPAPI 不可用时退明文并标注）
+lib/secret.mjs      cookie 备份加密（平台密钥后端保护主密钥 + AES-256-GCM；不可用时退明文并标注）
+lib/vault.mjs       店铺账号密码库（v0.9.0；密钥后端不可用时整库禁用，绝不退明文）
+lib/autologin.mjs   账密代填（按平台选择器 + cookie 判据复核；验证码交回用户）
+lib/collection.mjs  数据采集的配置与调度（真抓取交给 agent/skill）
 lib/store.mjs       accounts.json / config.json / runtime.json 的原子读写与降级
 lib/schedule.mjs    排期算法（纯函数：分组、时间点、到点、下次、记账）
 lib/index.js        宿主：/shop-accounts/* 路由、自更新、定时心跳
 lib/client.js       客户端 bundle：设置页「账号管理」整页 UI
 cordis.patch.yml    插件挂载点（id: shop-accounts）
-test/smoke.mjs      自检（零依赖、不启动浏览器）
+test/smoke.mjs      主自检（零依赖、不启动浏览器）
+test/features-v090.mjs  v0.9 功能自检（密码库 / 采集 / 账号类型 / 新路由）
+test/platform.mjs   平台层自检（v0.10.0；含把 mac 分支在 Windows 上能验的都验掉）
 test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时档案）
 ```
+
+## 平台支持（v0.10.0）
+
+Windows 与 macOS 共用一套代码，差异全在 `lib/platform/`：
+
+| 能力 | Windows | macOS |
+| --- | --- | --- |
+| 主密钥保护（cookie + 密码） | DPAPI（CurrentUser，经 PowerShell） | **登录钥匙串**（`/usr/bin/security`）；文件里只存 `keychain:<service>` 标记 |
+| 浏览器可执行文件 | `Program Files` / `LOCALAPPDATA` 下的 `chrome.exe`、`msedge.exe` | `/Applications/<App>.app/Contents/MacOS/<bin>`（Chrome / Edge / Chromium / Brave，也看 `~/Applications`） |
+| 进程按 `--user-data-dir` 精确匹配 | `Get-CimInstance Win32_Process` + 等值比较 | `ps -axo pid=,command=` + 等值比较（`normDir` 归一化） |
+| 杀进程树 | `taskkill /PID … /T /F` | `pkill -9 -P` + `kill -9` |
+| 「在文件夹中显示」 | `explorer.exe` | `open` |
+| ego lite 路径 | 官方安装器的默认位置 | **按 macOS 约定猜的，未真机验证** —— 找不到就回退 Chrome 后端 |
+| 无密钥后端的平台（Linux 等） | — | — | 明确不可用：密码库禁用、不存明文 |
+
+> ⚠️ **macOS 这一支还没在真机上跑过**（开发机是 Windows）。验收清单见
+> [CHANGELOG v0.10.0](CHANGELOG.md)；能脱离真机验证的部分（路径表、`ps` 解析、钥匙串命名与标记格式、
+> 白名单、业务代码里没有平台硬编码）都在 `test/platform.mjs` 里。
 
 ## 自检
 
 ```powershell
 node test/smoke.mjs            # 113 项：平台判据 / 持久化 / 宿主 HTTP 面 / 排期 / ego 后端 / 客户端契约 / 安全边界
+node test/features-v090.mjs    # 30 项：账号类型 / 密码库 / 账密代填 / 采集配置与调度 / 新路由
+node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（能在 Windows 上验的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
+
+`npm test` 一次跑完前三套（零依赖、不碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 用 `DSH_SHOP_ACCOUNTS_DIR` 把数据目录指到临时目录，**不碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真的拉起无头 Chrome（临时档案、不弹窗口、不碰店铺档案），验证

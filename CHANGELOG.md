@@ -1,7 +1,155 @@
 # 变更历史
 
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
-> 数字都当真跑出来的看。自检项数指 `node test/smoke.mjs` 的条数。
+> 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
+> `node test/platform.mjs`（v0.10 平台层）。
+
+## v0.10.0
+
+用户问：「那 mac 系统呢，能适配吗？」→ 又问「你说要兼容 mac 还是单独做一个 mac 版本的，哪个好」，
+我推荐**单代码库 + 平台适配层**（理由：平台相关代码只有 5 个文件三四百行，分叉要维护两套测试/两套版本；
+功能差异用能力位表达即可）。用户回「开始」。
+
+这一版把散在 `secret.mjs` / `chrome.mjs` / `ego.mjs` / `index.js` 里的 Windows 相关代码抽进 `lib/platform/`：
+
+- **新目录 `lib/platform/`**，统一契约（`id` / `label` / `secretBackend` / `capabilities` /
+  `secretProtect(dataDir,text)` / `secretUnprotect(dataDir,blob)` / `browserCandidates()` /
+  `killByProfileDir()` / `ownerOfPort()` / `revealDir()` / `egoCliCandidates()` / `systemDirs()` …）：
+  - `win32.mjs`：原 DPAPI PowerShell 脚本、Program Files 探测、`Get-CimInstance Win32_Process` 精确匹配、
+    `taskkill /T /F`、`explorer.exe` —— **实现逐字搬过去，行为不变**（143 项自检就是回归网）。
+  - `darwin.mjs`：**Keychain**（`/usr/bin/security add-generic-password` / `find-generic-password`）当密钥后端，
+    `/Applications/<App>.app/Contents/MacOS/<bin>` 当浏览器路径，`ps -axo pid=,command=` 解析进程，
+    `pkill -9 -P` 杀进程树，`open` 打开目录；路径一律用 `path.posix`（语义更准，且能在 Windows 上跑自检）。
+  - `unsupported.mjs`：其它平台明确「不可用」而不是崩：`secretBackend=null` → 密码库整体禁用（不存明文）。
+  - `index.mjs`：按 `process.platform` 选实现，支持 `DSH_SA_PLATFORM=darwin` 覆盖（自检用）。
+- **密码库里 Keychain 的存法**：`<数据目录>/session-cookie.key` 里只存标记 `keychain:<service>`，
+  service = `dsh-shop-accounts-<目录名可读片段>-<sha256(绝对路径) 前16位>`。好处：多个 DSH 档案/多份插件
+  互不覆盖主密钥；密钥本身在系统钥匙串里，文件被拷走也解不开（与 DPAPI 的信任边界同构）。
+- **行为变化（mac 上才算变化）**：`dpapiAvailable()` 这个名字保留（自检与历史调用依赖），
+  语义从「非 win32 一律 false」改成「**本平台有可用密钥后端**」；`vault.mjs` 里那句
+  `if (process.platform !== 'win32') return false;` 删掉了 —— 否则 mac 上密码库永远不可用。
+- **界面文案按平台说话**：`/state` 新增 `osPlatform:{id,label,secretBackend,capabilities}`；
+  详情页在 mac 上显示「密码只保存在本机（macOS 钥匙串 + AES-256-GCM）」，找不到浏览器时提示当前平台而不是写死 `chrome.exe`。
+- 顺带修：`package.json` 的 description 之前是**双重编码的乱码**（`DSH 鎻掍欢…`），已写回正常中文；
+  自检入口统一成 `npm test`（smoke + features + platform）。
+
+验证：`node test/smoke.mjs` **113 项**、`node test/features-v090.mjs` **30 项**、
+`node test/platform.mjs` **12 项**全过（Windows 本机）。
+
+**⚠️ macOS 这一支没有真机验证过**（开发机只有 Windows）。按代码形状把能纯函数验的都验了：
+候选路径表、`ps` 命令行里抠 `--user-data-dir`、目录归一化、Keychain service 命名与标记格式、
+白名单挡前缀骗法、以及「业务代码里不再出现 powershell/explorer/taskkill/Program Files 硬编码」。
+真机验收清单（拿到 mac 请照这个跑一遍）：
+
+1. `npm test` 三套全过（`platform.mjs` 在 mac 上会自动按 darwin 跑，`win32` 那几条断言仍是纯函数、不受影响）。
+2. 新建店铺 → 填账号密码 → 看钥匙串访问里出现 `dsh-shop-accounts-…` 条目；`account-secrets.enc` 里应看不到密码。
+3. **首次读写钥匙串可能弹一次授权**（system 会问「是否允许访问」）—— 允许即可；这是 Keychain ACL 的正常行为。
+   如果用户点了「拒绝」，插件应报「本机密码库不可用」，而不是崩。
+4. 打开店铺：Chrome 从 `/Applications` 找到并起来，`--user-data-dir` 正确隔离；
+   关不掉时按 profile 精确匹配杀进程（**不该**杀掉用户自己开的其它 Chrome）。
+5. 「在文件夹中显示」应打开 Finder。
+6. ego lite 的 mac 版路径是**猜的**（`/Applications/ego lite.app`、`~/Library/Application Support/…`）：
+   没装或路径不同时应回退到 Chrome 后端，而不是报错卡死。
+
+## v0.9.2
+
+用户指出我 v0.9.1 的做法没对齐 Accio：「人家不用点自动登录的，人家账号密码是必填的」。
+回头查逆向证据（报告 3.4 / 4.6 节），用户是对的：
+
+- Accio 密码库 `create()`：`normalizeText(account,"account",256)` 非空必填、`normalizePassword` 1..4096 必填；
+  店铺名只在 `isMerchantBackendAccount` 时必填。唯一性按 `platform+name`、`platform+account` 双查。
+- Accio 没有「自动登录」按钮：profile 模式是 `store-auth:password-start` + `password-progress`，
+  密码登录是**登录流程的一步**（`autoLoginSupported` 只是能力门控），RPA 侧用 `findSecret` 直接取账密填表。
+
+这一版照这个模型改：
+
+- **账号与密码改为必填**：新建弹窗标「登录账号（必填）」「登录密码（必填）」，前端先拦一次；
+  服务端 `POST /accounts` 也硬校验，缺账号回 `ACCOUNT_LOGIN_NAME_REQUIRED`、缺密码回 `ACCOUNT_PASSWORD_REQUIRED`。
+  密码库不可用或密码不合规时整单 400 —— 不会再建出「没有账密」的半成品记录。
+- **打开店铺即账密登录**：`POST /accounts/:id/open` 在「已存账号+密码」时自动代填并提交，
+  返回 `autofill:{attempted,ok,code,hint,loggedIn}`；界面 toast 直接说「已用保存的账号密码自动登录成功」
+  或代填失败的下一步提示。要扫码/手工登录时传 `autofill:false`（留着这条路径：C 端买家账号常常只能扫码）。
+- **`POST /accounts/:id/autologin` 不再要求 `confirm:true`**（显式 `confirm:false` 仍被尊重，回 `AUTOLOGIN_DECLINED`）；
+  详情页按钮改叫「重新登录（代填）」，语义变成「掉线后补一次登录」，不再是主流程。
+- 文案统一：卡片标题「密码与自动登录」→「密码与账密登录」；登录页提示改成「已保存的账号密码会自动代填；
+  要走扫码/短信就在弹出的窗口里手动完成」。
+
+验证：`node test/smoke.mjs` 113 项、`node test/features-v090.mjs` **30 项**全过。
+新增用例覆盖：缺账号 / 缺密码建号必须 400、`autofill` 默认开且可关、autologin 不再强制 confirm。
+
+## v0.9.1
+
+用户问：「怎么不用填密码店铺名那些？」—— 原来的「新增店铺」弹窗只有平台/店铺名/账号类型，
+密码得建完再进详情页设置，店铺名留空时还会自动起名（而且自动起的名字后面多带一个 `;`）。
+这一版把这两件事都改回直觉：
+
+- 新增店铺弹窗多了 **「登录账号（可选）」** 和 **「登录密码（可选）」** 两个字段，密码带显示/隐藏开关。
+  一次就能把「哪家店、用什么账号密码登录」填完，不用来回跳页面。
+- `POST /accounts` 支持可选的 `password`：服务端在校验通过后直接落进本机加密库（`account-secrets.enc`），
+  响应只回 `passwordSaved` 布尔，**任何地方都不回显明文**。密码库不可用或密码不合规时**整单 400**，
+  不会出现「号建好了、密码丢了」的半成品状态；落库失败则店铺照建，只回报 `passwordError` 让用户进详情页重试。
+- 修掉自动起名的多余分号：以前留空店铺名会得到 `拼多多 店铺 3;`，现在是 `拼多多 店铺 3`。
+- 编辑弹窗里的「登录账号」现在真的会保存（以前弹窗没带上这个字段，改了会被静默丢弃）；
+  密码字段只在新建时出现，编辑时仍走详情页的「密码与自动登录」区块。
+
+验证：`node test/smoke.mjs` 113 项、`node test/features-v090.mjs` **28 项**（新增一条「新建时直接带账号+密码」）全过；
+新用例同时断言 `accounts.json` 与 `/state` 响应里都不含明文密码。
+
+## v0.9.0
+
+用户说：「对照我逆向出来的 Accio Work 账号管理，补上我缺的：存密码和自动登录、卖买家账号、数据采集。」
+
+三块都按 Accio 的模型做，但**边界比它更保守**：密码只在用户显式点「自动登录」时代填一次，
+采集只维护配置与调度、真正的抓取交给 agent/skill（平台改版只改 skill）。
+
+### 1. 账号类型：卖家 / 买家（对齐 Accio 的 `accountType`）
+
+- 账号表里的 `accountType` 从自由文本（默认「商家账号」）改成枚举 **`seller` / `buyer`**；
+  老数据（`商家账号` / 空 / 其它）自动归一成 `seller`，不丢号。
+- 买家有**独立的登录入口与判据**（`platforms.mjs` 的 `BUYER_VARIANTS`）：
+  淘宝/天猫 → `login.taobao.com`、京东 → `passport.jd.com/new/login.aspx`、1688 买家页；
+  拼多多/抖音 C 端入口没真机验过，标 `experimental`（界面会提示）。
+- 新增能力位 `capabilities`：`upload`（上架）只给卖家；`storeUrl` 只给卖家且拼多多不支持
+  （照抄 Accio 的 `supportsStoreUrl(platform, accountType)` 口径）。
+- `/state`、列表、工具输出都带 `accountType` / `accountTypeLabel` / `capabilities`；
+  新增/编辑弹窗与详情页都能选类型。
+
+### 2. 密码库 + 自动登录（对齐 Accio 的 `password-vault` + `passwordLogin`）
+
+- 新 `lib/vault.mjs`：`<数据目录>/account-secrets.enc`，**复用 secret.mjs 的 DPAPI 主密钥 + AES-256-GCM**
+  （与 cookie 罐同一套信封）。**DPAPI 不可用时整库禁用，绝不退化成明文存密码**。
+- 密码**不进 `accounts.json`、不进 `/state`、不进日志**；账号表只有 `hasPassword` / `passwordUpdatedAt`。
+- `PUT/DELETE /accounts/:id/password`、`POST /accounts/:id/autologin`（必须 `confirm:true`）；
+  `DELETE /accounts/:id` 会顺手清掉该账号的密码。
+- 新 `lib/autologin.mjs`：按平台给选择器候选（阿里 havana / 京东 / 拼多多 / 抖店），
+  页面里用原生 setter + `input/change` 事件写值（React 受控输入直接改 `.value` 会被丢），
+  先尝试点「账号密码登录」页签、填完提交、再**用 cookie 判据验一次登录态**——
+  验不过就如实回 `AUTOLOGIN_NEEDS_USER`（验证码/短信交回用户），绝不假装成功。
+- ego 后端也支持：`ego.mjs` 新增 `autofill` op（走 ego 运行时 `page.cdp('Runtime.evaluate')`），
+  填完把控制权交还用户。安全说明：ego CLI 不继承环境变量，密码只能内联进临时运行脚本
+  （`%TEMP%` 下 mkdtemp 私有目录，执行完立即整目录删除），不是零痕迹，介意就用「打开窗口手动登录」。
+
+### 3. 数据采集：配置 + 调度，采集交给 skill（对齐 Accio 的 `STORE_COLLECTION_DOMAINS`）
+
+- 采集域固定 5 个、界面名照抄 Accio：**经营总览（成交与客户）/ 流量转化（访客与转化）/
+  运营推广（广告与营销）/ 商品供给（商品与动销）/ 服务履约（售后与服务）**；「竞争洞察」不开放。
+- 校验同口径：开启必须至少选一个域、域必须来自白名单、时间必须 `HH:mm`。
+- `domain_id` 与 Accio 同构：`<platform>-scheduler-<域>`，抖店用 `doudian`。
+- `collectionPrompt()` 生成交给 agent 的任务说明：店铺/平台/账号类型 + 各域 domain_id +
+  **固定最近 30 个完整自然日（不含今天）** + 「不要用 `--all-domains` 扩大范围」。
+  买家账号自动剔除三个经营域并说明原因。
+- 新路由：`PUT /accounts/:id/collection`、`GET /accounts/:id/collect-prompt`、
+  `POST /accounts/:id/collect-done`（回写 `ok/partial/failed` + 备注）。
+- 工具 `shop_accounts` 增 `collections` / `collect-prompt` / `collect-done` / `autologin` 四个 action；
+  `/state` 带 `dueCollections`（今日到期店铺）。
+
+### 验证
+
+- `node test/smoke.mjs` → **113 项全过**（原有 112 项 + 账号类型断言更新）
+- `node test/features-v090.mjs` → **27 项全过**（新增：类型变体/判据、密码库密文落盘、
+  采集校验/提示词/到期、新路由、autologin 缺密码/缺账号的错误码）
+- 唯一改动到的旧断言：详情页存 `accountType:'商家账号'` 现在读回 `seller`（预期行为变更）。
+
 
 ## v0.8.5
 
