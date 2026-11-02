@@ -12,10 +12,10 @@
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台），
 另外支持给这些平台的 **C 端买家账号**建档（买家账号只做浏览/采集，不上架）。
 
-- 版本：**0.11.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.12.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
-  `node test/platform.mjs` → 12 项全过
+  `node test/features-v0120.mjs` → 23 项、`node test/platform.mjs` → 12 项，合计 **217 项**全过
   （不启动浏览器、不碰真实账号；`npm test` 一次跑完）
 
 ---
@@ -39,6 +39,20 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 ---
 
 ## 更新说明
+
+### v0.12.0：内置「平台 → 采集域 → 指标」目录层
+
+把 Accio 的目录库（3675 条指标 / 497 节点经营树 / 224 个数据源）只取**骨架**搬过来，让「采什么」有据可依：
+
+- `lib/catalog/catalog.json`（593 KB，**3045 条指标**）：只留 `指标 id / 名称 / 所属域 / 度量类型 / 时间粒度 / 落库必需字段 / 来源 id`，
+  上游的取值路径、聚合口径、DSL、RPA 加密资产**一律不收录**（有断言守着）。
+- `lib/catalog.mjs`：按平台查域与指标。**淘宝/天猫 6 个采集域**（多「竞争洞察」，78 项指标），抖店/京东/拼多多各 5 个；
+  1688 在 Accio 里没有定时采集子树，退回默认 5 域。
+- 校验跟着走：拼多多选「竞争洞察」会被 400 挡回；`collect-import` 里带的 `metricId` 必须是该平台目录里的指标，
+  落库后可按 `metricId` 过滤查询；跨平台 id 直接拒。
+- `GET /catalog`（工具 `action=catalog`）：查某平台/某域的可采指标清单（淘宝运营推广 540 条，默认截断 200、`all=1` 全给）。
+- 界面：采集域按钮显示「域（解释 · N 项指标）」，并提示该平台目录规模。
+- **采集能力仍由 skill/agent 提供**：目录是「目标清单」，没接采集器的指标采不到 —— 这点别误会。
 
 ### v0.9.0 – v0.11.0：存密码 / 账密登录 / 买家账号 / 数据采集 / macOS 适配 / 配置迁移 / 采集数据层
 
@@ -418,6 +432,8 @@ lib/vault.mjs       店铺账号密码库（v0.9.0；密钥后端不可用时整
 lib/autologin.mjs   账密代填（按平台选择器 + cookie 判据复核；验证码交回用户）
 lib/collection.mjs  数据采集的配置与调度（真抓取交给 agent/skill）
 lib/datastore.mjs   采集数据层（v0.11.0）：覆盖台账 / 记录 JSONL / plan·import·query
+lib/catalog.mjs     指标目录层（v0.12.0）：平台 → 采集域 → 指标（域校验、指标查询、metricId 校验）
+lib/catalog/catalog.json  目录种子数据（593 KB / 3045 条指标，只留骨架，不含上游取值路径与聚合口径）
 lib/store.mjs       accounts.json / config.json / runtime.json 的原子读写与降级
 lib/schedule.mjs    排期算法（纯函数：分组、时间点、到点、下次、记账）
 lib/index.js        宿主：/shop-accounts/* 路由、自更新、定时心跳
@@ -456,12 +472,13 @@ node test/smoke.mjs            # 113 项：平台判据 / 持久化 / 宿主 HTT
 node test/features-v090.mjs    # 30 项：账号类型 / 密码库 / 账密代填 / 采集配置与调度 / 新路由
 node test/features-v0101.mjs   # 15 项：登录账号查重 / 店铺配置导出导入（含坏数据与重复导入）
 node test/features-v0110.mjs   # 24 项：采集数据层（台账缺口 / 导入校验与去重 / 空结果台账 / 查询）
+node test/features-v0120.mjs   # 23 项：目录层（平台域名与指标数 / 跨平台校验 / metricId / /catalog）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（能在 Windows 上验的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
 
-`npm test` 一次跑完前五套（零依赖、不碰真实账号、不启动浏览器）。
+`npm test` 一次跑完前六套（零依赖、不碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 用 `DSH_SHOP_ACCOUNTS_DIR` 把数据目录指到临时目录，**不碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真的拉起无头 Chrome（临时档案、不弹窗口、不碰店铺档案），验证

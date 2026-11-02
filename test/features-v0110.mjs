@@ -107,7 +107,7 @@ await test('采全之后返回 NO_COLLECTION_REQUIRED（不会再让人重采）
 });
 
 await test('plan 拒绝白名单外的域；域去重；抖店 domainId 用 doudian', () => {
-  assert.throws(() => D.planCollection({ accountId: ACC, platform: 'taobao', domains: ['竞争洞察'], start: '2026-10-01', end: '2026-10-02' }), /未知采集域/);
+  assert.throws(() => D.planCollection({ accountId: ACC, platform: 'taobao', domains: ['店铺装修'], start: '2026-10-01', end: '2026-10-02' }), /未知采集域/);
   const plan = D.planCollection({
     accountId: ACC, platform: 'douyin', domains: ['服务履约', '服务履约'],
     start: '2026-11-01', end: '2026-11-02',
@@ -198,7 +198,7 @@ await test('空导入不带覆盖区间要报错（否则"没数据"和"没采"�
 await test('导入上限与入参形状：items 必须数组、最多 5000 条、域必须在白名单', () => {
   assert.throws(() => D.importRecords({ accountId: ACC, domain: '服务履约', items: {} }), /数组/);
   assert.throws(() => D.importRecords({ accountId: ACC, domain: '服务履约', items: new Array(5001).fill({}) }), /最多导入/);
-  assert.throws(() => D.importRecords({ accountId: ACC, domain: '竞争洞察', items: [] }), /未知采集域/);
+  assert.throws(() => D.importRecords({ accountId: ACC, domain: '店铺装修', items: [] }), /未知采集域/);
   // 账号 id 会进路径，坏 id 必须挡掉
   assert.throws(() => D.importRecords({ accountId: '../etc', domain: '服务履约', items: [] }), /不合法/);
 });
@@ -228,7 +228,7 @@ await test('按域/指标/日期过滤，并返回指标概要与截断标记', 
 
 await test('query 的坏参数要报错，而不是静默返回全部', () => {
   assert.throws(() => D.queryRecords({ accountId: ACC, start: '2026-10-01' }), /成对/);
-  assert.throws(() => D.queryRecords({ accountId: ACC, domain: '竞争洞察' }), /未知采集域/);
+  assert.throws(() => D.queryRecords({ accountId: ACC, domain: '店铺装修' }), /未知采集域/);
 });
 
 // ── 5. HTTP 面 ──────────────────────────────────────────────────────────────
@@ -324,7 +324,7 @@ await test('POST collect-import：写入并回写账号的上次采集状态；�
   const missing = row.collectionCoverage.domains.find((d) => d.domain === '流量转化');
   assert.equal(missing.coveredDays, 0);
 
-  const bad = await call('POST', `/shop-accounts/accounts/${accId}/collect-import`, { domain: '竞争洞察', items: [] });
+  const bad = await call('POST', `/shop-accounts/accounts/${accId}/collect-import`, { domain: '店铺装修', items: [] });
   assert.equal(bad.status, 400);
 });
 
@@ -333,7 +333,7 @@ await test('GET collect-records：查询与参数校验', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.json.count, 1);
   assert.equal(r.json.rows[0].metric, '支付金额');
-  const bad = await call('GET', `/shop-accounts/accounts/${accId}/collect-records?domain=竞争洞察`);
+  const bad = await call('GET', `/shop-accounts/accounts/${accId}/collect-records?domain=店铺装修`);
   assert.equal(bad.status, 400);
 });
 
@@ -385,10 +385,12 @@ await test('界面会显示本地数据的覆盖情况', () => {
   assert.match(src, /缺 ' \+ d\.missingDays/);
 });
 
-await test('文档点名 v0.11.0（CHANGELOG / package.json 一致）', () => {
+await test('文档点名 v0.11.0（CHANGELOG / package.json 不早于它）', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   const log = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
-  assert.equal(pkg.version, '0.11.0');
+  // 版本只往后走：断言「>= 0.11.0」，免得每升一版就要改一次旧测试
+  const [maj, min] = String(pkg.version).split('.').map((x) => Number(x));
+  assert.ok(maj > 0 || min >= 11, `package.json 版本 ${pkg.version} 早于 0.11.0`);
   assert.match(log, /## v0\.11\.0/);
   assert.match(log, /覆盖台账|coverage/);
 });

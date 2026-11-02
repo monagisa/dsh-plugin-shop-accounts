@@ -3,7 +3,42 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
-> `node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.12.0
+
+用户：「你能拿到他的 3675 条指标、497 节点经营树、224 个数据源、采集覆盖记录（coverage）吗，要不我们也按照这个来」。
+先把 Accio 的目录库整表导出核对（`~/.accio/data/plugins/commerce-domestic/ecommerce.db`，导出脚本复制 db+wal 到临时目录读，
+**原库未改动**）：`topics` 497 行、`metrics` 3675 行、`sources` 224 行、`domestic_collection_coverage` **0 行**、
+`source_schema_record` 0 行、`domestic_internal_data` / `domestic_external_data` 都是 **0 行**。
+指标按平台：taobao 933、tmall 920、doudian 854、1688 346、alibaba 284、jd 185、pdd 153；
+数据源按类型：rpa 154 / mcp 67 / manual 3；经营树引用指标 7244 次、注册表里缺失 0（自洽）。
+
+**能不能照搬**：覆盖记录是**运行态**，他那边一行都没跑过，抄不到，只能自己长（v0.11.0 的 coverage 台账就是干这个的）；
+指标/树/数据源则是**静态知识**，可以取，但里面混着 Accio 自己的实现细节（`value_path` 取值路径、`aggregation` 聚合口径、
+`dsl_id`、RPA 加密资产），这些搬过来我们既跑不通也不需要。所以这一版只取**骨架**：
+
+- **新目录 `lib/catalog/catalog.json`（593 KB，3045 条指标）**：按「本插件平台 → 定时采集域 → 指标」组织，
+  每条指标只留 `name / domain / measure(度量类型) / time(时间粒度) / fields(落库必需字段) / src(来源 id) / scope`。
+  Accio 的 `value_path`、`auxiliary_path`、聚合口径、DSL id、加密资产**一律不收录**（自带断言：文件里出现这些字样就测试失败）。
+- **平台映射**：doudian → `douyin`、1688 → `ali1688`、alibaba（国际站）跳过；taobao/tmall/douyin/jd/pdd 五个平台共 3045 条。
+- **新模块 `lib/catalog.mjs`**：懒加载 + 缓存；`catalogDomains(平台)` / `catalogDomainIds` / `catalogMetrics(平台,域)` /
+  `catalogMetric(平台,id)` / `unknownMetricIds` / `metricCount` / `catalogInfo`；目录缺失或损坏时**整体降级**回 v0.11.0 的 5 域行为。
+- **域清单按平台真实下发**：淘宝/天猫 **6 个域**（多「竞争洞察」，78 项指标），抖店/京东/拼多多 5 个域；
+  1688 在 Accio 里没有 scheduler 子树（走 mcp/API），退回默认 5 域且不拦指标校验。
+- **按平台校验**（三处：改配置 / plan / import / query）：拼多多选「竞争洞察」会被 400 挡回，淘宝可以。
+- **记录带 `metricId`**：`collect-import` 的 items 可带目录里的 `metric_id`，落库后可按 `metricId` 过滤查询；
+  `metricId` 参与去重哈希（同一天同值但不同指标，是两条记录）；跨平台/目录外的 `metricId` → 400 并点名。
+- **HTTP `GET /catalog`**：不带参数给全平台概览（每平台域清单 + 指标数）；`?platform=&domain=` 给某域指标清单
+  （默认 limit 200、`all=1` 全给，淘宝运营推广 540 条）。
+- **工具**：`shop_accounts` 新增 `action=catalog`；`domain`/`domains` 枚举放开「竞争洞察」；新增 `metricId` 查询参数。
+- **界面**：采集域按钮改由 `/state` 的 `a.collectionDomains` 驱动，直接显示「域（解释 · N 项指标）」，
+  并加一行「本地指标目录：淘宝 共 933 项可采指标 / 6 个采集域」。
+- **采集提示词**：域后面带上「约 N 项指标」，并明确「要采哪些指标以本地目录层为准，落库带 metricId」。
+
+验证：`node test/features-v0120.mjs` **23 项**（目录规模与纯净度、平台域名与指标数、跨平台不认、三处校验、
+metricId 落库/去重/过滤、`/catalog` 与 `/state`、工具与界面文案）；主自检等五套照旧，合计 **217 项全绿**。
+**没做**：按指标做聚合/同比环比（要先有指标口径实现，暂由 agent 自己算）；把目录指标接到真实采集器（现在只是「目标清单」，采集能力另建）。
 
 ## v0.11.0
 

@@ -1,9 +1,9 @@
 {
   "name": "dsh-plugin-shop-accounts",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "type": "module",
-  "description": "DSH 插件：电商平台店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688，都是商家端）——一个店铺一份独立登录档案，登录一次长期复用，上架时直接挑选；浏览器优先 ego lite（每店一个 profile + TaskSpace），未安装时回退 Chrome CDP；v0.10.0 起支持 macOS（钥匙串加密密码、Finder 打开档案、.app 内浏览器路径）",
+  "description": "DSH 插件：电商平台店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688，都是商家端）——一个店铺一份独立登录档案，登录一次长期复用，上架时直接挑选；浏览器优先 ego lite（每店一个 profile + TaskSpace），未安装时回退 Chrome CDP；v0.12.0 起内置「平台→采集域→指标」目录层；v0.10.0 起支持 macOS（钥匙串加密密码、Finder 打开档案、.app 内浏览器路径）",
   "keywords": [
     "dsh-plugin",
     "dsh",
@@ -38,7 +38,8 @@
     "features2": "node test/features-v0101.mjs",
     "features3": "node test/features-v0110.mjs",
     "platform": "node test/platform.mjs",
-    "test": "node test/smoke.mjs && node test/features-v090.mjs && node test/features-v0101.mjs && node test/features-v0110.mjs && node test/platform.mjs"
+    "test": "node test/smoke.mjs && node test/features-v090.mjs && node test/features-v0101.mjs && node test/features-v0110.mjs && node test/features-v0120.mjs && node test/platform.mjs",
+    "features4": "node test/features-v0120.mjs"
   },
   "dsh": {
     "manifestVersion": 1,
