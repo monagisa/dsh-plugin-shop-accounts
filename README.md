@@ -12,8 +12,9 @@
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台），
 另外支持给这些平台的 **C 端买家账号**建档（买家账号只做浏览/采集，不上架）。
 
-- 版本：**0.10.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
-- 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、`node test/platform.mjs` → 12 项全过
+- 版本：**0.10.1**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
+  `node test/features-v0101.mjs` → 15 项、`node test/platform.mjs` → 12 项全过
   （不启动浏览器、不碰真实账号；`npm test` 一次跑完）
 
 ---
@@ -38,7 +39,7 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 
 ## 更新说明
 
-### v0.9.0 – v0.10.0：存密码 / 账密登录 / 买家账号 / 数据采集 / macOS 适配
+### v0.9.0 – v0.10.1：存密码 / 账密登录 / 买家账号 / 数据采集 / macOS 适配 / 配置迁移
 
 这一区间是按逆向 Accio Work「设置 → 账号管理」的结论补齐的能力（对照证据见 CHANGELOG 对应版本）：
 
@@ -55,6 +56,13 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 - **macOS 适配（v0.10.0）**：新增 `lib/platform/`，Windows 用 DPAPI + Program Files 探测 + PowerShell 进程匹配，
   macOS 用**钥匙串**（`/usr/bin/security`）+ `/Applications` 的 `.app` + `ps` 解析 + `open`。
   ⚠️ macOS 这一支**尚未真机验证**，验收清单见 CHANGELOG v0.10.0。
+- **登录账号查重（v0.10.1）**：同平台 + 同登录账号（大小写、前后空格、Unicode 归一后比较）= 同一个人，
+  新建和编辑都会被挡下（`ACCOUNT_LOGIN_NAME_DUPLICATE`）；跨平台同名正常允许。
+  对齐 Accio「账号管理」的双唯一性校验 —— 重复记录会让「代填哪个密码、采集算谁的」对不上。
+- **店铺配置导出 / 导入（v0.10.1）**：设置页「路径与高级选项 → 店铺配置迁移」，导出一个 JSON 带走
+  平台 / 店名 / 登录账号 / 店铺 URL / 采集设置，换机器（尤其 Windows → mac）不用一条条重填。
+  **只搬配置不搬秘密**：密码、登录态、档案路径、端口都不进包（密码与本机密钥绑定，搬过去也解不开）；
+  导入逐条校验，坏数据跳过并说明原因，重复条目自动跳过（导两次不会翻倍）。
 
 ### v0.7.0 – v0.8.5：新增 ego lite 浏览器后端
 
@@ -410,6 +418,7 @@ lib/client.js       客户端 bundle：设置页「账号管理」整页 UI
 cordis.patch.yml    插件挂载点（id: shop-accounts）
 test/smoke.mjs      主自检（零依赖、不启动浏览器）
 test/features-v090.mjs  v0.9 功能自检（密码库 / 采集 / 账号类型 / 新路由）
+test/features-v0101.mjs v0.10.1 自检（登录账号查重 / 店铺配置导出导入）
 test/platform.mjs   平台层自检（v0.10.0；含把 mac 分支在 Windows 上能验的都验掉）
 test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时档案）
 ```
@@ -437,12 +446,13 @@ Windows 与 macOS 共用一套代码，差异全在 `lib/platform/`：
 ```powershell
 node test/smoke.mjs            # 113 项：平台判据 / 持久化 / 宿主 HTTP 面 / 排期 / ego 后端 / 客户端契约 / 安全边界
 node test/features-v090.mjs    # 30 项：账号类型 / 密码库 / 账密代填 / 采集配置与调度 / 新路由
+node test/features-v0101.mjs   # 15 项：登录账号查重 / 店铺配置导出导入（含坏数据与重复导入）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（能在 Windows 上验的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
 
-`npm test` 一次跑完前三套（零依赖、不碰真实账号、不启动浏览器）。
+`npm test` 一次跑完前四套（零依赖、不碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 用 `DSH_SHOP_ACCOUNTS_DIR` 把数据目录指到临时目录，**不碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真的拉起无头 Chrome（临时档案、不弹窗口、不碰店铺档案），验证

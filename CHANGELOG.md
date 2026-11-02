@@ -2,7 +2,30 @@
 
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
-> `node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.10.1
+
+用户看完与 Accio「账号管理」的逐项对比后回：「1 4做一下」—— 即对比表里标「我们较弱 / 缺」里性价比最高的两条：
+
+1. **登录账号查重**（对齐 Accio `assertUnique(entries, platform, name, account)` 的双唯一性校验之一）：
+   - `POST /accounts`：同平台 + 同登录账号 → 400 `ACCOUNT_LOGIN_NAME_DUPLICATE`，错误里点名撞的是哪家店；
+   - `PUT /accounts/:id`：改成别人的登录账号同样挡（排除自己），改成空串仍是历史行为；
+   - 比较口径：`NFC` 归一 + `trim` + **折叠大小写**（Accio 用精确比较，这里多折一次 —— 手机号/邮箱大小写
+     不同是同一个账号，正是最容易重复建号的情形）；**只挡同平台**，跨平台同名（比如同一个邮箱在淘宝和京东都有账号）是正常的。
+2. **店铺配置导出 / 导入**（换机器用，尤其 Windows → mac）：
+   - `GET /export` 出一个 JSON：`{format:'dsh-shop-accounts/stores', version:1, count, accounts:[…]}`，
+     每项含平台 / 账号类型 / 店名 / 店铺 URL / 登录账号 / 备注 / ego profile / 采集设置；
+   - **只搬配置不搬秘密**：密码、登录态（浏览器档案与 cookie 罐）、档案路径、端口、内部 id 一律不进包 ——
+     密码本来就和本机密钥绑定（DPAPI/钥匙串），搬过去也解不开；文件里还写了一行 `note` 说明这件事。
+   - `POST /import` 逐条校验、能建就建、建不了就跳过并给原因（不因一条坏数据废掉整包）：
+     平台不认识 / 缺登录账号 / 同平台同账号已存在 → 跳过；`javascript:` 之类的 URL 被丢弃（导入文件是外部输入，
+     不能进 Chrome 命令行）；文件里夹带的 `profileDir`、`port` 被忽略（档案目录按新 id 本机重新派生）；
+     一次最多 500 条；导两次不会翻倍。
+   - 界面：设置页「路径与高级选项」里新增「店铺配置迁移」组，两个按钮（导出下载 JSON / 选文件导入），
+     导入完成提示里直说「密码要重新设置 —— 导出文件里不含密码」。
+
+验证：`node test/features-v0101.mjs` **11 项**全过（Windows 本机）；另有 `smoke` 113 / `features-v090` 30 / `platform` 12 未受影响。
 
 ## v0.10.0
 
