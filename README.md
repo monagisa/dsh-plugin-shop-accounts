@@ -12,9 +12,10 @@
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台），
 另外支持给这些平台的 **C 端买家账号**建档（买家账号只做浏览/采集，不上架）。
 
-- 版本：**0.10.1**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.11.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
-  `node test/features-v0101.mjs` → 15 项、`node test/platform.mjs` → 12 项全过
+  `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
+  `node test/platform.mjs` → 12 项全过
   （不启动浏览器、不碰真实账号；`npm test` 一次跑完）
 
 ---
@@ -39,7 +40,7 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 
 ## 更新说明
 
-### v0.9.0 – v0.10.1：存密码 / 账密登录 / 买家账号 / 数据采集 / macOS 适配 / 配置迁移
+### v0.9.0 – v0.11.0：存密码 / 账密登录 / 买家账号 / 数据采集 / macOS 适配 / 配置迁移 / 采集数据层
 
 这一区间是按逆向 Accio Work「设置 → 账号管理」的结论补齐的能力（对照证据见 CHANGELOG 对应版本）：
 
@@ -53,6 +54,11 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
   能力位区分「能否上架」「能否填店铺 URL」「能否采集」——买家账号不做上架。
 - **数据采集（v0.9.0）**：只做**配置与调度**（选 5 个业务域、每天几点、最近 30 个完整自然日），
   真正的抓取交给 agent/skill —— 平台改版时只改 skill，不用改插件。
+- **采集数据层（v0.11.0）**：把「采什么」变成一条带契约的管线（对照 Accio 的 `ecomctl` 结论）：
+  `plan`（这店这区间缺哪些天）→ skill 采集 → `import`（逐条校验 + content_hash 去重 + 记覆盖台账）→ `query`（查已采数据）。
+  数据放在 `<数据目录>/collection/<账号id>/`（`coverage.json` 台账 / `records.jsonl` 记录 / `imports.json` 批次日志）。
+  **合法空结果也记台账**（只记覆盖、不写记录），否则同一段每天都会被重采。对应工具动作：
+  `collect-plan` / `collect-import` / `collect-query`。
 - **macOS 适配（v0.10.0）**：新增 `lib/platform/`，Windows 用 DPAPI + Program Files 探测 + PowerShell 进程匹配，
   macOS 用**钥匙串**（`/usr/bin/security`）+ `/Applications` 的 `.app` + `ps` 解析 + `open`。
   ⚠️ macOS 这一支**尚未真机验证**，验收清单见 CHANGELOG v0.10.0。
@@ -411,6 +417,7 @@ lib/secret.mjs      cookie 备份加密（平台密钥后端保护主密钥 + AE
 lib/vault.mjs       店铺账号密码库（v0.9.0；密钥后端不可用时整库禁用，绝不退明文）
 lib/autologin.mjs   账密代填（按平台选择器 + cookie 判据复核；验证码交回用户）
 lib/collection.mjs  数据采集的配置与调度（真抓取交给 agent/skill）
+lib/datastore.mjs   采集数据层（v0.11.0）：覆盖台账 / 记录 JSONL / plan·import·query
 lib/store.mjs       accounts.json / config.json / runtime.json 的原子读写与降级
 lib/schedule.mjs    排期算法（纯函数：分组、时间点、到点、下次、记账）
 lib/index.js        宿主：/shop-accounts/* 路由、自更新、定时心跳
@@ -419,6 +426,7 @@ cordis.patch.yml    插件挂载点（id: shop-accounts）
 test/smoke.mjs      主自检（零依赖、不启动浏览器）
 test/features-v090.mjs  v0.9 功能自检（密码库 / 采集 / 账号类型 / 新路由）
 test/features-v0101.mjs v0.10.1 自检（登录账号查重 / 店铺配置导出导入）
+test/features-v0110.mjs v0.11.0 自检（采集数据层：缺口 / 导入去重 / 查询）
 test/platform.mjs   平台层自检（v0.10.0；含把 mac 分支在 Windows 上能验的都验掉）
 test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时档案）
 ```
@@ -447,12 +455,13 @@ Windows 与 macOS 共用一套代码，差异全在 `lib/platform/`：
 node test/smoke.mjs            # 113 项：平台判据 / 持久化 / 宿主 HTTP 面 / 排期 / ego 后端 / 客户端契约 / 安全边界
 node test/features-v090.mjs    # 30 项：账号类型 / 密码库 / 账密代填 / 采集配置与调度 / 新路由
 node test/features-v0101.mjs   # 15 项：登录账号查重 / 店铺配置导出导入（含坏数据与重复导入）
+node test/features-v0110.mjs   # 24 项：采集数据层（台账缺口 / 导入校验与去重 / 空结果台账 / 查询）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（能在 Windows 上验的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
 
-`npm test` 一次跑完前四套（零依赖、不碰真实账号、不启动浏览器）。
+`npm test` 一次跑完前五套（零依赖、不碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 用 `DSH_SHOP_ACCOUNTS_DIR` 把数据目录指到临时目录，**不碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真的拉起无头 Chrome（临时档案、不弹窗口、不碰店铺档案），验证

@@ -2,7 +2,44 @@
 
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
-> `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
+> `node test/platform.mjs`（v0.10 平台层）。
+
+## v0.11.0
+
+用户问：「这个定时采集，原来的 accio 是怎么做的，不可能是单纯的提示词吧」→ 我把 Accio 装在盘上的东西挖了一遍，
+结论是它有一条**带契约的采集管线**：本地 CLI `ecomctl`（`@accio-ai/ecommerce-cli` 0.4.5，Go 静态编译）
+操作 SQLite 数据仓库（`~/.accio/data/plugins/commerce-domestic/ecommerce.db`：3675 条指标注册表、497 节点经营树、
+224 个数据源、覆盖台账、内部/外部两张数据表），RPA 采集器配加密的 locator 模板（`locator_template.json.enc`，
+AES-256-GCM），流程是 `collection plan` → 跑采集（rpa/api）→ `collection import` → 记账 → `metric/topic query`。
+用户回：「A」（选「学它的契约，自己做轻量版」）。
+
+这一版只做**数据层**，采集执行仍然交给 skill/agent（插件不自己抓页面）：
+
+- **新模块 `lib/datastore.mjs`**（零依赖，JSONL + 覆盖台账，不引入 `node:sqlite`——宿主 Node/Electron 不保证带它）：
+  - `<数据目录>/collection/<账号id>/coverage.json`：覆盖台账，每个域若干 `{start,end}`，相邻/重叠自动合并；
+  - `<数据目录>/collection/<账号id>/records.jsonl`：业务记录，一行一条 JSON（追加写，坏一行不连坐）；
+  - `<数据目录>/collection/<账号id>/imports.json`：最近 100 次导入的批次日志。
+- **plan**：`planCollection()` 按「账号 + 域 + 区间」算缺口，返回 `COLLECTION_REQUIRED` /
+  `NO_COLLECTION_REQUIRED` 与 `awaitCollect:[{domain,label,domainId,missing,missingDays}]`，
+  其中 `domainId` 与 Accio 同形（`<platform>-scheduler-<域>`，抖店 → `doudian`）。窗口上限 366 天。
+- **import**：`importRecords()` 逐条校验（日期、指标名非空且不含控制字符、数值有限、`metric` 与 `values` 互斥、
+  `extra` ≤2KB）→ `content_hash` 去重 → 追加落盘 → 记台账。**合法空结果必须带覆盖区间**（只记台账不写记录），
+  否则「没采」和「确实没数据」分不清、台账永远推不动 —— 这是 Accio 的关键语义。
+  一次最多 5000 条；账号 id 会进路径，必须过 `validAccountId`。
+- **query**：`queryRecords()` 按域/指标/日期查（多指标记录按 `values` 里的键匹配），返回指标概要与截断标记。
+- **接口**：`POST /accounts/:id/collect-plan`、`POST /accounts/:id/collect-import`、
+  `GET /accounts/:id/collect-records`；工具 `shop_accounts` 新增 `collect-plan` / `collect-import` / `collect-query`。
+- **界面**：详情页「数据采集」卡片下方显示本地数据概览（窗口、总记录数、每个域「已采全 N 天 / 缺 M 天」）。
+- **顺手**：删账号时连带删掉它的采集数据目录（否则重建同 id 的账号会凭空有历史数据）；
+  `/state` 每个账号新增 `collectionCoverage`；采集提示词改成三步（plan → 采集 → import）并强调空结果也要导入。
+
+验证：新增 `node test/features-v0110.mjs` **24 项**全过（日期/区间、缺口、plan、导入校验与去重、空结果台账、
+query、HTTP 面、删账号清数据、工具/界面/文档）；
+`smoke` 113 / `features-v090` 30 / `features-v0101` 15 / `platform` 12 未受影响。
+
+> 没做（有意留到下一步）：`query` 的跨域聚合与同比环比、指标注册表（我们还没有「指标 → 采集来源」的映射，
+> 现在是记录级自由指标名）、把 `plan` 接进宿主排期自动跑（现在仍由 agent 按提示词驱动）。
 
 ## v0.10.1
 

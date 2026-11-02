@@ -284,10 +284,12 @@ await test('client.js：设置页有「店铺配置迁移」两个按钮，走 /
   assert.match(src, /不含密码/);
 });
 
-await test('文档点名了 v0.10.1（CHANGELOG / package.json 版本一致）', () => {
+await test('文档点名了 v0.10.1（CHANGELOG 有该段，package.json 版本不低于它）', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   const log = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
-  assert.equal(pkg.version, '0.10.1');
+  // 版本会一路往前走，这里只要求"不低于 v0.10.1"且该版本段还在（别把断言写死成某一个版本）
+  const [maj, min, patch] = String(pkg.version).split('.').map(Number);
+  assert.ok(maj === 0 && (min > 10 || (min === 10 && patch >= 1)), 'package.json 版本应 ≥ 0.10.1，实际 ' + pkg.version);
   assert.match(log, /## v0\.10\.1/, 'CHANGELOG 缺 v0.10.1 段');
   assert.match(log, /登录账号查重|ACCOUNT_LOGIN_NAME_DUPLICATE/);
   assert.match(log, /导出/);
