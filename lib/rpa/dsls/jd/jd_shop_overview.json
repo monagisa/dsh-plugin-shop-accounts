@@ -1,0 +1,358 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "jd_shop_overview",
+  "platform": "jd",
+  "description": "固定近30天采集京东商智首页经营概览页面。",
+  "conditions": {
+    "time": {
+      "kind": "fixed",
+      "value": "month"
+    }
+  },
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "京东商智首页经营概览",
+    "description": "固定近30天采集京东商智首页经营概览页面。",
+    "defaults": {
+      "timeoutMs": 8000,
+      "retries": 0,
+      "continueOnError": true,
+      "stepGapMs": 200,
+      "conditionTimeoutMs": 2000
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "home_overview:打开商智-首页经营概览",
+        "url": "https://jdsz.jd.com/szweb/view/index/home.html",
+        "waitUntil": "domcontentloaded",
+        "timeoutMs": 30000,
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "jd.dismiss-known-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ".close-modal",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'ux-modal-dialog')]//*[contains(@class,'close-modal')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is(.jmt-dialog-wrapper, .all-dialog) :is(.close-modal, .close-icon)",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "jd.dismiss-known-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ".close-modal",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'ux-modal-dialog')]//*[contains(@class,'close-modal')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is(.jmt-dialog-wrapper, .all-dialog) :is(.close-modal, .close-icon)",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitForLoadState",
+        "id": "home_overview:等待DOM加载",
+        "loadState": "domcontentloaded"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "home_overview:等待页面初始渲染",
+        "ms": 2500
+      },
+      {
+        "action": "when",
+        "id": "home_overview:关闭首屏广告弹窗",
+        "condition": {
+          "kind": "element",
+          "state": "visible",
+          "target": [
+            {
+              "by": "css",
+              "value": ".close-modal",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//*[contains(@class,'ux-modal-dialog')]//*[contains(@class,'close-modal')]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//*[contains(@class,'ux-overlay') or contains(@class,'ux-dialog')]//*[contains(@class,'close') or normalize-space(.)='×' or normalize-space(.)='✕']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//*[contains(@class,'ux-overlay-dialog')]//img[contains(@alt,'关闭')]",
+              "nth": 0
+            }
+          ],
+          "timeoutMs": 5000
+        },
+        "then": [
+          {
+            "action": "click",
+            "id": "home_overview:点击广告弹窗关闭按钮",
+            "target": [
+              {
+                "by": "css",
+                "value": ".close-modal",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'ux-modal-dialog')]//*[contains(@class,'close-modal')]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'ux-overlay') or contains(@class,'ux-dialog')]//*[contains(@class,'close') or normalize-space(.)='×' or normalize-space(.)='✕']",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'ux-overlay-dialog')]//img[contains(@alt,'关闭')]",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 8000,
+            "retries": 2,
+            "onError": "continue"
+          },
+          {
+            "action": "waitTimeout",
+            "id": "home_overview:等待广告弹窗关闭",
+            "ms": 2000
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "action": "when",
+        "id": "home_overview:关闭京准通引导浮层(jzt-lite)",
+        "description": "首页 #jzt-lite-wrapper 的 #jzt-lite-mask 引导浮层可能拦截日期点击；先尝试关闭，后续点击按已声明的 force 执行。",
+        "condition": {
+          "kind": "element",
+          "state": "visible",
+          "target": [
+            {
+              "by": "css",
+              "value": "#jzt-lite-wrapper",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "#jzt-lite-mask",
+              "nth": 0
+            }
+          ],
+          "timeoutMs": 3000
+        },
+        "then": [
+          {
+            "action": "click",
+            "id": "home_overview:点击jzt-lite关闭按钮",
+            "target": [
+              {
+                "by": "css",
+                "value": "#jzt-lite-wrapper :is([class*='close'],[class*='Close'],[class*='skip'],[class*='Skip'])",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[@id='jzt-lite-wrapper']//*[contains(@class,'close') or normalize-space(.)='×' or normalize-space(.)='✕' or normalize-space(.)='跳过' or normalize-space(.)='我知道了']"
+              }
+            ],
+            "timeoutMs": 3000,
+            "retries": 1,
+            "onError": "continue"
+          },
+          {
+            "action": "press",
+            "id": "home_overview:Esc关闭jzt-lite",
+            "key": "Escape",
+            "onError": "continue"
+          },
+          {
+            "action": "waitTimeout",
+            "id": "home_overview:等待jzt-lite关闭",
+            "ms": 800
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "home_overview:等待月档位渲染",
+        "description": "日期档位为懒加载渲染，滚动与点击前显式等待「月」档位可见，避免渲染未完成导致定位失败。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'jmt-combo-date-picker-list-tag') and @data-event-content='当前时间_月'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'date-picker-list-tag')][normalize-space(.)='月'])[1]"
+          },
+          {
+            "by": "text",
+            "value": "月",
+            "match": "exact",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "onError": "fail",
+        "recovery": "auto"
+      },
+      {
+        "id": "home_overview:滚动到日期档位",
+        "action": "scrollIntoView",
+        "description": "把经营概览时间档位滚入视口，降低被浮层/视口外遮挡导致 click 超时的概率。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'jmt-combo-date-picker-list-tag') and @data-event-content='当前时间_月'])[1]"
+          }
+        ],
+        "timeoutMs": 8000,
+        "retries": 1,
+        "onError": "continue"
+      },
+      {
+        "action": "click",
+        "id": "home_overview:尝试选择日期-月",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'jmt-combo-date-picker-list-tag') and @data-event-content='当前时间_月'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'date-picker-list-tag')][normalize-space(.)='月'])[1]"
+          },
+          {
+            "by": "text",
+            "value": "月",
+            "match": "exact",
+            "nth": 0
+          }
+        ],
+        "onError": "fail",
+        "force": true,
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 3000
+        },
+        "timeoutMs": 20000,
+        "retries": 3,
+        "description": "选中经营概览目标时间档位，使用 force 绕过 #jzt-lite-mask 浮层拦截。onError=fail：未选中时停止，避免把默认实时口径当作目标周期。"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "home_overview:等待日期筛选后渲染",
+        "ms": 5000
+      },
+      {
+        "action": "press",
+        "id": "home_overview:向下滚动-1",
+        "key": "PageDown",
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "home_overview:等待懒加载-1",
+        "ms": 500
+      },
+      {
+        "action": "press",
+        "id": "home_overview:向下滚动-2",
+        "key": "PageDown",
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "home_overview:等待懒加载-2",
+        "ms": 500
+      },
+      {
+        "action": "press",
+        "id": "home_overview:向下滚动-3",
+        "key": "PageDown",
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "home_overview:等待懒加载-3",
+        "ms": 500
+      },
+      {
+        "action": "readText",
+        "id": "home_overview:读取页面可见文本",
+        "target": [
+          {
+            "by": "css",
+            "value": "body",
+            "nth": 0
+          }
+        ],
+        "readMode": "innerText",
+        "trim": true,
+        "outputKey": "home_overview_body_text",
+        "recovery": "auto"
+      }
+    ]
+  },
+  "collection": {
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  }
+}

@@ -3,7 +3,42 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
-> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.13.0
+
+用户：「你看看他是怎么采集的，学他的」。
+
+先说结论：**Accio 的采集不是写死的抓取代码，而是「配方 + 编排 + 宿主原生执行」**。证据（本机只读实测）：
+它的 `ecommerce-data-collect` skill 目录是**全明文**的 —— `SKILL.md`、**120 份 DSL（JSON 步骤集）**、
+10 个 Python 编排脚本、4 篇 references；宿主侧是原生工具 `browser_rpa_launch`（含 `_batch`），
+CLI `ecomctl` 只负责 plan 与入库。完整逆向记录见 [docs/accio-collection-architecture.md](docs/accio-collection-architecture.md)。
+
+这一版把**执行层**学过来：
+
+- **新模块 `lib/rpa.mjs`**：DSL 编译器 + 哑执行器 + 三种 driver。
+  - 编译层（唯一真源）：`trailingWindow`（最近 30 个完整自然日，30 天前~昨天，不含今天）、
+    `conditions.time.bindings` 占位符（`{dateRange}` → `YYYY-MM-DD%7CYYYY-MM-DD`）、
+    残留占位符直接报 `INVALID_DSL`（绝不把 `{dateRange}` 发给站点）、`runId` 自动生成；
+  - 动作覆盖：`goto / waitTimeout / waitFor / readText / readPageUrl / click / when / assertElement`，
+    外加 `scrollIntoView / scrollToBottom / type / hover / readAttribute / queryAll / assertText / clickAndWait / waitForLoadState / press / if / while / runScript`；
+  - 登录守卫照抄它的技巧：`when` 命中登录框 → `then` 断言同一元素 `hidden`（必然失败，`onError:fail`）→ 得到 `LOGIN_REQUIRED`；
+  - 产物声明 `collection.artifacts`：`present/bytes` 判定；**空产物 = 业务无数据（不重试）**，和它的语义一致；
+  - driver：`makeCdpDriver`（Chrome 调试端口）、ego 后端用 `EGO_EXECUTOR_SOURCE`（同一份 ops 在 ego 运行时里哑执行，
+    一次任务空间进出）、`makeMockDriver`（测试全离线）。
+- **新模块 `lib/dsls.mjs`**：配方库存。自带 3 份种子（淘宝/京东/拼多多概览），并自动发现本机 Accio 的 120 份
+  （`SHOP_ACCOUNTS_DSL_DIR` 可指别处），标出每份是否需要下载。
+- **新路由 / 工具**：`GET /rpa/dsls`（列配方）、`POST /accounts/:id/collect-run`（跑一份，返回原始产物 + 逐步 trace + finalUrl）、
+  工具 `action=rpa-dsls` / `action=collect-run`。原始产物落盘到 `<数据目录>/collection/<账号>/raw/<dslId>/`（失败也存，便于查配方）。
+- **边界如实**：`downloadFile`（83 处、50 份 DSL 依赖浏览器下载落盘）**本版不支持**，直接 501 `DSL_NEEDS_DOWNLOAD`，
+  不假装采到；浏览器没开返回 409（不偷偷拉起浏览器）。归一化仍交 collect-import，不猜指标映射。
+
+覆盖率实测（120 份真实 DSL，给日期参数后离线编译）：**17 份可直接跑**、**51 份需业务参数**（传 `productId` 即可）、
+**50 份依赖下载**（当前最大缺口）、2 份其它动作不支持。
+
+验证：新增 `node test/features-v0130.mjs` **27 项**（编译层/时间窗口/占位符/真实配方编译/登录守卫→LOGIN_REQUIRED/
+空产物判定/超时与可选步骤/trace/库存/HTTP 400·404·409·501/ego 执行器接线）；六套旧自检照旧，合计 **244 项全绿**。
+**没做**：`downloadFile` 接管、Python 式编排层（job 目录/revision/并发分组/一次重试）。
 
 ## v0.12.0
 

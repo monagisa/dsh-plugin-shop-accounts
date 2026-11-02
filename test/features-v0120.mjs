@@ -326,7 +326,7 @@ const toolSrc = fs.readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8');
 const clientSrc = fs.readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8');
 
 await test('工具：新增 catalog 动作，域枚举含「竞争洞察」', () => {
-  assert.ok(/enum: \['list'.*'catalog'\]/s.test(toolSrc), 'action 枚举里没有 catalog');
+  assert.ok(/enum: \['list'[\s\S]*?'catalog'/.test(toolSrc), 'action 枚举里没有 catalog');
   assert.ok(toolSrc.includes("action === 'catalog'"), '没有 catalog 分支');
   assert.ok(toolSrc.includes("['竞争洞察']") || toolSrc.includes("'竞争洞察'"), '域枚举没放开竞争洞察');
 });
