@@ -423,14 +423,14 @@ await test('GET/PUT /accounts/:id 改名换端口', async () => {
   // 「管理」详情页要写的那几个字段：店铺 URL / 账号 / 账号类型（v0.9.0 起是 seller/buyer 枚举，
   // 老写法“商家账号”仍接受，但落库/读取时会归一成 'seller'）
   const d = await call('PUT', '/shop-accounts/accounts/' + id, {
-    url: 'https://mms.pinduoduo.com/goods/goods_list', loginName: '韩品兰坊;阿荣', accountType: '商家账号',
+    url: 'https://mms.pinduoduo.com/goods/goods_list', loginName: '示例店铺;示例账号', accountType: '商家账号',
   });
   assert.equal(d.json.account.url, 'https://mms.pinduoduo.com/goods/goods_list');
-  assert.equal(d.json.account.loginName, '韩品兰坊;阿荣');
+  assert.equal(d.json.account.loginName, '示例店铺;示例账号');
   assert.equal(d.json.account.accountType, 'seller');
   const ds = await call('GET', '/shop-accounts/state');
   assert.equal(ds.json.accounts[0].url, 'https://mms.pinduoduo.com/goods/goods_list');
-  assert.equal(ds.json.accounts[0].loginName, '韩品兰坊;阿荣');
+  assert.equal(ds.json.accounts[0].loginName, '示例店铺;示例账号');
   assert.equal(ds.json.accounts[0].accountType, 'seller');
   // 买家账号可落库，并带上「只做浏览/采集、不做上架」的能力位
   const b = await call('PUT', '/shop-accounts/accounts/' + id, { accountType: 'buyer' });
@@ -1470,7 +1470,8 @@ await test('Chrome 模式下设置页不出现 ego 专属 UI，ego 模式下才�
   assert.ok(!chrome.includes('ego-browser'), 'Chrome 模式不该出现 ego-browser 路径字段');
   assert.ok(!chrome.includes('ego profile'), 'Chrome 模式不该列 ego profile（那是 ego 模式的隐私信息）');
   assert.ok(!chrome.includes('刷新 ego'), 'Chrome 模式不该有「刷新 ego」按钮');
-  assert.ok(chrome.includes('切到「ego lite」才会用到它'), 'Chrome 模式要说明为什么没用 ego');
+  // v0.16.1 精简文案：一行说清状态即可，不再写大段解释
+  assert.ok(chrome.includes('当前用 Chrome'), 'Chrome 模式要说明当前用的是 Chrome');
 
   // ② Chrome + 没装 ego：选项标「未安装」，提示只说 Chrome
   const noEgo = renderSettings({ backend: 'chrome', egoAvailable: false });

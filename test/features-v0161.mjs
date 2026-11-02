@@ -1,0 +1,149 @@
+#!/usr/bin/env node
+/**
+ * features-v0161.mjs —— v0.16.1：界面文案精简 + 占位符不暴露用户信息
+ *
+ * 用户原话 m03119：`去掉那些提示，那些很大段文字，输入框提示也不要透露我的信息`
+ *
+ * 两件事：
+ *   1. 详情页/弹窗里那些三四行的大段说明（"密码只保存在本机（…文件 …），不进账号表、不上传。打开店铺时会…"）
+ *      全删了，只留能指导操作的一句话；不该出现的整段直接去掉。
+ *   2. 占位符里原来拿用户的真实数据当例子：`例如：韩品兰坊`、`例如：淘宝·韩品兰坊·阿柔`、
+ *      `登录账号名，例如 韩品兰坊;阿荣`，还有本机路径（ego.cli / browser.path / 数据目录 / 源码目录）
+ *      直接塞进 placeholder —— 都换成中性文案。
+ *
+ * 本套是**源码级回归**：以后谁再往界面里塞长段落或真实信息，这里会炸。
+ * 跑法：node test/features-v0161.mjs
+ */
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(here, '..');
+const clientSrc = fs.readFileSync(path.join(ROOT, 'lib/client.js'), 'utf8');
+
+let passed = 0;
+const failures = [];
+function test(name, fn) {
+  try { fn(); passed += 1; console.log('  \u2713 ' + name); }
+  catch (err) { failures.push({ name, err }); console.log('  \u2717 ' + name + '\n      ' + (err && err.message ? err.message : String(err))); }
+}
+const section = (t) => console.log('\n' + t);
+
+// ── A. 占位符不暴露用户信息 ─────────────────────────────────────────────────
+section('A. 输入框占位符：不许出现真实店铺名 / 人名 / 本机路径');
+
+test('占位符里没有真实店铺名与人名（韩品兰坊 / 阿柔 / 阿荣）', () => {
+  for (const bad of ['韩品兰坊', '阿柔', '阿荣']) {
+    assert.equal(clientSrc.includes(bad), false, '占位符里还留着真实信息：' + bad);
+  }
+});
+
+test('店铺名 / 备注 / 账号的占位符是中性的例子', () => {
+  assert.match(clientSrc, /placeholder: '例如：某品牌旗舰店（留空自动起名）'/);
+  assert.match(clientSrc, /placeholder: '例如：平台·店铺·运营（选填）'/);
+  assert.match(clientSrc, /'登录账号名，例如 主账号;子账号'/);
+});
+
+test('本机路径不再进占位符（ego.cli / browser.path / 数据目录 / 源码目录）', () => {
+  assert.equal(clientSrc.includes('placeholder: ego.cli ||'), false, 'ego 路径还在占位符里');
+  assert.equal(clientSrc.includes('placeholder: browser.path ||'), false, '浏览器路径还在占位符里');
+  assert.equal(clientSrc.includes("placeholder: (state.data && state.data.dataDir"), false, '数据目录还在占位符里');
+  assert.equal(clientSrc.includes('placeholder: detectedDir ||'), false, '源码目录还在占位符里');
+  // 换成了固定文案
+  assert.ok(clientSrc.split("placeholder: '留空 = 自动探测'").length - 1 >= 2, '路径类输入框要有统一的中性占位符');
+  assert.ok(clientSrc.includes("placeholder: '留空 = <数据目录>\\\\profiles'"), '档案根目录要给中性占位符');
+});
+
+test('密码库里那条真实文件路径不再出现在界面上', () => {
+  assert.equal(/props\.vault\.path/.test(clientSrc), false, '把本机密码库文件路径显示在界面上了');
+});
+
+// ── B. 大段说明已删除 ───────────────────────────────────────────────────────
+section('B. 那些很大段的说明文字已经删掉');
+
+const REMOVED = [
+  ['账号与密码都必填（和 Accio 的账号管理一致）', '新增店铺弹窗的三行密码说明'],
+  ['卖家走千牛 / mms / 抖店 / 京麦 / 1688 卖家入口', '账号类型的两行说明'],
+  ['填入已登录过的 Chrome 用户目录可以直接复用它的登录态', '浏览器目录说明'],
+  ['上架流程靠这个端口复用登录态', '调试端口说明'],
+  ['插件只维护「采什么、什么时候采」', '采集卡片开场说明'],
+  ['下面只选「采哪些域」：', '采集卡片引导句'],
+  ['来自 Accio 目录库的域骨架', '目录概览长句'],
+  ['买家账号：经营总览/流量转化/运营推广会被自动剔除', '买家账号说明段'],
+  ['只调整执行时间，不保存或覆盖店铺开关、检测内容', '调整排期弹窗开场说明'],
+  ['判定「已登录」后让页面多待这么久', '保活停留说明'],
+  ['默认「定时采集」—— 和 Accio 一样', '到点做什么的说明段'],
+  ['已保存的账号密码会自动代填；要走扫码 / 短信', '待登录横幅说明段'],
+  ['「检测更新」只查询 GitHub 有没有新提交', '更新说明段'],
+  ['换机器（比如 Windows → mac）时用：导出只含店铺配置', '配置迁移说明段'],
+  ['每个店铺一份独立的登录档案：用 ego lite（每店一个 profile', '顶部副标题长句'],
+  ['还没有店铺账号 —— 点右上角「+ 新增店铺」', '空列表长句'],
+];
+for (const [text, what] of REMOVED) {
+  test('已删除：' + what, () => {
+    assert.equal(clientSrc.includes(text), false, '这段文案还在：' + text.slice(0, 20) + '…');
+  });
+}
+
+// ── C. 该留的功能文案还在（别删过头） ───────────────────────────────────────
+section('C. 该留的操作文案还在');
+
+test('采集卡片：状态胶囊 + 同一个开关的按钮', () => {
+  assert.match(clientSrc, /定时采集：已加入/);
+  assert.match(clientSrc, /定时采集：已暂停/);
+  assert.match(clientSrc, /加入定时采集/);
+  assert.match(clientSrc, /暂停定时采集/);
+  assert.match(clientSrc, /保存采集域/);
+});
+
+test('密码卡：一句话说明 + 操作按钮齐全', () => {
+  assert.match(clientSrc, /只保存在本机（/);
+  assert.match(clientSrc, /macOS 钥匙串/);
+  assert.match(clientSrc, /保存密码/);
+  assert.match(clientSrc, /删除密码/);
+  assert.match(clientSrc, /重新登录（代填）/);
+});
+
+test('账号密码错的警示卡：只留一句', () => {
+  assert.match(clientSrc, /已暂停自动代填/);
+  assert.equal(clientSrc.includes('避免连续错误被锁号'), false, '警示卡还留着长解释');
+});
+
+test('指标目录规模还显示，但压成一行', () => {
+  assert.match(clientSrc, /本地指标目录：/);
+  assert.equal(clientSrc.includes('可采指标 / '), false, '目录那行还是长句');
+});
+
+test('顶部副标题确实换成一行短句', () => {
+  assert.match(clientSrc, /一店一份独立登录档案（ego lite）/);
+  assert.match(clientSrc, /一店一份独立登录档案（Chrome）/);
+});
+
+// ── D. 提示行长度上限（防止再写长段落） ─────────────────────────────────────
+section('D. 界面里不再有超长提示句');
+
+test('client.js 里没有超过 100 字的中文界面文案（注释不算）', () => {
+  // 逐行扫：跳过纯注释行，只看带引号的中文字面量
+  const longOnes = [];
+  for (const line of clientSrc.split('\n')) {
+    const t = line.trim();
+    if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')) continue;
+    const re = /'([^'\n]*)'/g;
+    let m;
+    while ((m = re.exec(line))) {
+      const v = m[1];
+      if (!/[\u4e00-\u9fa5]/.test(v)) continue;
+      if (v.length > 100) longOnes.push(v.slice(0, 60) + '…(' + v.length + '字)');
+    }
+  }
+  assert.deepEqual(longOnes, [], '还有超长文案：\n      ' + longOnes.join('\n      '));
+});
+
+// ── 汇总 ────────────────────────────────────────────────────────────────────
+console.log('\n' + (failures.length ? '\u2717 失败 ' + failures.length + ' 项 / 共 ' + (passed + failures.length) : '\u2713 全部通过（' + passed + ' 项）'));
+if (failures.length) {
+  for (const f of failures) console.log('\n--- ' + f.name + '\n' + (f.err && f.err.stack ? f.err.stack : f.err));
+  process.exit(1);
+}
