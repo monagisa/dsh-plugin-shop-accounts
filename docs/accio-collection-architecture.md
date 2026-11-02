@@ -197,19 +197,18 @@ Connector（1688 / 国际站）走另一条：
 | Chrome 后端（CDP driver）与 ego 后端（运行时哑执行器 `EGO_EXECUTOR_SOURCE`） | ✅ |
 | 配方库存：自带 3 份种子 + 自动发现本机 Accio 的 120 份（`SHOP_ACCOUNTS_DSL_DIR`） | ✅ |
 | `GET /rpa/dsls`、`POST /accounts/:id/collect-run`、工具 `rpa-dsls` / `collect-run`、原始产物落盘 | ✅ |
-| `downloadFile`（83 处 / 50 份 DSL 依赖浏览器下载落盘） | ❌ **明确报 501**，不假装成功 |
-| Python 编排层（job 目录 / revision / 并发分组 / 一次重试） | ⚠️ 未做：现在由 agent 用工具串，或下一步补 |
+| `downloadFile`（83 处 / 50 份 DSL 依赖浏览器下载落盘） | ✅ v0.14.0：设下载目录 + 轮询落盘 + `download_ref` 产物 |
+| 编排层（job 目录 / revision / 分批 / 一次重试 / 交付） | ✅ v0.14.0 `lib/collect-runner.mjs`（单店串行批；多店并发未做） |
 
 覆盖率实测（对 120 份真实 DSL，给定日期参数后离线编译）：
 
-- 可完整编译执行：**17 份**（无业务参数、无下载）
+- 可完整编译执行：**67 份**（v0.14.0 起含下载型）
 - 需要业务参数（`productId` 等，传入后即可）：**51 份**
-- 需要浏览器下载落盘：**50 份** ← 当前最大缺口
+- ~~需要浏览器下载落盘：50 份~~ → v0.14.0 已支持
 - 其它不支持动作：2 份
 
-所以 v0.13.0 的定位是：**接口型/JSON 接口型采集已经能自己跑**（淘宝/京东/拼多多概览这类），
-下载报表型（商品明细、退款、订单导出）仍需 skill/agent 走下载路线 —— 下一版补 `downloadFile` 接管
-（`Browser.setDownloadBehavior` + 文件落地 + `download_ref` artifact）。
+所以 v0.14.0 的定位是：**JSON 接口型与下载报表型都能自己跑**（淘宝/京东/拼多多概览、
+商品明细导出这类）；真正的多店并发（他那种每 3 个 Profile 分组）与指标级归一化仍未做。
 
 ---
 

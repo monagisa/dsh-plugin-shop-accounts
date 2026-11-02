@@ -3,7 +3,36 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
-> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.14.0
+
+用户：「那你能按照他的来写吗」→ 把 v0.13.0 里没学完的两块补齐：**下载落盘** 和 **Python 式编排层**。
+
+- **`downloadFile` 支持（v0.13.0 的最大缺口）**：编译成 `download` op →
+  driver 设 `Page.setDownloadBehavior` 把浏览器下载目录指到我们定的路径 → 点下载按钮 →
+  轮询目录等文件落地（忽略 `.crdownload/.tmp/.part`）→ 产物按 `download_ref` 登记（present/bytes/filePath）。
+  Chrome 与 ego 两个后端都实现了（ego 运行时里用动态 `import('node:fs')` 轮询）。
+  **覆盖率从 17/120 涨到 67/120**（剩下 51 份缺业务参数、2 份其它动作）。
+- **新模块 `lib/collect-runner.mjs`：采集作业编排**，照 `collect_pipeline.py` 的契约一一对应：
+  - `prepareJob`：算窗口 / 挑配方 / 查覆盖台账 → 生成 job 目录与首批 tasks（**每批最多 5 项**，对齐他"一个 Profile 每批 5 个 DSL"）；
+    平台不匹配、缺业务参数、已采过分别进 `failedToPrepare` / `skipped` 并点名原因；
+  - `advanceJob`：记本批回执 → **失败只重试一次**（且只重试"没采到业务数据"的；`UNSUPPORTED_ACTION`/`NO_DRIVER` 不重试）→
+    下一批或交付；**空产物算 empty（业务无数据，不重试）**；**回执没到的项保留 pending，不猜不重发**；`revision` 不对直接拒绝（防重复推进）；
+  - `statusJob`/`listJobs`：只读快照，绝不重发；
+  - `driveBatch` + `drive:true`：插件自己把整批跑完（不想让调用方逐项执行时用）。
+- **作业落盘**：`<数据目录>/collection/<账号>/jobs/<jobId>/`（`job.json` 状态机 + `artifacts/<taskId>.json` 回执与产物）；
+  DSL 级覆盖台账 `dsl-coverage.json`（同窗口采过就不再重采）。
+- **新路由 / 工具**：`POST /accounts/:id/collect-job`（prepare，可选 `drive:true` 自跑）、
+  `POST /accounts/:id/collect-job/:jobId/advance`、`GET /accounts/:id/collect-job/:jobId`、`GET /accounts/:id/collect-jobs`；
+  工具新增 `collect-job` / `collect-advance` / `collect-status` / `collect-jobs`。
+- `collect-run` 不再对下载型配方报 501（现在真的会去下载）。
+
+验证：新增 `node test/features-v0140.mjs` **18 项**（下载目录/落盘/产物统计、真实下载配方编译、
+分批、覆盖跳过、一次重试、空数据不重试、无回执留 pending、revision 校验、status 只读、HTTP 四路由）；
+老七套照旧，合计 **262 项全绿**。
+**没做**：他那种「每 3 个 Profile 分组 + 组内并发」的多店并发（我们一店一个浏览器，现在是单店串行批）；
+指标级归一化（仍交 collect-import）。
 
 ## v0.13.0
 

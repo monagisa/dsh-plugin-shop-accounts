@@ -12,7 +12,7 @@
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台），
 另外支持给这些平台的 **C 端买家账号**建档（买家账号只做浏览/采集，不上架）。
 
-- 版本：**0.13.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.14.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、`node test/platform.mjs` → 12 项，合计 **244 项**全过
@@ -39,6 +39,14 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 ---
 
 ## 更新说明
+
+### v0.14.0：下载落盘 + 采集作业编排
+
+- **`downloadFile`**：设浏览器下载目录 → 点按钮 → 轮询落盘 → 产物按 `download_ref` 登记（含 bytes/filePath）。覆盖率 17→**67/120**。
+- **作业编排 `lib/collect-runner.mjs`**：`prepare`（分批，每批 ≤5）→ 调用方执行 → `advance`（失败只重试一次、
+  空数据不重试、无回执留 pending、revision 防重）→ 交付清单；作业状态落盘 `jobs/<jobId>/job.json`。
+- 路由：`POST /accounts/:id/collect-job`（可 `drive:true` 让插件自己跑完）、`.../collect-job/:jobId/advance`、
+  `GET .../collect-job/:jobId`、`GET .../collect-jobs`；工具 `collect-job`/`collect-advance`/`collect-status`/`collect-jobs`。
 
 ### v0.13.0：声明式采集 DSL 引擎（学 Accio 的执行层）
 
@@ -448,6 +456,7 @@ lib/catalog/catalog.json  目录种子数据（593 KB / 3045 条指标，只留�
 lib/rpa.mjs         采集 DSL 引擎（v0.13.0）：编译成 op 列表 + 哑执行器 + Chrome/ego driver
 lib/rpa/dsls/       采集配方种子（淘宝/京东/拼多多概览 3 份；本机装了 Accio 会自动发现它那 120 份）
 lib/dsls.mjs        配方库存发现与读取（v0.13.0）
+lib/collect-runner.mjs  采集作业编排（v0.14.0）：prepare/advance/status、分批、一次重试、作业落盘
 docs/               逆向记录（v0.13.0：Accio 采集架构）
 lib/store.mjs       accounts.json / config.json / runtime.json 的原子读写与降级
 lib/schedule.mjs    排期算法（纯函数：分组、时间点、到点、下次、记账）
@@ -489,12 +498,13 @@ node test/features-v0101.mjs   # 15 项：登录账号查重 / 店铺配置导�
 node test/features-v0110.mjs   # 24 项：采集数据层（台账缺口 / 导入校验与去重 / 空结果台账 / 查询）
 node test/features-v0120.mjs   # 23 项：目录层（平台域名与指标数 / 跨平台校验 / metricId / /catalog）
 node test/features-v0130.mjs   # 27 项：采集 DSL（编译/占位符/真实配方/登录守卫/产物/HTTP 边界）
+node test/features-v0140.mjs   # 18 项：下载落盘 + 采集作业编排（分批/重试/覆盖/交付）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（能在 Windows 上验的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
 
-`npm test` 一次跑完前七套（零依赖、不碰真实账号、不启动浏览器）。
+`npm test` 一次跑完前八套（零依赖、不碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 用 `DSH_SHOP_ACCOUNTS_DIR` 把数据目录指到临时目录，**不碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真的拉起无头 Chrome（临时档案、不弹窗口、不碰店铺档案），验证

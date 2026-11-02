@@ -125,18 +125,17 @@ await test('淘宝配方把 dateRange 填进了站内接口 URL（%7C 编码）'
   assert.match(api.url, /dateType=day/);
 });
 
-await test('下载型 DSL 明确报 UNSUPPORTED（不假装能跑）', () => {
+await test('下载型 DSL 编译成 download op（v0.14.0 起支持落盘）', () => {
   const dsl = {
     id: 'dl',
-    template: { steps: [{ action: 'goto', url: 'https://x/' }, { action: 'downloadFile', target: [{ by: 'css', value: '#dl' }] }] },
+    template: { steps: [{ action: 'goto', url: 'https://x/' }, { action: 'downloadFile', target: [{ by: 'css', value: '#dl' }], outputKey: 'file' }] },
+    collection: { artifacts: [{ role: 'business', kind: 'download_ref', output_key: 'file' }] },
   };
-  try {
-    R.compileExecution(dsl, { start: '2026-10-03', end: '2026-11-01' });
-    assert.fail('应该抛 unsupported');
-  } catch (err) {
-    assert.equal(err.code, 'UNSUPPORTED_ACTION');
-    assert.equal(err.action, 'downloadfile');
-  }
+  const compiled = R.compileExecution(dsl, { start: '2026-10-03', end: '2026-11-01' });
+  const dl = compiled.ops.find((o) => o.op === 'download');
+  assert.ok(dl, '没有编译出 download op');
+  assert.equal(dl.outputKey, 'file');
+  assert.ok(dl.timeoutMs >= 1000);
 });
 
 // ── 3. 执行层（mock driver，全离线）────────────────────────────────────────
@@ -382,17 +381,19 @@ await test('POST collect-run：配方平台不匹配 → 400', async () => {
   assert.equal(r.json.code, 'DSL_PLATFORM_MISMATCH');
 });
 
-await test('POST collect-run：下载型配方 → 501 且说明原因', async () => {
+await test('POST collect-run：下载型配方不再被 501 挡（会尝试真的跑，浏览器没开则 409）', async () => {
   const dir = fs.mkdtempSync(path.join(TMP, 'dl-'));
   fs.writeFileSync(path.join(dir, 'need_dl.json'), JSON.stringify({
-    id: 'need_dl', platform: 'taobao', template: { steps: [{ action: 'goto', url: 'https://x/' }, { action: 'downloadFile', target: [{ by: 'css', value: '#a' }] }] },
+    id: 'need_dl', platform: 'taobao',
+    template: { steps: [{ action: 'goto', url: 'https://x/' }, { action: 'downloadFile', target: [{ by: 'css', value: '#a' }], outputKey: 'f' }] },
+    collection: { artifacts: [{ role: 'business', kind: 'download_ref', output_key: 'f' }] },
   }), 'utf8');
   process.env.SHOP_ACCOUNTS_DSL_DIR = dir;
   try {
     const r = await call('POST', `/shop-accounts/accounts/${taobaoId}/collect-run`, { dslId: 'need_dl' });
-    assert.equal(r.status, 501);
-    assert.equal(r.json.code, 'DSL_NEEDS_DOWNLOAD');
-    assert.match(r.json.error, /下载/);
+    assert.notEqual(r.status, 501, 'v0.14.0 起不再用 501 拒绝下载型配方');
+    assert.equal(r.status, 409);
+    assert.ok(['BROWSER_NOT_RUNNING', 'ego_not_running'].includes(r.json.code), '实际 code=' + r.json.code);
   } finally {
     process.env.SHOP_ACCOUNTS_DSL_DIR = '';
   }
