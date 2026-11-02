@@ -3,7 +3,35 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
-> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.15.0
+
+用户：「那个定时任务现在该改为定时采集了，你去 rea 他原来的就发现，那个是定时采集来的」。
+
+**逆向确认（铁证）**：他机器上 `~/.accio/accounts/<id>/automations/jobs.json` 有 8 个自动化任务，其中 **7 个就是定时采集**：
+
+```json
+{ "name": "吸音隔热教授 · pdd 经营数据采集",
+  "schedule": { "kind": "cron", "expr": "0 10 * * *" },
+  "payload": { "kind": "agent", "message": "ecommerce-data-collect\n\n使用这个skill，采集拼多多店铺“吸音隔热教授”的以下数据：“经营总览”（采集目录：“经营总览”，domain_id=pdd-scheduler-经营总览）…" },
+  "sessionTarget": "isolated", "target": { "type": "agent_sticky", "agentId": "MID-…" } }
+```
+
+他每个店一条 cron、彼此错峰（10:00 / 10:30 / 11:00 …），到点往该店绑定的 agent 会话里投递一条采集指令。
+**所以「定时任务」= 定时采集**，不是"定时检测登录态"。这一版把我们这边的语义改过来：
+
+- **`schedule.mode`**（新增，默认 `collect`）：到点做什么 —— `collect` 跑采集，`check` 只是老的静默检测。老配置没有该字段 → 自动按 `collect` 走（等于升级即切换），想留老行为的在设置页切回。
+- **`tickSchedule` 分流**：`mode=collect` 且这个店配了采集 → 调 `runScheduledCollection`（内部走 v0.14.0 的作业编排：prepare → 自己跑 → advance）；
+  没配采集的店铺、或该平台还没有可跑配方 → 退回静默检测（不会因为开关是采集就什么都不做）。
+- **`runScheduledCollection`**：挑该平台可跑配方 → `prepareJobForAccount({drive:true, skipCovered:true})` → 回写 `collection.lastRun*`（by=schedule）；
+  登录失效（`LOGIN_REQUIRED`）会把店铺标成「待登录」，**不在这里偷偷代填密码**；没有可跑配方返回 `NO_DSL_FOR_PLATFORM`，不假装采过。
+- **采集时不再因为"浏览器开着"跳过**（那正是我们要用的登录态）；检测模式仍不打断用户。
+- **设置页**：新增「到点做什么」选择器（定时采集 / 只检测登录态），文案与表头按 mode 显示；`PUT /schedule` 与 `/schedule/preview` 真正接住 `mode`（之前只在 normalizeSchedule 里有，路由会丢掉）。
+
+验证：新增 `node test/features-v0150.mjs` **18 项**（mode 默认/切换、collect 分流、check 模式不采集、待登录跳过、
+采集回写、无配方退化、`lastSchedError` 记账、界面与注释接线）；八套旧自检照旧，合计 **280 项全绿**。
+**没做**：像他那样「每店一条独立 cron + 各自绑 agent 会话」的多会话模型（我们是一条主排期按组错峰，语义等价、实现更简单）。
 
 ## v0.14.0
 

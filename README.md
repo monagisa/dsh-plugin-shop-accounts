@@ -12,7 +12,7 @@
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台），
 另外支持给这些平台的 **C 端买家账号**建档（买家账号只做浏览/采集，不上架）。
 
-- 版本：**0.14.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.15.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、`node test/platform.mjs` → 12 项，合计 **244 项**全过
@@ -39,6 +39,15 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 ---
 
 ## 更新说明
+
+### v0.15.0：定时任务改为「定时采集」
+
+逆向确认 Accio 的定时任务就是定时采集（每店一条 cron，到点投一条 `ecommerce-data-collect` 指令；他机器上 7/8 个任务都是）。
+
+- 排期新增 `mode`：`collect`（默认，到点跑采集）/ `check`（只检测登录态）。
+- 到点执行：配了采集 → 走作业编排（prepare→执行→advance），回写 `lastRun*`；没配采集 → 退回静默检测。
+- 登录失效只标「待登录」，不偷偷代填密码；没有可跑配方明确报 `NO_DSL_FOR_PLATFORM`。
+- 设置页「到点做什么」选择器；`PUT /schedule` 接住 `mode`。
 
 ### v0.14.0：下载落盘 + 采集作业编排
 
@@ -499,12 +508,13 @@ node test/features-v0110.mjs   # 24 项：采集数据层（台账缺口 / 导�
 node test/features-v0120.mjs   # 23 项：目录层（平台域名与指标数 / 跨平台校验 / metricId / /catalog）
 node test/features-v0130.mjs   # 27 项：采集 DSL（编译/占位符/真实配方/登录守卫/产物/HTTP 边界）
 node test/features-v0140.mjs   # 18 项：下载落盘 + 采集作业编排（分批/重试/覆盖/交付）
+node test/features-v0150.mjs   # 18 项：定时采集（mode 分流 / 待登录跳过 / 回写 / 无配方退化）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（能在 Windows 上验的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
 
-`npm test` 一次跑完前八套（零依赖、不碰真实账号、不启动浏览器）。
+`npm test` 一次跑完前九套（零依赖、不碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 用 `DSH_SHOP_ACCOUNTS_DIR` 把数据目录指到临时目录，**不碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真的拉起无头 Chrome（临时档案、不弹窗口、不碰店铺档案），验证

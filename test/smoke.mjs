@@ -1343,13 +1343,13 @@ await test('账号管理页在「有排期数据」时也能渲染出来：横�
 
   const page = renderPage({ withDialog: false });
   assert.ok(!/render-error/.test(page.text), '页面渲染抛错了：' + page.text.slice(0, 400));
-  for (const want of ['定时检测', '调整排期', '每天 09:05 起 · 每组 1 个店铺，组间隔 30 分钟', '开启·09:05', '暂停·09:35', '上次失败']) {
+  for (const want of ['定时采集', '调整排期', '每天 09:05 起 · 每组 1 个店铺，组间隔 30 分钟', '开启·09:05', '暂停·09:35', '上次失败']) {
     assert.ok(page.text.includes(want), '列表页少了「' + want + '」：' + page.text.slice(0, 500));
   }
 
   const dlg = renderPage({ withDialog: true });
   assert.ok(!/render-error/.test(dlg.text), '弹窗渲染抛错了：' + dlg.text.slice(0, 400));
-  for (const want of ['调整排期', '每日起始时间', '组间隔（分钟）', '每组店铺数', '开启定时检测', '保存排期', '取消']) {
+  for (const want of ['调整排期', '每日起始时间', '组间隔（分钟）', '每组店铺数', '开启定时采集', '保存排期', '取消']) {
     assert.ok(dlg.text.includes(want), '弹窗少了「' + want + '」');
   }
 });
