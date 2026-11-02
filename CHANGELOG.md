@@ -7,523 +7,233 @@
 
 ## v0.16.3
 
-用户原话：「下拉框搞好看点」
+下拉框不再用系统原生样式：4 个下拉框（账号类型 ×2、到点做什么、浏览器后端）改为 `appearance:none` + 自绘 chevron
+（内联 SVG，12×12，右侧 8px 垂直居中）。和输入框同高同圆角，hover 有反馈、focus 有 3px 焦点环，
+选项底色跟随主题（深色下不再白底黑字）。回归测试核对「所有 `<select>` 都挂了 `.sa-select`」，漏一个就报错。
 
-界面上 4 个下拉框（账号类型 ×2、到点做什么、浏览器后端）之前只是套了输入框的皮，
-选择器本身还是浏览器原生的：Windows 上那条系统灰箭头、和输入框不等高、选项在深色主题下还会白底。
-
-- 去掉原生外观（`appearance:none`），自绘 chevron：内联 SVG data URI，中性灰 `#8b93a1`，深浅两套主题都看得见；
-  靠右 8px、垂直居中、12×12。
-- 和输入框拉齐：同样的圆角 8px、同样的 7px 内边距，右边留 26px 给箭头，长选项（"定时采集（配了采集的店铺跑采集，没配的退回检测）"）不会被箭头挤到。
-- 交互：hover 边框加深 + 底色微提；focus 有 3px 焦点环（键盘 Tab 过去看得出落点）；`transition` 120ms 过渡。
-- 展开后的选项列表是系统画的，只能给底色兜底：`.sa-select option` 用 `--dsw-alias-bg-base`，深色主题不再白底黑字。
-- 顺手加了条防漏：`sa-input sa-select` 的数量必须等于源码里 `<select>` 的数量，以后新增下拉框忘了挂样式会当场炸。
-
-**验证**
-
-- `test/features-v0161.mjs` 加 3 项（`.sa-select` 去原生外观 + 自绘箭头 + hover/focus 齐、所有 select 都挂样式、选项有底色）→ 28 → **31 项**。
-- 用 headless Chrome 把深色/浅色/改前改后都渲成图比过（原生箭头 vs 自绘 chevron、与输入框等高、焦点环）。
-- 十二套自检合计 **346 项**全绿（源码目录与宿主实际加载的已安装副本各跑一遍）。
+**验证**：`test/features-v0161.mjs` 28 → 31 项；headless Chrome 渲图比对深色/浅色/改前改后；十二套自检合计 346 项全绿。
 
 ## v0.16.2
 
-用户原话：「显示隐藏改成小眼睛」
+密码框的「显示 / 隐藏」文字按钮换成图标：睁眼 = 明文，闭眼（杏仁轮廓 + 一道斜线）= 密文。
+内联 SVG，`stroke="currentColor"` 跟随主题；透明底、32×32 命中区、hover 才亮、带 `aria-label`。
+新增店铺弹窗与店铺详情页的密码框都用同一个按钮（详情页原来没有切换，顺手补上）。
 
-密码框右边原来是一个写着「显示 / 隐藏」的文字按钮，现在换成图标：
-
-- 睁眼 = 当前是明文（点一下变密文）；闭眼（杏仁轮廓 + 一道斜线）= 当前是密文。
-- 内联 SVG，`stroke="currentColor"`，跟着主题文字色走；不给颜色写死，深色/浅色都不违和。
-- 两处都换了：**新增店铺**弹窗里的密码框、**店铺详情**页的「密码与账密登录」密码框
-  （详情页原来没有切换，顺手补上）。
-- 按钮类名 `.sa-eye`：透明底、无边框、32×32 命中区、hover 才出现浅底色；
-  图标 16×16，`aria-label` 给读屏用（"显示密码 / 隐藏密码"）。
-- 闭眼图标试了三版（断口弧线 / 带瞳孔 / 杏仁+斜线）在 headless Chrome 里渲出来比过：
-  带瞳孔那一版斜线穿过瞳孔，16px 下糊成一团；断口那版像缺了一角。最后用**同一个杏仁轮廓 + 斜线**，
-  与睁眼只差一道斜线，一眼能看出是"同一件事的两种状态"。
-
-**验证**
-
-- `test/features-v0161.mjs` 加 2 项：不再是「隐藏 / 显示」文字按钮、睁眼/闭眼两个图标路径都在
-  （该套件 26 → **28 项**）。
-- 十二套自检合计 **343 项**全绿（源码目录与宿主实际加载的已安装副本各跑一遍）。
+**验证**：`test/features-v0161.mjs` 26 → 28 项；闭眼图标在 headless Chrome 里比过三版才定稿；十二套自检合计 343 项全绿。
 
 ## v0.16.1
 
-用户原话：「去掉那些提示，那些很大段文字，输入框提示也不要透露我的信息」
+界面文案精简 + 占位符脱敏。
 
-两件事，一件是啰嗦，一件是泄漏。
+- 详情页/弹窗里大段"讲道理"的说明全删（密码必填说明、账号类型说明、浏览器目录、调试端口、采集卡开场、
+  排期弹窗三段说明、更新原理、待登录横幅等），只留能指导操作的一句；密码卡压成
+  「只保存在本机（macOS 钥匙串 / 系统密钥），不上传。」
+- 输入框占位符原来是拿使用者的真实数据当例子（真实店铺名、人名、登录账号），还直接显示本机路径
+  （ego / Chrome / 数据目录 / 源码目录）—— 全部换成中性文案；密码库里那条真实文件路径也不再显示。
+- 新增源码级回归 `test/features-v0161.mjs`：以后谁再往界面塞长段落、真实信息或超长中文字面量，当场报错。
 
-**1) 删掉大段说明文字**
-
-详情页和弹窗里原本有大段"讲道理"的段落（三四行、每段都带括号补充），删到只剩能指导操作的一句，能不要的整段去掉：
-
-| 位置 | 原来 | 现在 |
-| --- | --- | --- |
-| 新增店铺 · 密码 | 「账号与密码都必填（和 Accio 的账号管理一致）—— 有了它们…密码只在本机加密保存（系统密钥后端 + AES-256-GCM），不上传、不写进账号文件…验证码/短信仍需你手动完成。」 | 无 |
-| 新增店铺 · 账号类型 | 「卖家走千牛 / mms / 抖店 / 京麦 / 1688 卖家入口；买家走 C 端登录页…类型决定…」 | 无 |
-| 新增店铺 · 浏览器目录 / 调试端口 | 各两行说明 | 无 |
-| 密码卡 | 两行（含密码库文件路径） | 「只保存在本机（macOS 钥匙串 / 系统密钥），不上传。」 |
-| 采集卡 | 开场段 + 目录概览长句 + 「下面只选采哪些域」+ 买家说明 | 一行指标规模 + 采集域按钮 |
-| 调整排期弹窗 | 开场说明 + 每组数/保活/模式三段说明 | 无（字段名和占位符已够） |
-| 版本与更新 | 一行含本机源码目录 + 一段更新原理说明 | 只留版本号 |
-| 待登录横幅 | 三行操作说明 | 无 |
-| 顶部副标题 | 「每个店铺一份独立的登录档案：用 ego lite（每店一个 profile + 一个 TaskSpace）…」 | 「一店一份独立登录档案（ego lite）」 |
-| 空列表 | 「还没有店铺账号 —— 点右上角「+ 新增店铺」，在弹出的窗口里登录一次就够了」 | 「还没有店铺，点右上角「+ 新增店铺」」 |
-
-**2) 占位符不再透露用户信息**
-
-原来的 placeholder 是拿**用户自己的真实数据**当例子，还有本机路径：
-
-| 字段 | 原来 | 现在 |
-| --- | --- | --- |
-| 店铺名 | `例如：韩品兰坊（留空自动起名）` | `例如：某品牌旗舰店（留空自动起名）` |
-| 备注 | `例如：淘宝·韩品兰坊·阿柔，商家账号` | `例如：平台·店铺·运营（选填）` |
-| 账号 | `登录账号名，例如 韩品兰坊;阿荣` | `登录账号名，例如 主账号;子账号` |
-| ego-browser 路径 | 探测到的 `ego.cli` 真路径 | `留空 = 自动探测` |
-| Chrome / Edge | 探测到的 `browser.path` 真路径 | `留空 = 自动探测` |
-| 档案根目录 | 真实数据目录 `…\\profiles` | `留空 = <数据目录>\\profiles` |
-| 更新源目录 | 真实源码目录 | `留空 = 自动探测源码目录` |
-| 密码卡说明 | 显示密码库文件真实路径 | 不再显示 |
-
-顺带把 `test/smoke.mjs` 里的真实登录账号样本（`韩品兰坊;阿荣`）换成中性的 `示例店铺;示例账号`。
-
-**验证**
-
-- 新增 `node test/features-v0161.mjs`（26 项）：占位符无真实店铺名/人名/本机路径、16 条被删长文案确实不在、
-  该留的操作文案还在（保存采集域 / 保存密码 / 重新登录 / 定时采集胶囊）、界面无超过 100 字的中文文案。
-- 十套自检合计 **341 项**全绿（源码目录与宿主实际加载的已安装副本各跑一遍）。
+**验证**：新套件 26 项（占位符无真实信息 / 16 条被删文案确实不在 / 该留的操作文案还在 / 界面无超 100 字中文字面量）。
 
 ## v0.16.0
 
-用户原话：「为什么你数据采集那里还做了个勾选和设置采集时间，不是统一的吗」
+「店铺跑不跑、几点跑」统一到排期，不再有两套开关。
 
-说得对，那是历史包袱：v0.9.0 做采集时它只是「配置」，所以每店给了「开启采集」勾选和「每天 09:00」时间输入；
-v0.15.0 把定时任务改成**定时采集**后，真正的执行时间由全局排期（起跑时间 + 每组间隔 + 顺序）决定，
-那两个字段就成了摆设 —— 填了不生效，还跟排期表里的「开启 / 暂停」打架。同一个意思说两遍，必须统一。
+之前采集卡片里还有「开启采集」勾选和「每天 __:__」时间输入 —— 那是采集只是配置时的遗留；
+定时采集上线后，真正的执行时间由全局排期决定，那两个字段是摆设，还跟排期表的开关打架。
 
-**统一后的规矩（只有一套）**
+现在只有一套来源：
 
 | 问题 | 唯一来源 |
 | --- | --- |
-| 这个店跑不跑 | 账号的 `schedEnabled` —— 排期表里的「开启 / 暂停」，详情页那个按钮是同一个开关 |
-| 几点跑 | 全局排期槽位（`/state` 每账号的 `schedTime`） |
-| 采什么 | `collection.domains`（采集卡片只管这个） |
+| 这个店跑不跑 | 排期表里的「开启 / 暂停」（= 账号的 `schedEnabled`；详情页那个按钮是同一个开关） |
+| 几点跑 | 全局排期槽位（详情页显示 `schedTime`，时间在「定时任务」里调） |
+| 采什么 | 采集卡片里的采集域勾选 |
 
-**改动**
+- 采集卡片里的勾选与时间输入已删除，改成一行状态 +「加入 / 暂停定时采集」按钮。
+- 升级迁移（幂等）：老数据「选了域又把开关关掉」→ 排期里的暂停（行为不变）；`collection.time` 不再影响调度。
+- 顺带修掉两个会让人以为「插件坏了」的坑：新建店铺默认 `collection.enabled=false`，只看它会把所有店铺在升级时暂停；
+  只传采集域不改 `enabled` 会让选了域也永远不采。
 
-- 详情页「数据采集」卡片：**删掉**「开启采集」勾选和「每天 __:__」输入框；换成一行状态
-  「定时采集：已加入 / 已暂停 · 每天 10:30 到点跑，时间在「定时任务」里调」+ 一个「加入/暂停定时采集」按钮
-  （按钮打的就是 `POST /accounts/:id/schedule`，和排期表同一个 `schedEnabled`，点哪边都一样）。
-- `lib/collection.mjs` 新增 `collectionReady(account)`（= 选了至少一个采集域，且没被老开关显式关掉），
-  `isCollectionDue(account, now, {time})` 改成用**排期槽位时间**判到期；`dueCollections` 支持 `timeOf` 注入。
-- `tickSchedule`：`wantsCollect = mode !== 'check' && collectionReady(account)` —— 不再看 `collection.enabled`。
-- `lib/index.js`：新增 `schedSlotOf(accountId)`（读排期槽位时间）；`/state` 每账号加 `collectionReady`，
-  `collectionDue`/`dueCollections`/`collect-prompt` 全部改用槽位时间；工具 `collections` 只看 `collectionReady`。
-- `PUT /accounts/:id/collection`：新界面只传 `domains`；老调用方传 `enabled` 会被**翻译**成 `schedEnabled`
-  （false→暂停、true→开启），免得「我在采集卡片里关掉了，结果还是到点跑」。
-
-**升级迁移（幂等，只在需要时写一次）**
-
-`migrateCollectionSchedule()` 在 `apply()` 里跑一次：老的「配了域但 `collection.enabled === false`」→ `schedEnabled: false`
-（升级后行为不变，不会突然开始自动采集）。`collection.time` **不删**，只是不再影响任何调度（降级回老版本还能看到原值）。
-
-> ⚠️ 写迁移时踩到一个真坑：新建店铺的采集配置默认就是 `{enabled:false, domains:[]}`，
-> 如果只看 `enabled === false` 就把 `schedEnabled` 关掉，**所有店铺**会在升级瞬间全被暂停。
-> 所以迁移条件是「有域 + enabled 为 false」，并且 `PUT /collection` 只传域时会顺手把 `enabled` 补成 `domains.length > 0`，
-> 不然选了域也会因为 `enabled` 还是 false 而永远不采（这两处都有专门用例）。
-
-**验证**
-
-- 新增 `node test/features-v0160.mjs`（19 项）：`collectionReady` 三种情形 / 到期判据用槽位时间（`collection.time` 23:00 不干扰 09:00 槽位）/
-  `dueCollections` 的 `timeOf` / 迁移改成排期暂停 + 幂等 + 不动 enabled=true 与没配采集的店 / tick 只认采集域 /
-  tick 0 域退回检测 / 未迁移的显式关闭仍不采 / 排期暂停的店不参与 due / PUT 只传域 / PUT enabled 翻译 / 
-  `POST schedule` 与卡片同开关 / `/state` 带 `collectionReady`+`schedTime` / 界面不再有勾选与时间输入。
-- 十套自检合计 **315 项**全绿（源码目录与宿主实际加载的已安装副本各跑一遍）。
+**验证**：`test/features-v0160.mjs` 19 项（三态判定 / 槽位时间 / 迁移与幂等 / tick 只认采集域 / 界面无旧控件）。
 
 ## v0.15.2
 
-用户报障：「密码或者账号是错误时，他会停掉，不返回任何信息」。
+账号或密码填错时，说清楚并停住，不再「卡在那里什么都不返回」。
 
-两个根因都找到了：
+**根因**：① 站点只是渲染一行红字（HTTP 200），只看 cookie 判登录态会把「密码错」误报成「需要用户处理」；
+② 定时采集逐店串行且没有超时，一家店卡住会把整轮钉死。
 
-1. **站点不会用 HTTP 状态告诉你"密码错了"** —— 它只在页面上渲染一行红字（"账号或密码不正确"），而代填流程只读 cookie 判登录态，
-   于是密码错被当成「需要验证码 / 未建立登录态」，用户看到的只有一句含糊的"登录态还没建立"，等于没信息。
-2. **定时任务里没有任何超时** —— 某一店的代填/采集卡住，整轮 `tick` 就钉死在那儿，后面所有店铺都不再执行，界面上也什么都看不到。
+- 新增错误文案识别（中英文「账号或密码不正确 / 密码错误 / incorrect password …」），与验证码分开分类；
+  代填后额外扫一遍页面可见错误元素与正文。
+- 密码错 → 明确返回 `AUTOLOGIN_BAD_CREDENTIALS`，账号标记「已暂停自动代填」（带时间），
+  详情页顶部橙色警示卡说明原因与修法（去改对账号/密码 = 解除），避免连续错误被锁号。
+- 每店的采集任务加超时（默认 15 分钟），一家卡住不影响后面的店铺。
 
-这一版：
-
-- **新增 `classifyLoginFailure(text)`**（`lib/autologin.mjs`）：读页面提示分类 ——
-  中英文的"账号或密码不正确/密码错误/incorrect password/invalid credentials" → `AUTOLOGIN_BAD_CREDENTIALS`；
-  "验证码/滑块/captcha" → `AUTOLOGIN_NEEDS_USER`。两条链路（Chrome 与 ego）都会在提交后扫一次页面。
-- **错误密码 = 明确停下 + 明确告知**：
-  - 代填返回 `AUTOLOGIN_BAD_CREDENTIALS`，文案直接给出下一步（"去店铺详情里把账号/密码改对后，再点一次重新登录（代填）"）；
-  - 定时采集把店铺标 `pendingLogin` + `credentialErrorAt`（**暂停自动代填**，避免连续错密码被站点锁号），
-    并写清 `lastSchedError`；因为 `pendingLogin` 会让后续 tick 直接跳过，等于"停下来但信息齐全"。
-- **`/state` 新增 `credentialErrorAt` / `autoLoginBlocked`**；店铺详情页顶部出现橙色警示卡
-  「⚠️ 账号或密码不正确（时间）… 把账号/密码改对后保存，再点重新登录」。
-- **定时任务每店套超时**（`withTimeout`，默认 15 分钟，可用 `collectTimeoutMs` 覆盖）：
-  某店卡住只算这一店失败（`skipped.reason` 记"超时"），**后面的店铺照常执行**。
-
-验证：新增 `node test/features-v0152.mjs` **12 项**（中英文密码错识别、验证码与密码错分开、不误判、
-空提示不误报、错误密码全链路（返回码/文案/待登录/credentialErrorAt/lastSchedError）、`/state` 字段、
-清 pendingLogin 后解除 blocked、验证码不记成密码错、**卡住的店不拖死后面的店**、界面警示卡与文案）；
-九套旧自检照旧，合计 **296 项全绿**。
-**没做**：错密码后的自动"冷却期"（现在靠 pendingLogin 一直挡到你手动改；不会自己重试，避免锁号）。
+**验证**：`test/features-v0152.mjs` 12 项（中英文分类 / 验证码分开 / 不误判 / 全链路状态 / 不拖死下一家）。
 
 ## v0.15.1
 
-用户纠正：「给你密码就是让你在过期时自动填的」。
+登录过期时自动代填，而不是干等着人来点。
 
-v0.15.0 里定时采集遇到登录过期只标「待登录」、不代填 —— 这是错的。这一版改成**过期就自动代填，填完接着采**：
+定时采集跑配方时若遇到 `LOGIN_REQUIRED`：用本机加密保存的密码代填一次，成功就**只重跑失败的那几份**配方
+（已采过的不重采），并清掉「待登录」标记、在采集备注里写明「已自动代填后重采 N 份」。
+代填撞上验证码/短信 → 标记待登录；没存密码 → 提示去补；密码错 → 走 v0.15.2 的停机逻辑。
 
-- `runScheduledCollection` 收到 `LOGIN_REQUIRED` 后：
-  1. 挑出因登录失效失败的那几份配方（按 `dslId`）；
-  2. 用本机加密保存的密码调 `autoLogin` 代填一次（**只代填，不改密码、不外传**）；
-  3. 代填成功 → **只重跑那几份配方**，结果并进统计，`pendingLogin` 置回 false，`lastRunNote` 里写明「已自动代填后重采 N 份」；
-  4. 代填到验证码/短信（`AUTOLOGIN_NEEDS_USER`）或填不进去时，才标「待登录」并写清原因；
-  5. 本机没存密码 → `AUTOLOGIN_NO_PASSWORD`，提示去店铺详情存一次密码。
-- 一切正常时不碰密码库（有断言守着）。
-- `runScheduledCollection(account, log, opts)` 新增可注入的 `prepareFn` / `autoLoginFn`，自检全离线。
-
-验证：`node test/features-v0150.mjs` **22 项**（原 18 + 代填 4 项：代填成功后重采、验证码才标待登录、
-没密码报错、正常时不代填），合计 **284 项全绿**。
+**验证**：v0.15 套件 18 → 22 项（含「正常采集不碰密码库」的断言）。
 
 ## v0.15.0
 
-用户：「那个定时任务现在该改为定时采集了，你去 rea 他原来的就发现，那个是定时采集来的」。
+定时任务改为「定时采集」（原先那套只检测登录态）。
 
-**逆向确认（铁证）**：他机器上 `~/.accio/accounts/<id>/automations/jobs.json` 有 8 个自动化任务，其中 **7 个就是定时采集**：
+- 排期新增 `mode`：`collect`（默认，到点跑采集）/ `check`（只检测登录态）。
+- 到点执行：配了采集 → 走作业编排（prepare → 执行 → advance），回写 `lastRun*`；
+  没配采集 → 退回静默检测。没有可跑配方时明确报 `NO_DSL_FOR_PLATFORM`，不假装成功。
+- 采集模式**不再因为「浏览器正开着」跳过**（要复用那份登录态）；检测模式照旧跳过，不打断你手里的活。
+- 设置页「到点做什么」选择器；`PUT /schedule` 与预览都接住 `mode`。
 
-```json
-{ "name": "吸音隔热教授 · pdd 经营数据采集",
-  "schedule": { "kind": "cron", "expr": "0 10 * * *" },
-  "payload": { "kind": "agent", "message": "ecommerce-data-collect\n\n使用这个skill，采集拼多多店铺“吸音隔热教授”的以下数据：“经营总览”（采集目录：“经营总览”，domain_id=pdd-scheduler-经营总览）…" },
-  "sessionTarget": "isolated", "target": { "type": "agent_sticky", "agentId": "MID-…" } }
-```
-
-他每个店一条 cron、彼此错峰（10:00 / 10:30 / 11:00 …），到点往该店绑定的 agent 会话里投递一条采集指令。
-**所以「定时任务」= 定时采集**，不是"定时检测登录态"。这一版把我们这边的语义改过来：
-
-- **`schedule.mode`**（新增，默认 `collect`）：到点做什么 —— `collect` 跑采集，`check` 只是老的静默检测。老配置没有该字段 → 自动按 `collect` 走（等于升级即切换），想留老行为的在设置页切回。
-- **`tickSchedule` 分流**：`mode=collect` 且这个店配了采集 → 调 `runScheduledCollection`（内部走 v0.14.0 的作业编排：prepare → 自己跑 → advance）；
-  没配采集的店铺、或该平台还没有可跑配方 → 退回静默检测（不会因为开关是采集就什么都不做）。
-- **`runScheduledCollection`**：挑该平台可跑配方 → `prepareJobForAccount({drive:true, skipCovered:true})` → 回写 `collection.lastRun*`（by=schedule）；
-  登录失效（`LOGIN_REQUIRED`）会把店铺标成「待登录」，**不在这里偷偷代填密码**；没有可跑配方返回 `NO_DSL_FOR_PLATFORM`，不假装采过。
-- **采集时不再因为"浏览器开着"跳过**（那正是我们要用的登录态）；检测模式仍不打断用户。
-- **设置页**：新增「到点做什么」选择器（定时采集 / 只检测登录态），文案与表头按 mode 显示；`PUT /schedule` 与 `/schedule/preview` 真正接住 `mode`（之前只在 normalizeSchedule 里有，路由会丢掉）。
-
-验证：新增 `node test/features-v0150.mjs` **18 项**（mode 默认/切换、collect 分流、check 模式不采集、待登录跳过、
-采集回写、无配方退化、`lastSchedError` 记账、界面与注释接线）；八套旧自检照旧，合计 **280 项全绿**。
-**没做**：像他那样「每店一条独立 cron + 各自绑 agent 会话」的多会话模型（我们是一条主排期按组错峰，语义等价、实现更简单）。
+**验证**：`test/features-v0150.mjs` 18 项（模式分流 / 待登录跳过 / 回写 / 无配方报错）。
 
 ## v0.14.0
 
-用户：「那你能按照他的来写吗」→ 把 v0.13.0 里没学完的两块补齐：**下载落盘** 和 **Python 式编排层**。
+下载落盘 + 采集作业编排。
 
-- **`downloadFile` 支持（v0.13.0 的最大缺口）**：编译成 `download` op →
-  driver 设 `Page.setDownloadBehavior` 把浏览器下载目录指到我们定的路径 → 点下载按钮 →
-  轮询目录等文件落地（忽略 `.crdownload/.tmp/.part`）→ 产物按 `download_ref` 登记（present/bytes/filePath）。
-  Chrome 与 ego 两个后端都实现了（ego 运行时里用动态 `import('node:fs')` 轮询）。
-  **覆盖率从 17/120 涨到 67/120**（剩下 51 份缺业务参数、2 份其它动作）。
-- **新模块 `lib/collect-runner.mjs`：采集作业编排**，照 `collect_pipeline.py` 的契约一一对应：
-  - `prepareJob`：算窗口 / 挑配方 / 查覆盖台账 → 生成 job 目录与首批 tasks（**每批最多 5 项**，对齐他"一个 Profile 每批 5 个 DSL"）；
-    平台不匹配、缺业务参数、已采过分别进 `failedToPrepare` / `skipped` 并点名原因；
-  - `advanceJob`：记本批回执 → **失败只重试一次**（且只重试"没采到业务数据"的；`UNSUPPORTED_ACTION`/`NO_DRIVER` 不重试）→
-    下一批或交付；**空产物算 empty（业务无数据，不重试）**；**回执没到的项保留 pending，不猜不重发**；`revision` 不对直接拒绝（防重复推进）；
-  - `statusJob`/`listJobs`：只读快照，绝不重发；
-  - `driveBatch` + `drive:true`：插件自己把整批跑完（不想让调用方逐项执行时用）。
-- **作业落盘**：`<数据目录>/collection/<账号>/jobs/<jobId>/`（`job.json` 状态机 + `artifacts/<taskId>.json` 回执与产物）；
-  DSL 级覆盖台账 `dsl-coverage.json`（同窗口采过就不再重采）。
-- **新路由 / 工具**：`POST /accounts/:id/collect-job`（prepare，可选 `drive:true` 自跑）、
-  `POST /accounts/:id/collect-job/:jobId/advance`、`GET /accounts/:id/collect-job/:jobId`、`GET /accounts/:id/collect-jobs`；
-  工具新增 `collect-job` / `collect-advance` / `collect-status` / `collect-jobs`。
-- `collect-run` 不再对下载型配方报 501（现在真的会去下载）。
+- **`downloadFile`**：设浏览器下载目录（CDP `Page.setDownloadBehavior`）→ 点按钮 → 每 500ms 轮询目录
+  （忽略 `.crdownload/.tmp/.part`）→ 产物按 `download_ref` 登记（含 bytes / filePath，文件不在就 present=false）。
+  Chrome 与 ego 两条后端都实现。配方可编译率 17 → **67/120**。
+- **作业编排 `lib/collect-runner.mjs`**：`prepare`（分批，每批 ≤5）→ 调用方执行 → `advance`
+  （失败只重试一次、空数据不重试、无回执留 pending、revision 防重复推进）→ 交付清单；
+  作业状态落盘 `jobs/<jobId>/job.json`（原子写 + 每次推进 revision+1）。
+- 路由：`POST /accounts/:id/collect-job`（可 `drive:true` 让插件自己跑完）、`.../collect-job/:jobId/advance`、
+  `GET .../collect-job/:jobId`、`GET .../collect-jobs`；工具 `collect-job` / `collect-advance` / `collect-status` / `collect-jobs`。
 
-验证：新增 `node test/features-v0140.mjs` **18 项**（下载目录/落盘/产物统计、真实下载配方编译、
-分批、覆盖跳过、一次重试、空数据不重试、无回执留 pending、revision 校验、status 只读、HTTP 四路由）；
-老七套照旧，合计 **262 项全绿**。
-**没做**：他那种「每 3 个 Profile 分组 + 组内并发」的多店并发（我们一店一个浏览器，现在是单店串行批）；
-指标级归一化（仍交 collect-import）。
+**验证**：`test/features-v0140.mjs` 18 项（下载落盘 / 分批 / 一次重试 / 空数据不重试 / 缺回执 / revision 冲突 / 交付）。
 
 ## v0.13.0
 
-用户：「你看看他是怎么采集的，学他的」。
+声明式采集 DSL 引擎：采集配方不是代码，是**数据**。
 
-先说结论：**Accio 的采集不是写死的抓取代码，而是「配方 + 编排 + 宿主原生执行」**。证据（本机只读实测）：
-它的 `ecommerce-data-collect` skill 目录是**全明文**的 —— `SKILL.md`、**120 份 DSL（JSON 步骤集）**、
-10 个 Python 编排脚本、4 篇 references；宿主侧是原生工具 `browser_rpa_launch`（含 `_batch`），
-CLI `ecomctl` 只负责 plan 与入库。完整逆向记录见 [docs/accio-collection-architecture.md](docs/accio-collection-architecture.md)。
+一份 DSL（JSON 步骤集）描述「进哪个页面、点哪里、读哪个元素、取哪个产物」，
+引擎负责编译成操作列表并执行 —— 平台改版只改配方，不用改插件。
 
-这一版把**执行层**学过来：
+- 新模块 `lib/rpa.mjs`：DSL 编译（时间窗口 / 占位符绑定 / 参数校验）+ 执行器 + Chrome / ego 两种 driver。
+  登录守卫用「`when` 命中登录框 → 断言它必须不可见（必然失败）」短路出 `LOGIN_REQUIRED`。
+- 新模块 `lib/dsls.mjs` + `lib/rpa/dsls/`：自带 3 份种子配方；`SHOP_ACCOUNTS_DSL_DIR` 可指向任意外部配方库。
+- `GET /rpa/dsls` 列配方；`POST /accounts/:id/collect-run {dslId}` 跑一份，返回原始产物与逐步 trace。
+- 本版只跑「读」的路线，依赖浏览器下载落盘的配方明确报 501，不假装成功（v0.14.0 补齐）。
 
-- **新模块 `lib/rpa.mjs`**：DSL 编译器 + 哑执行器 + 三种 driver。
-  - 编译层（唯一真源）：`trailingWindow`（最近 30 个完整自然日，30 天前~昨天，不含今天）、
-    `conditions.time.bindings` 占位符（`{dateRange}` → `YYYY-MM-DD%7CYYYY-MM-DD`）、
-    残留占位符直接报 `INVALID_DSL`（绝不把 `{dateRange}` 发给站点）、`runId` 自动生成；
-  - 动作覆盖：`goto / waitTimeout / waitFor / readText / readPageUrl / click / when / assertElement`，
-    外加 `scrollIntoView / scrollToBottom / type / hover / readAttribute / queryAll / assertText / clickAndWait / waitForLoadState / press / if / while / runScript`；
-  - 登录守卫照抄它的技巧：`when` 命中登录框 → `then` 断言同一元素 `hidden`（必然失败，`onError:fail`）→ 得到 `LOGIN_REQUIRED`；
-  - 产物声明 `collection.artifacts`：`present/bytes` 判定；**空产物 = 业务无数据（不重试）**，和它的语义一致；
-  - driver：`makeCdpDriver`（Chrome 调试端口）、ego 后端用 `EGO_EXECUTOR_SOURCE`（同一份 ops 在 ego 运行时里哑执行，
-    一次任务空间进出）、`makeMockDriver`（测试全离线）。
-- **新模块 `lib/dsls.mjs`**：配方库存。自带 3 份种子（淘宝/京东/拼多多概览），并自动发现本机 Accio 的 120 份
-  （`SHOP_ACCOUNTS_DSL_DIR` 可指别处），标出每份是否需要下载。
-- **新路由 / 工具**：`GET /rpa/dsls`（列配方）、`POST /accounts/:id/collect-run`（跑一份，返回原始产物 + 逐步 trace + finalUrl）、
-  工具 `action=rpa-dsls` / `action=collect-run`。原始产物落盘到 `<数据目录>/collection/<账号>/raw/<dslId>/`（失败也存，便于查配方）。
-- **边界如实**：`downloadFile`（83 处、50 份 DSL 依赖浏览器下载落盘）**本版不支持**，直接 501 `DSL_NEEDS_DOWNLOAD`，
-  不假装采到；浏览器没开返回 409（不偷偷拉起浏览器）。归一化仍交 collect-import，不猜指标映射。
-
-覆盖率实测（120 份真实 DSL，给日期参数后离线编译）：**17 份可直接跑**、**51 份需业务参数**（传 `productId` 即可）、
-**50 份依赖下载**（当前最大缺口）、2 份其它动作不支持。
-
-验证：新增 `node test/features-v0130.mjs` **27 项**（编译层/时间窗口/占位符/真实配方编译/登录守卫→LOGIN_REQUIRED/
-空产物判定/超时与可选步骤/trace/库存/HTTP 400·404·409·501/ego 执行器接线）；六套旧自检照旧，合计 **244 项全绿**。
-**没做**：`downloadFile` 接管、Python 式编排层（job 目录/revision/并发分组/一次重试）。
+**验证**：`test/features-v0130.mjs` 27 项（时间窗口 / 占位符 / 残留占位符拒绝 / 种子配方编译 / 登录守卫 / 产物 / HTTP 边界）。
 
 ## v0.12.0
 
-用户：「你能拿到他的 3675 条指标、497 节点经营树、224 个数据源、采集覆盖记录（coverage）吗，要不我们也按照这个来」。
-先把 Accio 的目录库整表导出核对（`~/.accio/data/plugins/commerce-domestic/ecommerce.db`，导出脚本复制 db+wal 到临时目录读，
-**原库未改动**）：`topics` 497 行、`metrics` 3675 行、`sources` 224 行、`domestic_collection_coverage` **0 行**、
-`source_schema_record` 0 行、`domestic_internal_data` / `domestic_external_data` 都是 **0 行**。
-指标按平台：taobao 933、tmall 920、doudian 854、1688 346、alibaba 284、jd 185、pdd 153；
-数据源按类型：rpa 154 / mcp 67 / manual 3；经营树引用指标 7244 次、注册表里缺失 0（自洽）。
+内置「平台 → 采集域 → 指标」目录层，让「采什么」有据可依。
 
-**能不能照搬**：覆盖记录是**运行态**，他那边一行都没跑过，抄不到，只能自己长（v0.11.0 的 coverage 台账就是干这个的）；
-指标/树/数据源则是**静态知识**，可以取，但里面混着 Accio 自己的实现细节（`value_path` 取值路径、`aggregation` 聚合口径、
-`dsl_id`、RPA 加密资产），这些搬过来我们既跑不通也不需要。所以这一版只取**骨架**：
+- `lib/catalog/catalog.json`（593 KB，**3045 条指标**）：只留指标 id / 名称 / 所属域 / 度量类型 / 时间粒度 /
+  落库必需字段，取值路径、聚合口径、DSL 这类实现细节一律不收录（有断言守着）。
+- `lib/catalog.mjs`：按平台查域与指标。**淘宝/天猫 6 个采集域**（多「竞争洞察」，78 项指标），
+  抖店/京东/拼多多各 5 个；1688 目录里没有定时采集子树，退回默认 5 域。目录缺失时整体降级回 5 域，不影响其它功能。
+- 校验跟着走：平台不支持的域会被 400 挡回；`collect-import` 里的 `metricId` 必须是该平台目录里的指标，
+  落库后可按 `metricId` 过滤查询。
+- `GET /catalog`（工具 `action=catalog`）：查某平台/某域的可采指标清单（淘宝运营推广 540 条，默认截断 200、`all=1` 全给）。
+- 界面：采集域按钮显示「域（解释 · N 项指标）」，并显示该平台目录规模。
+- 目录只是「目标清单」：没接采集器的指标仍然采不到，这点别误会。
 
-- **新目录 `lib/catalog/catalog.json`（593 KB，3045 条指标）**：按「本插件平台 → 定时采集域 → 指标」组织，
-  每条指标只留 `name / domain / measure(度量类型) / time(时间粒度) / fields(落库必需字段) / src(来源 id) / scope`。
-  Accio 的 `value_path`、`auxiliary_path`、聚合口径、DSL id、加密资产**一律不收录**（自带断言：文件里出现这些字样就测试失败）。
-- **平台映射**：doudian → `douyin`、1688 → `ali1688`、alibaba（国际站）跳过；taobao/tmall/douyin/jd/pdd 五个平台共 3045 条。
-- **新模块 `lib/catalog.mjs`**：懒加载 + 缓存；`catalogDomains(平台)` / `catalogDomainIds` / `catalogMetrics(平台,域)` /
-  `catalogMetric(平台,id)` / `unknownMetricIds` / `metricCount` / `catalogInfo`；目录缺失或损坏时**整体降级**回 v0.11.0 的 5 域行为。
-- **域清单按平台真实下发**：淘宝/天猫 **6 个域**（多「竞争洞察」，78 项指标），抖店/京东/拼多多 5 个域；
-  1688 在 Accio 里没有 scheduler 子树（走 mcp/API），退回默认 5 域且不拦指标校验。
-- **按平台校验**（三处：改配置 / plan / import / query）：拼多多选「竞争洞察」会被 400 挡回，淘宝可以。
-- **记录带 `metricId`**：`collect-import` 的 items 可带目录里的 `metric_id`，落库后可按 `metricId` 过滤查询；
-  `metricId` 参与去重哈希（同一天同值但不同指标，是两条记录）；跨平台/目录外的 `metricId` → 400 并点名。
-- **HTTP `GET /catalog`**：不带参数给全平台概览（每平台域清单 + 指标数）；`?platform=&domain=` 给某域指标清单
-  （默认 limit 200、`all=1` 全给，淘宝运营推广 540 条）。
-- **工具**：`shop_accounts` 新增 `action=catalog`；`domain`/`domains` 枚举放开「竞争洞察」；新增 `metricId` 查询参数。
-- **界面**：采集域按钮改由 `/state` 的 `a.collectionDomains` 驱动，直接显示「域（解释 · N 项指标）」，
-  并加一行「本地指标目录：淘宝 共 933 项可采指标 / 6 个采集域」。
-- **采集提示词**：域后面带上「约 N 项指标」，并明确「要采哪些指标以本地目录层为准，落库带 metricId」。
-
-验证：`node test/features-v0120.mjs` **23 项**（目录规模与纯净度、平台域名与指标数、跨平台不认、三处校验、
-metricId 落库/去重/过滤、`/catalog` 与 `/state`、工具与界面文案）；主自检等五套照旧，合计 **217 项全绿**。
-**没做**：按指标做聚合/同比环比（要先有指标口径实现，暂由 agent 自己算）；把目录指标接到真实采集器（现在只是「目标清单」，采集能力另建）。
+**验证**：`test/features-v0120.mjs` 23 项（目录规模 / 不含实现细节 / 跨平台校验 / metricId / `/catalog` / 界面）。
 
 ## v0.11.0
 
-用户问：「这个定时采集，原来的 accio 是怎么做的，不可能是单纯的提示词吧」→ 我把 Accio 装在盘上的东西挖了一遍，
-结论是它有一条**带契约的采集管线**：本地 CLI `ecomctl`（`@accio-ai/ecommerce-cli` 0.4.5，Go 静态编译）
-操作 SQLite 数据仓库（`~/.accio/data/plugins/commerce-domestic/ecommerce.db`：3675 条指标注册表、497 节点经营树、
-224 个数据源、覆盖台账、内部/外部两张数据表），RPA 采集器配加密的 locator 模板（`locator_template.json.enc`，
-AES-256-GCM），流程是 `collection plan` → 跑采集（rpa/api）→ `collection import` → 记账 → `metric/topic query`。
-用户回：「A」（选「学它的契约，自己做轻量版」）。
+采集数据层：把「采什么」变成一条带契约的管线，采过的不用重采。
 
-这一版只做**数据层**，采集执行仍然交给 skill/agent（插件不自己抓页面）：
+`plan`（这店这区间缺哪些天）→ skill 采集 → `import`（逐条校验 + content_hash 去重 + 记覆盖台账）→
+`query`（查已采数据，不必重采）。
 
-- **新模块 `lib/datastore.mjs`**（零依赖，JSONL + 覆盖台账，不引入 `node:sqlite`——宿主 Node/Electron 不保证带它）：
-  - `<数据目录>/collection/<账号id>/coverage.json`：覆盖台账，每个域若干 `{start,end}`，相邻/重叠自动合并；
-  - `<数据目录>/collection/<账号id>/records.jsonl`：业务记录，一行一条 JSON（追加写，坏一行不连坐）；
-  - `<数据目录>/collection/<账号id>/imports.json`：最近 100 次导入的批次日志。
-- **plan**：`planCollection()` 按「账号 + 域 + 区间」算缺口，返回 `COLLECTION_REQUIRED` /
-  `NO_COLLECTION_REQUIRED` 与 `awaitCollect:[{domain,label,domainId,missing,missingDays}]`，
-  其中 `domainId` 与 Accio 同形（`<platform>-scheduler-<域>`，抖店 → `doudian`）。窗口上限 366 天。
-- **import**：`importRecords()` 逐条校验（日期、指标名非空且不含控制字符、数值有限、`metric` 与 `values` 互斥、
-  `extra` ≤2KB）→ `content_hash` 去重 → 追加落盘 → 记台账。**合法空结果必须带覆盖区间**（只记台账不写记录），
-  否则「没采」和「确实没数据」分不清、台账永远推不动 —— 这是 Accio 的关键语义。
-  一次最多 5000 条；账号 id 会进路径，必须过 `validAccountId`。
-- **query**：`queryRecords()` 按域/指标/日期查（多指标记录按 `values` 里的键匹配），返回指标概要与截断标记。
-- **接口**：`POST /accounts/:id/collect-plan`、`POST /accounts/:id/collect-import`、
-  `GET /accounts/:id/collect-records`；工具 `shop_accounts` 新增 `collect-plan` / `collect-import` / `collect-query`。
-- **界面**：详情页「数据采集」卡片下方显示本地数据概览（窗口、总记录数、每个域「已采全 N 天 / 缺 M 天」）。
-- **顺手**：删账号时连带删掉它的采集数据目录（否则重建同 id 的账号会凭空有历史数据）；
-  `/state` 每个账号新增 `collectionCoverage`；采集提示词改成三步（plan → 采集 → import）并强调空结果也要导入。
+- 新模块 `lib/datastore.mjs`：数据放 `<数据目录>/collection/<账号id>/` ——
+  `coverage.json`（覆盖台账，相邻/重叠自动合并）、`records.jsonl`（一行一条，坏一行不坏整库）、
+  `imports.json`（最近 100 次导入日志）。为什么用 JSONL 不用 SQLite：插件必须零依赖、跨平台，
+  且这个数据量（每店每天几十~几百条）用 JSONL + 内存哈希索引完全够。
+- **合法空结果也记台账**（只记覆盖、不写记录），否则同一段每天都会被重采；**导入幂等**（content_hash 相同就跳过）。
+- 单次窗口上限 366 天、单批最多 5000 条、`extra` 最多 2 KB。
+- 路由/工具：`collect-plan` / `collect-import` / `collect-query`；`/state` 每店带覆盖概览；
+  删账号连带清掉它的采集数据；界面显示「本地数据（窗口 ~ 共 N 条）」与每域覆盖天数。
 
-验证：新增 `node test/features-v0110.mjs` **24 项**全过（日期/区间、缺口、plan、导入校验与去重、空结果台账、
-query、HTTP 面、删账号清数据、工具/界面/文档）；
-`smoke` 113 / `features-v090` 30 / `features-v0101` 15 / `platform` 12 未受影响。
-
-> 没做（有意留到下一步）：`query` 的跨域聚合与同比环比、指标注册表（我们还没有「指标 → 采集来源」的映射，
-> 现在是记录级自由指标名）、把 `plan` 接进宿主排期自动跑（现在仍由 agent 按提示词驱动）。
+**验证**：`test/features-v0110.mjs` 24 项（台账合并与缺口 / 导入校验与去重 / 空结果台账 / 查询 / 删号清理）。
 
 ## v0.10.1
 
-用户看完与 Accio「账号管理」的逐项对比后回：「1 4做一下」—— 即对比表里标「我们较弱 / 缺」里性价比最高的两条：
+两项收尾能力。
 
-1. **登录账号查重**（对齐 Accio `assertUnique(entries, platform, name, account)` 的双唯一性校验之一）：
-   - `POST /accounts`：同平台 + 同登录账号 → 400 `ACCOUNT_LOGIN_NAME_DUPLICATE`，错误里点名撞的是哪家店；
-   - `PUT /accounts/:id`：改成别人的登录账号同样挡（排除自己），改成空串仍是历史行为；
-   - 比较口径：`NFC` 归一 + `trim` + **折叠大小写**（Accio 用精确比较，这里多折一次 —— 手机号/邮箱大小写
-     不同是同一个账号，正是最容易重复建号的情形）；**只挡同平台**，跨平台同名（比如同一个邮箱在淘宝和京东都有账号）是正常的。
-2. **店铺配置导出 / 导入**（换机器用，尤其 Windows → mac）：
-   - `GET /export` 出一个 JSON：`{format:'dsh-shop-accounts/stores', version:1, count, accounts:[…]}`，
-     每项含平台 / 账号类型 / 店名 / 店铺 URL / 登录账号 / 备注 / ego profile / 采集设置；
-   - **只搬配置不搬秘密**：密码、登录态（浏览器档案与 cookie 罐）、档案路径、端口、内部 id 一律不进包 ——
-     密码本来就和本机密钥绑定（DPAPI/钥匙串），搬过去也解不开；文件里还写了一行 `note` 说明这件事。
-   - `POST /import` 逐条校验、能建就建、建不了就跳过并给原因（不因一条坏数据废掉整包）：
-     平台不认识 / 缺登录账号 / 同平台同账号已存在 → 跳过；`javascript:` 之类的 URL 被丢弃（导入文件是外部输入，
-     不能进 Chrome 命令行）；文件里夹带的 `profileDir`、`port` 被忽略（档案目录按新 id 本机重新派生）；
-     一次最多 500 条；导两次不会翻倍。
-   - 界面：设置页「路径与高级选项」里新增「店铺配置迁移」组，两个按钮（导出下载 JSON / 选文件导入），
-     导入完成提示里直说「密码要重新设置 —— 导出文件里不含密码」。
+- **登录账号查重**：同平台 + 同登录账号（大小写、前后空格、Unicode 归一后比较）= 同一个人，
+  新建和编辑都会被挡下（`ACCOUNT_LOGIN_NAME_DUPLICATE`，并点名撞了哪家店）；跨平台同名正常允许。
+  重复记录会让「代填哪个密码、采集算谁的」对不上。
+- **店铺配置导出 / 导入**：设置页「路径与高级选项 → 店铺配置迁移」，导出 JSON 带走
+  平台 / 店名 / 登录账号 / 店铺 URL / 采集设置，换机器（尤其 Windows → mac）不用一条条重填。
+  **只搬配置不搬秘密**：密码、登录态、档案路径、端口都不进包（密码与本机密钥绑定，搬过去也解不开）；
+  导入逐条校验，坏数据跳过并说明原因，重复条目自动跳过（导两次不会翻倍），URL 走白名单校验。
 
-验证：`node test/features-v0101.mjs` **11 项**全过（Windows 本机）；另有 `smoke` 113 / `features-v090` 30 / `platform` 12 未受影响。
+**验证**：`test/features-v0101.mjs` 15 项（查重两个入口 / 导出不含秘密 / 重复导入不翻倍 / 坏数据跳过 / 上限）。
 
 ## v0.10.0
 
-用户问：「那 mac 系统呢，能适配吗？」→ 又问「你说要兼容 mac 还是单独做一个 mac 版本的，哪个好」，
-我推荐**单代码库 + 平台适配层**（理由：平台相关代码只有 5 个文件三四百行，分叉要维护两套测试/两套版本；
-功能差异用能力位表达即可）。用户回「开始」。
+macOS 支持：抽出平台适配层，一套代码两个系统。
 
-这一版把散在 `secret.mjs` / `chrome.mjs` / `ego.mjs` / `index.js` 里的 Windows 相关代码抽进 `lib/platform/`：
+平台相关的东西（密钥后端、浏览器路径、进程匹配、打开目录、ego 路径、路径分隔符）全部收进 `lib/platform/`，
+业务代码不再判断操作系统。
 
-- **新目录 `lib/platform/`**，统一契约（`id` / `label` / `secretBackend` / `capabilities` /
-  `secretProtect(dataDir,text)` / `secretUnprotect(dataDir,blob)` / `browserCandidates()` /
-  `killByProfileDir()` / `ownerOfPort()` / `revealDir()` / `egoCliCandidates()` / `systemDirs()` …）：
-  - `win32.mjs`：原 DPAPI PowerShell 脚本、Program Files 探测、`Get-CimInstance Win32_Process` 精确匹配、
-    `taskkill /T /F`、`explorer.exe` —— **实现逐字搬过去，行为不变**（143 项自检就是回归网）。
-  - `darwin.mjs`：**Keychain**（`/usr/bin/security add-generic-password` / `find-generic-password`）当密钥后端，
-    `/Applications/<App>.app/Contents/MacOS/<bin>` 当浏览器路径，`ps -axo pid=,command=` 解析进程，
-    `pkill -9 -P` 杀进程树，`open` 打开目录；路径一律用 `path.posix`（语义更准，且能在 Windows 上跑自检）。
-  - `unsupported.mjs`：其它平台明确「不可用」而不是崩：`secretBackend=null` → 密码库整体禁用（不存明文）。
-  - `index.mjs`：按 `process.platform` 选实现，支持 `DSH_SA_PLATFORM=darwin` 覆盖（自检用）。
-- **密码库里 Keychain 的存法**：`<数据目录>/session-cookie.key` 里只存标记 `keychain:<service>`，
-  service = `dsh-shop-accounts-<目录名可读片段>-<sha256(绝对路径) 前16位>`。好处：多个 DSH 档案/多份插件
-  互不覆盖主密钥；密钥本身在系统钥匙串里，文件被拷走也解不开（与 DPAPI 的信任边界同构）。
-- **行为变化（mac 上才算变化）**：`dpapiAvailable()` 这个名字保留（自检与历史调用依赖），
-  语义从「非 win32 一律 false」改成「**本平台有可用密钥后端**」；`vault.mjs` 里那句
-  `if (process.platform !== 'win32') return false;` 删掉了 —— 否则 mac 上密码库永远不可用。
-- **界面文案按平台说话**：`/state` 新增 `osPlatform:{id,label,secretBackend,capabilities}`；
-  详情页在 mac 上显示「密码只保存在本机（macOS 钥匙串 + AES-256-GCM）」，找不到浏览器时提示当前平台而不是写死 `chrome.exe`。
-- 顺带修：`package.json` 的 description 之前是**双重编码的乱码**（`DSH 鎻掍欢…`），已写回正常中文；
-  自检入口统一成 `npm test`（smoke + features + platform）。
+- `lib/platform/win32.mjs`：DPAPI（经 PowerShell）保护主密钥、`Program Files`/`LOCALAPPDATA` 找浏览器、
+  `Get-CimInstance Win32_Process` 按 `--user-data-dir` 等值匹配进程、`taskkill /T /F`、`explorer.exe` 打开目录。
+- `lib/platform/darwin.mjs`：**登录钥匙串**（`/usr/bin/security`）存主密钥，文件里只留 `keychain:<service>` 标记
+  （service 名由数据目录派生，同名目录对应同一把）；`/Applications/*.app/Contents/MacOS/*` 找浏览器；
+  `ps -axo pid=,command=` 解析后等值匹配；`pkill -9 -P` + `kill -9`；`open` 打开目录。
+- `lib/platform/unsupported.mjs`：其它系统明确「未适配」——密码库禁用、不存明文。
+- `DSH_SA_PLATFORM` 环境变量可覆盖平台（便于测试）。
+- `/state` 增加 `osPlatform`（id / label / 密钥后端 / 能力位），界面文案按平台显示「系统账户加密」或「macOS 钥匙串」。
+- 旧数据不受影响：加密信封格式没变，Windows 上升级后已存的 cookie 与密码照样能读。
 
-验证：`node test/smoke.mjs` **113 项**、`node test/features-v090.mjs` **30 项**、
-`node test/platform.mjs` **12 项**全过（Windows 本机）。
-
-**⚠️ macOS 这一支没有真机验证过**（开发机只有 Windows）。按代码形状把能纯函数验的都验了：
-候选路径表、`ps` 命令行里抠 `--user-data-dir`、目录归一化、Keychain service 命名与标记格式、
-白名单挡前缀骗法、以及「业务代码里不再出现 powershell/explorer/taskkill/Program Files 硬编码」。
-真机验收清单（拿到 mac 请照这个跑一遍）：
-
-1. `npm test` 三套全过（`platform.mjs` 在 mac 上会自动按 darwin 跑，`win32` 那几条断言仍是纯函数、不受影响）。
-2. 新建店铺 → 填账号密码 → 看钥匙串访问里出现 `dsh-shop-accounts-…` 条目；`account-secrets.enc` 里应看不到密码。
-3. **首次读写钥匙串可能弹一次授权**（system 会问「是否允许访问」）—— 允许即可；这是 Keychain ACL 的正常行为。
-   如果用户点了「拒绝」，插件应报「本机密码库不可用」，而不是崩。
-4. 打开店铺：Chrome 从 `/Applications` 找到并起来，`--user-data-dir` 正确隔离；
-   关不掉时按 profile 精确匹配杀进程（**不该**杀掉用户自己开的其它 Chrome）。
-5. 「在文件夹中显示」应打开 Finder。
-6. ego lite 的 mac 版路径是**猜的**（`/Applications/ego lite.app`、`~/Library/Application Support/…`）：
-   没装或路径不同时应回退到 Chrome 后端，而不是报错卡死。
+**⚠️ macOS 这一支尚未真机验证**（开发机是 Windows）。能脱离真机验证的部分都在 `test/platform.mjs`（12 项）：
+三份实现满足同一份契约、mac 路径表、`ps` 解析、钥匙串 service 命名、根路径保护、
+以及「业务代码里没有平台硬编码」的扫描。真机验收清单：候选路径是否存在 / 钥匙串读写 / 进程匹配 /
+打开目录 / 无密钥后端降级 / `/state` 文案。
 
 ## v0.9.2
 
-用户指出我 v0.9.1 的做法没对齐 Accio：「人家不用点自动登录的，人家账号密码是必填的」。
-回头查逆向证据（报告 3.4 / 4.6 节），用户是对的：
+账密登录是「打开店铺」的一部分，不用再单独点一次按钮。
 
-- Accio 密码库 `create()`：`normalizeText(account,"account",256)` 非空必填、`normalizePassword` 1..4096 必填；
-  店铺名只在 `isMerchantBackendAccount` 时必填。唯一性按 `platform+name`、`platform+account` 双查。
-- Accio 没有「自动登录」按钮：profile 模式是 `store-auth:password-start` + `password-progress`，
-  密码登录是**登录流程的一步**（`autoLoginSupported` 只是能力门控），RPA 侧用 `findSecret` 直接取账密填表。
+- 新建店铺时「登录账号」「登录密码」都是**必填**（缺任一个 400，错误码分别点名）；密码落进本机加密库，
+  响应只回「已保存」布尔，不回明文。
+- 点「打开店铺」就用保存的账密代填并提交，结果明确回报（成功 / 需要验证码或短信 / 找不到输入框 / 浏览器没开）。
+  验证码与短信仍需你手动完成 —— 插件不破验证码。
+- 「自动登录」接口不再要求额外确认参数；显式拒绝才返回已取消。
+- 顺手支持「打开时带 `autofill:false` 只开窗口不代填」。
 
-这一版照这个模型改：
-
-- **账号与密码改为必填**：新建弹窗标「登录账号（必填）」「登录密码（必填）」，前端先拦一次；
-  服务端 `POST /accounts` 也硬校验，缺账号回 `ACCOUNT_LOGIN_NAME_REQUIRED`、缺密码回 `ACCOUNT_PASSWORD_REQUIRED`。
-  密码库不可用或密码不合规时整单 400 —— 不会再建出「没有账密」的半成品记录。
-- **打开店铺即账密登录**：`POST /accounts/:id/open` 在「已存账号+密码」时自动代填并提交，
-  返回 `autofill:{attempted,ok,code,hint,loggedIn}`；界面 toast 直接说「已用保存的账号密码自动登录成功」
-  或代填失败的下一步提示。要扫码/手工登录时传 `autofill:false`（留着这条路径：C 端买家账号常常只能扫码）。
-- **`POST /accounts/:id/autologin` 不再要求 `confirm:true`**（显式 `confirm:false` 仍被尊重，回 `AUTOLOGIN_DECLINED`）；
-  详情页按钮改叫「重新登录（代填）」，语义变成「掉线后补一次登录」，不再是主流程。
-- 文案统一：卡片标题「密码与自动登录」→「密码与账密登录」；登录页提示改成「已保存的账号密码会自动代填；
-  要走扫码/短信就在弹出的窗口里手动完成」。
-
-验证：`node test/smoke.mjs` 113 项、`node test/features-v090.mjs` **30 项**全过。
-新增用例覆盖：缺账号 / 缺密码建号必须 400、`autofill` 默认开且可关、autologin 不再强制 confirm。
+**验证**：`test/features-v090.mjs` 补到 30 项（必填校验 / 不回明文 / 代填结果码 / 无浏览器时的错误码）。
 
 ## v0.9.1
 
-用户问：「怎么不用填密码店铺名那些？」—— 原来的「新增店铺」弹窗只有平台/店铺名/账号类型，
-密码得建完再进详情页设置，店铺名留空时还会自动起名（而且自动起的名字后面多带一个 `;`）。
-这一版把这两件事都改回直觉：
-
-- 新增店铺弹窗多了 **「登录账号（可选）」** 和 **「登录密码（可选）」** 两个字段，密码带显示/隐藏开关。
-  一次就能把「哪家店、用什么账号密码登录」填完，不用来回跳页面。
-- `POST /accounts` 支持可选的 `password`：服务端在校验通过后直接落进本机加密库（`account-secrets.enc`），
-  响应只回 `passwordSaved` 布尔，**任何地方都不回显明文**。密码库不可用或密码不合规时**整单 400**，
-  不会出现「号建好了、密码丢了」的半成品状态；落库失败则店铺照建，只回报 `passwordError` 让用户进详情页重试。
-- 修掉自动起名的多余分号：以前留空店铺名会得到 `拼多多 店铺 3;`，现在是 `拼多多 店铺 3`。
-- 编辑弹窗里的「登录账号」现在真的会保存（以前弹窗没带上这个字段，改了会被静默丢弃）；
-  密码字段只在新建时出现，编辑时仍走详情页的「密码与自动登录」区块。
-
-验证：`node test/smoke.mjs` 113 项、`node test/features-v090.mjs` **28 项**（新增一条「新建时直接带账号+密码」）全过；
-新用例同时断言 `accounts.json` 与 `/state` 响应里都不含明文密码。
+新建店铺弹窗就能填「登录账号」和「密码」（当时都可留空，v0.9.2 起改为必填）；
+编辑弹窗也能改登录账号。
 
 ## v0.9.0
 
-用户说：「对照我逆向出来的 Accio Work 账号管理，补上我缺的：存密码和自动登录、卖买家账号、数据采集。」
+三块能力一起上：存密码、卖家/买家账号、数据采集配置。
 
-三块都按 Accio 的模型做，但**边界比它更保守**：密码只在用户显式点「自动登录」时代填一次，
-采集只维护配置与调度、真正的抓取交给 agent/skill（平台改版只改 skill）。
+- **密码库**：`<数据目录>/account-secrets.enc`，复用 cookie 罐那把主密钥（系统密钥后端）+ AES-256-GCM。
+  密码**不写进 `accounts.json`、不进 `/state`、不进日志**，账号表只有「已保存 / 更新时间」。
+  没有可用密钥后端的平台**整库禁用，绝不退化成明文**（cookie 备份可以退明文并标注，密码不行——
+  密码明文落盘等于把所有店铺的账号密码摊开）。
+- **卖家 / 买家账号**：`accountType` = `seller` / `buyer`，买家有独立登录入口（拼多多、抖音的买家入口标为实验性）；
+  能力位区分「能否上架」「能否填店铺 URL」「能否采集」——买家账号不做上架，店铺 URL 只对卖家且拼多多不支持。
+- **数据采集（配置层）**：5 个业务域（经营总览 / 流量转化 / 运营推广 / 商品供给 / 服务履约），
+  范围固定「最近 30 个完整自然日」，生成可交给 agent/skill 的采集提示词；买家账号自动剔除经营类域。
+- 新增路由：`PUT|DELETE /accounts/:id/password`、`POST /accounts/:id/autologin`、
+  `PUT /accounts/:id/collection`、`GET /accounts/:id/collect-prompt`、`POST /accounts/:id/collect-done`；
+  工具 `shop_accounts` 相应加了 `collections` / `collect-prompt` / `collect-done` / `autologin`。
+- 界面：新增店铺弹窗加账号类型下拉；详情页加「密码与账密登录」「数据采集」两张卡。
 
-### 1. 账号类型：卖家 / 买家（对齐 Accio 的 `accountType`）
-
-- 账号表里的 `accountType` 从自由文本（默认「商家账号」）改成枚举 **`seller` / `buyer`**；
-  老数据（`商家账号` / 空 / 其它）自动归一成 `seller`，不丢号。
-- 买家有**独立的登录入口与判据**（`platforms.mjs` 的 `BUYER_VARIANTS`）：
-  淘宝/天猫 → `login.taobao.com`、京东 → `passport.jd.com/new/login.aspx`、1688 买家页；
-  拼多多/抖音 C 端入口没真机验过，标 `experimental`（界面会提示）。
-- 新增能力位 `capabilities`：`upload`（上架）只给卖家；`storeUrl` 只给卖家且拼多多不支持
-  （照抄 Accio 的 `supportsStoreUrl(platform, accountType)` 口径）。
-- `/state`、列表、工具输出都带 `accountType` / `accountTypeLabel` / `capabilities`；
-  新增/编辑弹窗与详情页都能选类型。
-
-### 2. 密码库 + 自动登录（对齐 Accio 的 `password-vault` + `passwordLogin`）
-
-- 新 `lib/vault.mjs`：`<数据目录>/account-secrets.enc`，**复用 secret.mjs 的 DPAPI 主密钥 + AES-256-GCM**
-  （与 cookie 罐同一套信封）。**DPAPI 不可用时整库禁用，绝不退化成明文存密码**。
-- 密码**不进 `accounts.json`、不进 `/state`、不进日志**；账号表只有 `hasPassword` / `passwordUpdatedAt`。
-- `PUT/DELETE /accounts/:id/password`、`POST /accounts/:id/autologin`（必须 `confirm:true`）；
-  `DELETE /accounts/:id` 会顺手清掉该账号的密码。
-- 新 `lib/autologin.mjs`：按平台给选择器候选（阿里 havana / 京东 / 拼多多 / 抖店），
-  页面里用原生 setter + `input/change` 事件写值（React 受控输入直接改 `.value` 会被丢），
-  先尝试点「账号密码登录」页签、填完提交、再**用 cookie 判据验一次登录态**——
-  验不过就如实回 `AUTOLOGIN_NEEDS_USER`（验证码/短信交回用户），绝不假装成功。
-- ego 后端也支持：`ego.mjs` 新增 `autofill` op（走 ego 运行时 `page.cdp('Runtime.evaluate')`），
-  填完把控制权交还用户。安全说明：ego CLI 不继承环境变量，密码只能内联进临时运行脚本
-  （`%TEMP%` 下 mkdtemp 私有目录，执行完立即整目录删除），不是零痕迹，介意就用「打开窗口手动登录」。
-
-### 3. 数据采集：配置 + 调度，采集交给 skill（对齐 Accio 的 `STORE_COLLECTION_DOMAINS`）
-
-- 采集域固定 5 个、界面名照抄 Accio：**经营总览（成交与客户）/ 流量转化（访客与转化）/
-  运营推广（广告与营销）/ 商品供给（商品与动销）/ 服务履约（售后与服务）**；「竞争洞察」不开放。
-- 校验同口径：开启必须至少选一个域、域必须来自白名单、时间必须 `HH:mm`。
-- `domain_id` 与 Accio 同构：`<platform>-scheduler-<域>`，抖店用 `doudian`。
-- `collectionPrompt()` 生成交给 agent 的任务说明：店铺/平台/账号类型 + 各域 domain_id +
-  **固定最近 30 个完整自然日（不含今天）** + 「不要用 `--all-domains` 扩大范围」。
-  买家账号自动剔除三个经营域并说明原因。
-- 新路由：`PUT /accounts/:id/collection`、`GET /accounts/:id/collect-prompt`、
-  `POST /accounts/:id/collect-done`（回写 `ok/partial/failed` + 备注）。
-- 工具 `shop_accounts` 增 `collections` / `collect-prompt` / `collect-done` / `autologin` 四个 action；
-  `/state` 带 `dueCollections`（今日到期店铺）。
-
-### 验证
-
-- `node test/smoke.mjs` → **113 项全过**（原有 112 项 + 账号类型断言更新）
-- `node test/features-v090.mjs` → **27 项全过**（新增：类型变体/判据、密码库密文落盘、
-  采集校验/提示词/到期、新路由、autologin 缺密码/缺账号的错误码）
-- 唯一改动到的旧断言：详情页存 `accountType:'商家账号'` 现在读回 `seller`（预期行为变更）。
-
+**验证**：新增 `test/features-v090.mjs` 30 项（密码库密文落盘且文件里不含明文 / 账号类型能力位 /
+采集校验与提示词 / 新路由 / 代填错误码）；主自检 113 项保持全绿。
 
 ## v0.8.5
 
-用户说「路径与高级选项有点乱，再美化一下」。**只动设置页这一块的排版，逻辑与接口一行没改。**
+需求「路径与高级选项有点乱，再美化一下」。**只动设置页这一块的排版，逻辑与接口一行没改。**
 
 诊断（离线渲染 + CDP 量几何，见下）出来是五个叠加的小毛病：
 
@@ -544,15 +254,15 @@ query、HTTP 面、删账号清数据、工具/界面/文档）；
 **验证**：`node test/smoke.mjs` 113 项全过（只碰 client.js 的样式/结构；两处断言随新 DOM 更新 —— ego profile
 从「一行文本」改成 Field 行，意图不变：仍然只在 ego 模式下出现）。几何实测（无头 Chrome + CDP，430px 宽卡片）：
 值列 252→304px、展开高度 459→426px、标签与值列左边缘各自统一、无横向越界（`outside: []`）、无纵向裁剪。
-截图：`C:\Users\mo\cluade\shop-accounts-diag\ui-adv-before.png` / `ui-adv-after.png`。
+截图：`shop-accounts-diag/ui-adv-before.png` / `ui-adv-after.png`（本机诊断目录）。
 
 ## v0.8.4
 
-用户说「继续修」。这一版是**对 v0.8.3 加固本身的第二轮审查**（专挑"修得不彻底 / 修出问题"的地方），
+需求「继续修」。这一版是**对 v0.8.3 加固本身的第二轮审查**（专挑"修得不彻底 / 修出问题"的地方），
 外加把上一版明确留的两项（cookie 明文落盘、ego 临时脚本）补掉。
 
 - **① 严重：信任锚能被同一个 API 改写**。删除判定原来只看"目录在 `profileRoot` 之下"，而 `profileRoot`
-  本身可以由 `PUT /config` 改 —— 把它改成 `C:\Users\mo` 再删同级目录就绕过了。
+  本身可以由 `PUT /config` 改 —— 把它改成某个家目录再删同级目录就绕过了。
   现在：`profileRoot` 写入要校验（绝对路径、不能是盘根/用户主目录/系统或程序目录）；删除要求
   **「在档案根目录下 + 目录名正好等于账号 id」**（`deletableProfileDir()`），导入的目录一律不删。
 - **② 严重：导入目录会让全机浏览器被杀**。`killChromeForProfile()` 原来用"命令行包含这个子串"匹配，
@@ -618,7 +328,7 @@ DPAPI 加密往返+篡改检测+旧格式兼容+**密钥解不开不被覆盖**�
 
 ## v0.8.3
 
-用户说「我的店铺账号管理插件，review 一下，最新版兼容了 ego，看看现在有没有漏洞」「全改了」。
+需求「我的店铺账号管理插件，review 一下，最新版兼容了 ego，看看现在有没有漏洞」「全改了」。
 
 这一版是**安全审查后的集中修复**。先给结论：命令执行面本来就是干净的（全程 `spawn`/`execFile`/`spawnSync`
 数组传参、无 `shell:true`、PowerShell 用环境变量传参），问题集中在**信任边界**上 —— 两处调试端口开关、
@@ -706,7 +416,7 @@ reset 与删号都不越界删 / 自更新按 commit 落地且脏工作区不生
   新增可选配置 `egoliteUserData`（留空自动探测 `%LOCALAPPDATA%\Citro Labs\ego lite\User Data`）。
 - **定时检测**：不再因为「ego 没在运行」跳过（那条跳过逻辑和文案一起删了），到点照常检测、结果照常写回。
 - **真机验证**（2026-10-31，ego 完全关闭，`tasklist` 显示 0 个 ego 进程）：
-  - 淘宝店铺「韩品兰坊」/ Profile 2：`ok=true`，读 85 个 taobao cookie（共 2655），判定**已登录**，证据 `cookie2 / _tb_token_ / sgcookie / unb`，耗时 **2086ms → 1697ms**（优化后）。
+  - 淘宝店铺（实测）/ Profile 2：`ok=true`，读 85 个 taobao cookie（共 2655），判定**已登录**，证据 `cookie2 / _tb_token_ / sgcookie / unb`，耗时 **2086ms → 1697ms**（优化后）。
   - 拼多多店铺「吸引隔热教授」/ Profile 3：`ok=true`，读 15 个 pdd cookie（共 16），判定**已登录**，证据 `PASS_ID / mms_b84d1838`，耗时 **1627ms**。
   - 两次读完立刻测进程：**0 个 ego 进程残留、0 个窗口**；`Profile 1/2/3` 的 `exit_type` 仍为 `Normal`（干净退出）。
 - **界面文案**：设置页在「ego 没在运行」的提示里补了一句「检测不受影响：会在后台起一个无窗口实例读登录态，不弹窗」。

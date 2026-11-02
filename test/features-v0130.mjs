@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * features-v0130.mjs —— v0.13.0 声明式采集 DSL（学 Accio 的 ecommerce-data-collect 执行层）：
+ * features-v0130.mjs —— v0.13.0 声明式采集 DSL 引擎：
  *   1. 编译层：时间窗口（最近 30 个完整自然日）、占位符 bindings（{dateRange} → encoded）、残留占位符报错
  *   2. 执行层：goto / waitFor / readText / click / when 分支 / 登录守卫 → LOGIN_REQUIRED
  *   3. 产物声明：artifacts present/bytes；空产物 = 业务无数据（不重试）
- *   4. 真实 DSL：三份 Accio 种子配方都能编译（不是玩具格式）
+ *   4. 真实 DSL：三份种子配方都能编译（不是玩具格式）
  *   5. 库存与 HTTP 面：GET /rpa/dsls、POST collect-run 的 404/400/501/409 边界
  *   6. ego 执行器源码与工具动作接线
  *
@@ -22,7 +22,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'shop-accounts-v0130-'));
 process.env.DSH_SHOP_ACCOUNTS_DIR = path.join(TMP, 'data');
-process.env.SHOP_ACCOUNTS_DSL_DIR = ''; // 只用插件自带种子，避免被本机 Accio 目录影响
+process.env.SHOP_ACCOUNTS_DSL_DIR = ''; // 只用插件自带种子，避免被外部配方库影响
 
 const url = (rel) => pathToFileURL(path.join(ROOT, rel)).href;
 
@@ -96,7 +96,7 @@ await test('没声明 schedule.days 时默认 30 天窗口', () => {
 });
 
 // ── 2. 真实 DSL 能编译 ──────────────────────────────────────────────────────
-section('2. 真实 Accio 配方能编译（不是玩具格式）');
+section('2. 真实配方能编译（不是玩具格式）');
 
 const seeds = [
   ['taobao/tb_shop_overview.json', 'tb_shop_overview', 'taobao'],
@@ -262,7 +262,7 @@ await test('trace 记录每一步的 op/状态/耗时（可定位失败在哪一
 });
 
 // ── 4. DSL 库存 ─────────────────────────────────────────────────────────────
-section('4. DSL 库存（种子 + 本机 Accio 目录）');
+section('4. DSL 库存（种子 + 外部配方库）');
 
 await test('listDsls：自带 3 份种子可列出，且标了 hasDownload', () => {
   const { items, seedDir } = D.listDsls();

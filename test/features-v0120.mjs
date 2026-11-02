@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * features-v0120.mjs —— v0.12.0 目录层（对齐 Accio 的「平台 → 采集域 → 指标」模型）：
- *   1. 目录文件本身：可解析、规模合理、只含骨架（不含 Accio 私有的 value_path / 聚合规则）
+ * features-v0120.mjs —— v0.12.0 目录层（「平台 → 采集域 → 指标」模型）：
+ *   1. 目录文件本身：可解析、规模合理、只含骨架（不含取值路径 / 聚合规则等实现细节）
  *   2. 平台 → 域：淘宝/天猫 6 个域（多「竞争洞察」），抖店/京东/拼多多 5 个域
  *   3. 指标查询：按 id 查名字/度量类型/所需字段；跨平台不认
  *   4. 按平台校验：pdd 不能采「竞争洞察」，taobao 可以（配置 + import + query 三处）
@@ -56,14 +56,14 @@ await test('目录可加载：6 个平台、指标总数 ≥ 3000', () => {
   assert.deepEqual(ids, ['douyin', 'jd', 'pdd', 'taobao', 'tmall']);
 });
 
-await test('目录只保留骨架：不含 Accio 私有的 value_path / 聚合规则 / RPA 资产', () => {
+await test('目录只保留骨架：不含取值路径 / 聚合规则 / 加密资产', () => {
   const raw = fs.readFileSync(path.join(ROOT, 'lib', 'catalog', 'catalog.json'), 'utf8');
   assert.ok(!raw.includes('value_path'), '不该带 value_path');
   assert.ok(!raw.includes('auxiliary_path'), '不该带 auxiliary_path');
   assert.ok(!raw.includes('aggregation'), '不该带聚合规则');
   assert.ok(!raw.includes('按日可加'), '不该带聚合说明');
   assert.ok(!raw.includes('locator_template'), '不该带 RPA 资产');
-  assert.ok(!raw.includes('ecommerce.db'), '不该带 Accio 库路径');
+  assert.ok(!raw.includes('ecommerce.db'), '不该带上游库路径');
   const kb = Buffer.byteLength(raw, 'utf8') / 1024;
   assert.ok(kb < 1024, `目录文件太大：${kb.toFixed(0)} KB`);
 });

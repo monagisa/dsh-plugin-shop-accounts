@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * features-v090.mjs —— v0.9.0 三个新能力的自检（对齐 Accio Work「账号管理」逆向结论）：
+ * features-v090.mjs —— v0.9.0 三个新能力的自检：
  *   1. 账号类型：卖家 / 买家（platforms.mjs 的变体与能力位）
  *   2. 密码库 + 自动登录（vault.mjs / autologin.mjs，密码不落 accounts.json、不进 /state）
  *   3. 数据采集：采集域配置、校验、提示词生成、到期判断、结果回写
@@ -156,7 +156,7 @@ await test('vaultInfo 只暴露可用性/路径/条数，不暴露内容', () =>
 section('3. 数据采集 lib/collection.mjs');
 const C = await import(url('lib/collection.mjs'));
 
-await test('采集域与标签对齐 Accio：5 个域 + 5 个说明名，竞争洞察不开放', () => {
+await test('采集域与标签：5 个域 + 5 个说明名，竞争洞察默认不开放', () => {
   assert.deepEqual(C.COLLECTION_DOMAINS, ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约']);
   assert.equal(C.COLLECTION_LABELS['经营总览'], '成交与客户');
   assert.equal(C.COLLECTION_LABELS['服务履约'], '售后与服务');
@@ -174,7 +174,7 @@ await test('normalizeCollection：开启必须选域；未知域/坏时间要报
   assert.equal(ok.time, '09:30');
 });
 
-await test('domain_id 与 Accio 同构（抖店→doudian）', () => {
+await test('domain_id 形状固定（抖店→doudian）', () => {
   assert.equal(C.collectDomainId('taobao', '商品供给'), 'taobao-scheduler-商品供给');
   assert.equal(C.collectDomainId('douyin', '服务履约'), 'doudian-scheduler-服务履约');
 });
@@ -193,13 +193,13 @@ await test('collectionPrompt：带 domain_id、平台、店铺、30 天范围，
     collection: { enabled: true, domains: ['商品供给', '服务履约'], time: '08:00' },
   };
   const p = C.collectionPrompt(acc, { now: new Date(2026, 10, 2) });
-  assert.match(p, /ecommerce-data-collect/);
+  assert.match(p, /店铺数据采集/);
   assert.match(p, /测试店/);
   assert.match(p, /淘宝/);
   assert.match(p, /taobao-scheduler-商品供给/);
   assert.match(p, /taobao-scheduler-服务履约/);
   assert.match(p, /最近 30 个完整自然日/);
-  assert.match(p, /不要使用 --all-domains/);
+  assert.match(p, /不要用全量参数扩大范围/);
 });
 
 await test('collectionPrompt：买家账号自动剔除经营类域并说明', () => {
@@ -338,7 +338,7 @@ await test('POST /accounts：新建时可直接带登录账号+密码（落库�
   assert.ok(!JSON.stringify(s2.json).includes('Create-P@ss1'));
 });
 
-await test('POST /accounts：账号与密码都是必填（对齐 Accio 账号管理），缺一即 400', async () => {
+await test('POST /accounts：账号与密码都是必填，缺一即 400', async () => {
   const noName = await call('POST', '/shop-accounts/accounts', { platform: 'pdd', name: '缺账号店', password: 'P@ss1' });
   assert.equal(noName.status, 400);
   assert.equal(noName.json.code, 'ACCOUNT_LOGIN_NAME_REQUIRED');
@@ -371,7 +371,7 @@ await test('PUT /accounts/:id/collection：校验与落盘', async () => {
 await test('GET /accounts/:id/collect-prompt：返回可交给 agent 的提示词', async () => {
   const r = await call('GET', `/shop-accounts/accounts/${accId}/collect-prompt`);
   assert.equal(r.status, 200);
-  assert.match(r.json.prompt, /ecommerce-data-collect/);
+  assert.match(r.json.prompt, /店铺数据采集/);
   assert.match(r.json.prompt, /taobao-scheduler-商品供给/);
   assert.equal(r.json.collection.enabled, true);
 });
@@ -404,7 +404,7 @@ await test('PUT/DELETE /accounts/:id/password：只回布尔与时间戳，绝�
 });
 
 await test('POST /accounts/:id/autologin：不再要 confirm；缺密码/缺账号要有可读错误；confirm:false 显式拒绝', async () => {
-  // v0.9.2：账密登录是「打开店铺」的一部分，不再要求显式 confirm（对齐 Accio）——
+  // v0.9.2：账密登录是「打开店铺」的一部分，不再要求显式 confirm ——
   // 不带 confirm 的请求会直接走到字段校验，而不是被 confirm 闸挡下。
   // 这个账号建号时带了登录账号、但上一条用例把密码删了 → NO_PASSWORD（而不是 confirmation 错误）
   const noConfirm = await call('POST', `/shop-accounts/accounts/${accId}/autologin`, {});

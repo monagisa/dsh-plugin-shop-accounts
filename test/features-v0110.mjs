@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * features-v0110.mjs —— v0.11.0 本地采集数据层（对齐 Accio 的 plan → collect → import → query 契约）：
+ * features-v0110.mjs —— v0.11.0 本地采集数据层（plan → collect → import → query 契约）：
  *   1. 日期/区间/覆盖台账：合并、缺口计算、窗口上限
  *   2. plan：这个账号这个区间缺哪些天（COLLECTION_REQUIRED / NO_COLLECTION_REQUIRED）
  *   3. import：逐条校验 → content_hash 去重 → 追加落盘 → 记覆盖台账；**合法空结果也记台账**

@@ -874,7 +874,7 @@ await test('ego 后端的店铺：端口记 0、状态看空间在不在（不�
 });
 
 await test('ego 模式「完成」只存状态、不收掉空间（空间是独立窗口，不挡用户用浏览器）', () => {
-  // 用户原话：到 ego 就不用关窗口了，它单独一个 space，不影响我们使用浏览器。
+  // 需求：到 ego 就不用关窗口了，它单独一个 space，不影响我们使用浏览器。
   const start = indexSrc.indexOf('async function egoFinishAccount');
   assert.ok(start > 0, '找不到 egoFinishAccount');
   const rest = indexSrc.slice(start + 10);
@@ -1240,7 +1240,7 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   //    改用 --dsw-alias-label-secondary（浅色 #61666b ≈5.8:1，深色 #cfd3d6 也够）。别再换回 caption。
   assert.ok(!/--dsw-alias-label-caption/.test(src), '说明性小字要用 label-secondary，不能用 caption（浅色主题下几乎看不见）');
   assert.ok(/--dsw-alias-label-secondary/.test(src), '小字颜色要走 label-secondary');
-  // ⑧ 行里「详细配置」要和上面的排期胶囊对齐居中（用户原话「不居中，太奇怪」）。
+  // ⑧ 行里「详细配置」要和上面的排期胶囊对齐居中（需求：不居中太奇怪）。
   assert.ok(/\.sa-schedcell\{[^}]*align-items:center/.test(src), '定时检测列的胶囊和链接要居中');
   // ⑨ 顶部排期横幅按参考软件的样子：左边两行（粗标题 + 淡说明）、右边一个描边胶囊按钮、整体一行不折行。
   assert.ok(/\.sa-schedbar\{[^}]*justify-content:space-between/.test(src), '横幅要左右两端对齐（文字在左、按钮在右）');
@@ -1761,7 +1761,7 @@ await test('删除只认「根目录下 + 目录名 = 账号 id」：把 profile
   const created = await call('POST', '/shop-accounts/accounts', { loginName: 'u13', password: 'Test-P@ss1', platform: 'pdd', name: '投毒测试店' });
   assert.equal(created.status, 200, JSON.stringify(created.json));
   const id = created.json.account.id;
-  // 把账号的档案目录指向"根目录下但名字不是 id"的目录（模拟"把根指向 C:\Users\mo 后删同级目录"）
+  // 把账号的档案目录指向"根目录下但名字不是 id"的目录（模拟"把根指向家目录后删同级目录"）
   const victim = path.join(root, 'victim-dir');
   fs.mkdirSync(victim, { recursive: true });
   fs.writeFileSync(path.join(victim, 'keep.txt'), 'keep');

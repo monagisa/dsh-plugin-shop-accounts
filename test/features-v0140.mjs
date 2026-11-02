@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * features-v0140.mjs —— v0.14.0：下载落盘 + 采集作业编排（照 Accio 的 prepare/advance/status）
+ * features-v0140.mjs —— v0.14.0：下载落盘 + 采集作业编排（prepare/advance/status）
  *
  *   A. downloadFile：编译成 download op → driver 设下载目录 → 点按钮 → 轮询落盘 → download_ref 产物
  *   B. 编排层：job 目录 + revision + 每批 5 项 + 覆盖台账跳过 + 失败只重试一次 + 空结果不重试 + 交付清单
@@ -98,12 +98,22 @@ await test('产物：download_ref 指向的文件不存在时 present=false（�
   assert.equal(arts[0].bytes, 0);
 });
 
-await test('真实下载型配方（淘宝商品明细）能被编译', () => {
-  const realPath = 'C:/Users/mo/.accio/accounts/286936609/plugins/installed/ecommerce-automation-toolkit/skills/ecommerce-data-collect/dsls/taobao/tb_product_detail_list.json';
-  if (!fs.existsSync(realPath)) { console.log('      （本机没装 Accio，跳过）'); return; }
-  const real = JSON.parse(fs.readFileSync(realPath, 'utf8'));
-  const compiled = R.compileExecution(real, { ...WINDOW, params: {} });
-  assert.ok(compiled.ops.some((o) => o.op === 'download'), '真实配方里没编译出 download');
+await test('外部配方库：SHOP_ACCOUNTS_DSL_DIR 指到临时目录后能被发现', async () => {
+  const D = await import(url('lib/dsls.mjs'));
+  const ext = path.join(TMP, 'ext-dsl');
+  fs.mkdirSync(path.join(ext, 'taobao'), { recursive: true });
+  const seed = JSON.parse(fs.readFileSync(path.join(ROOT, 'lib', 'rpa', 'dsls', 'taobao', 'tb_shop_overview.json'), 'utf8'));
+  seed.id = 'ext_overview_demo';
+  fs.writeFileSync(path.join(ext, 'taobao', 'ext_overview.json'), JSON.stringify(seed), 'utf8');
+  const prev = process.env.SHOP_ACCOUNTS_DSL_DIR;
+  process.env.SHOP_ACCOUNTS_DSL_DIR = ext;
+  try {
+    const { items, externalDir } = D.listDsls();
+    assert.equal(externalDir, ext);
+    assert.ok(items.some((d) => d.origin === 'external'), '外部配方库里那份没被发现');
+  } finally {
+    if (prev === undefined) delete process.env.SHOP_ACCOUNTS_DSL_DIR; else process.env.SHOP_ACCOUNTS_DSL_DIR = prev;
+  }
 });
 
 // ── B. 编排层 ───────────────────────────────────────────────────────────────

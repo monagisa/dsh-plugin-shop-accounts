@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * features-v0150.mjs —— v0.15.0：定时任务 = 定时采集（照 Accio 的「每店一条 cron 跑采集」）
+ * features-v0150.mjs —— v0.15.0：定时任务 = 定时采集（每店一条任务，到点跑采集）
  *
- * 逆向证据：他机器上 8 个自动化任务里 7 个是
+ * 设计依据：定时任务里绝大多数条目都是「到点跑一次数据采集」——
  *   name: "<店铺> · <平台> 经营数据采集"、schedule: {kind:'cron', expr:'0 10 * * *'}、
- *   payload: {kind:'agent', message:'ecommerce-data-collect …domain_id=<platform>-scheduler-<域>…'}
+ *   payload: {kind:'agent', message:'采集 …domain_id=<platform>-scheduler-<域>…'}
  * 即：**定时任务就是定时采集**，不是"定时检测登录态"。
  *
  * 本套覆盖：
@@ -278,7 +278,7 @@ await test('tick 的 collect 失败会把 lastSchedError 记下来（界面能�
 });
 
 
-// ── E. 登录过期 → 自动代填后继续采（v0.15.1，用户原话：给你密码就是让你在过期时自动填的）──
+// ── E. 登录过期 → 自动代填后继续采（v0.15.1：有密码就该在过期时代填）──────────────────
 section('E. 登录过期自动代填');
 
 /** 造一个 prepareFn：第一次这批里带 LOGIN_REQUIRED，第二次（重跑）成功。 */
@@ -425,9 +425,9 @@ await test('界面：有「到点做什么」选择器 + 定时采集文案', ()
   assert.ok(!/h\('div', \{ className: 'sa-c-sched' \}, '定时检测'\)/.test(clientSrc), '表头还硬写成定时检测');
 });
 
-await test('注释里留了 Accio 逆向依据（每店一条 cron 跑采集）', () => {
-  assert.ok(/每店一条 cron/i.test(indexSrc), '注释没写清逆向依据');
-  assert.ok(/ecommerce-data-collect/.test(indexSrc), '注释没引用他的采集指令');
+await test('注释里讲清了调度形状（每店一条任务、错峰、到点跑采集）', () => {
+  assert.ok(/每店一条任务/.test(indexSrc), '注释没写清调度形状');
+  assert.ok(/错峰/.test(indexSrc), '注释没写错峰');
 });
 
 // ── 汇总 ────────────────────────────────────────────────────────────────────
