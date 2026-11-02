@@ -3,7 +3,27 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
-> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/features-v0160.mjs`（v0.16 采集开关与排期统一）、`node test/features-v0161.mjs`（v0.16.1 文案精简与占位符脱敏，含 v0.16.2 小眼睛图标）、`node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/features-v0160.mjs`（v0.16 采集开关与排期统一）、`node test/features-v0161.mjs`（v0.16.1 文案精简与占位符脱敏，含 v0.16.2 小眼睛图标、v0.16.3 下拉框样式）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.16.3
+
+用户原话：「下拉框搞好看点」
+
+界面上 4 个下拉框（账号类型 ×2、到点做什么、浏览器后端）之前只是套了输入框的皮，
+选择器本身还是浏览器原生的：Windows 上那条系统灰箭头、和输入框不等高、选项在深色主题下还会白底。
+
+- 去掉原生外观（`appearance:none`），自绘 chevron：内联 SVG data URI，中性灰 `#8b93a1`，深浅两套主题都看得见；
+  靠右 8px、垂直居中、12×12。
+- 和输入框拉齐：同样的圆角 8px、同样的 7px 内边距，右边留 26px 给箭头，长选项（"定时采集（配了采集的店铺跑采集，没配的退回检测）"）不会被箭头挤到。
+- 交互：hover 边框加深 + 底色微提；focus 有 3px 焦点环（键盘 Tab 过去看得出落点）；`transition` 120ms 过渡。
+- 展开后的选项列表是系统画的，只能给底色兜底：`.sa-select option` 用 `--dsw-alias-bg-base`，深色主题不再白底黑字。
+- 顺手加了条防漏：`sa-input sa-select` 的数量必须等于源码里 `<select>` 的数量，以后新增下拉框忘了挂样式会当场炸。
+
+**验证**
+
+- `test/features-v0161.mjs` 加 3 项（`.sa-select` 去原生外观 + 自绘箭头 + hover/focus 齐、所有 select 都挂样式、选项有底色）→ 28 → **31 项**。
+- 用 headless Chrome 把深色/浅色/改前改后都渲成图比过（原生箭头 vs 自绘 chevron、与输入框等高、焦点环）。
+- 十二套自检合计 **346 项**全绿（源码目录与宿主实际加载的已安装副本各跑一遍）。
 
 ## v0.16.2
 

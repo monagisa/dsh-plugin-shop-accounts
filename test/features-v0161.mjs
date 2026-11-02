@@ -138,6 +138,29 @@ test('睁眼/闭眼两个图标都有（闭眼带一道斜线）', () => {
   assert.ok(clientSrc.includes("h('circle', { cx: 12, cy: 12, r: 3.1 })"), '睁眼图标少了瞳孔');
 });
 
+// ── F. 下拉框样式（v0.16.3） ────────────────────────────────────────────────
+section('F. 下拉框：去掉原生外观 + 自绘箭头');
+
+test('.sa-select：去原生外观、自绘 chevron、hover 与焦点环都有', () => {
+  assert.ok(clientSrc.includes('.sa-select{appearance:none'), '没去掉 select 的原生外观');
+  assert.ok(clientSrc.includes('background-image:url("data:image/svg+xml'), '没用自绘箭头');
+  assert.ok(clientSrc.includes('background-position:right 8px center'), '箭头没靠右垂直居中');
+  assert.ok(clientSrc.includes('.sa-select:hover'), '缺 hover 反馈');
+  assert.ok(clientSrc.includes('.sa-select:focus{border-color'), '缺焦点样式');
+  assert.ok(/\.sa-select:focus\{[^}]*box-shadow/.test(clientSrc), '焦点没有焦点环（键盘操作看不出落点）');
+});
+
+test('所有 <select> 都挂上了 sa-select（漏一个就会是原生丑箭头）', () => {
+  const selects = (clientSrc.match(/h\('select'/g) || []).length;
+  const styled = (clientSrc.match(/sa-input sa-select/g) || []).length;
+  assert.ok(selects > 0, '源码里没有 select？');
+  assert.equal(styled, selects, `有 ${selects} 个下拉框，但只有 ${styled} 个用了 sa-select`);
+});
+
+test('展开后的选项也给了底色（深色主题下不会白底黑字）', () => {
+  assert.ok(clientSrc.includes('.sa-select option{'), '选项没有底色，深色主题下可能看不清');
+});
+
 // ── D. 提示行长度上限（防止再写长段落） ─────────────────────────────────────
 section('D. 界面里不再有超长提示句');
 

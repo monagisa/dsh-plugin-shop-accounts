@@ -12,13 +12,13 @@
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台），
 另外支持给这些平台的 **C 端买家账号**建档（买家账号只做浏览/采集，不上架）。
 
-- 版本：**0.16.2**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.16.3**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
   `node test/features-v0140.mjs` → 18 项、`node test/features-v0150.mjs` → 22 项、
   `node test/features-v0152.mjs` → 12 项、`node test/features-v0160.mjs` → 19 项、
-  `node test/features-v0161.mjs` → 28 项、`node test/platform.mjs` → 12 项，合计 **343 项**全过
+  `node test/features-v0161.mjs` → 31 项、`node test/platform.mjs` → 12 项，合计 **346 项**全过
   （不启动浏览器、不碰真实账号；`npm test` 一次跑完）
 
 ---
@@ -42,6 +42,12 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 ---
 
 ## 更新说明
+
+### v0.16.3：下拉框去掉原生外观
+
+4 个下拉框（账号类型 ×2 / 到点做什么 / 浏览器后端）改成自绘：`appearance:none` + 内联 SVG chevron，
+和输入框同高同圆角，hover 有反馈、focus 有焦点环，选项底色跟随主题（深色下不再白底）。
+回归测试会核对「所有 `<select>` 都挂了 `.sa-select`」，漏一个就报错。
 
 ### v0.16.2：密码框的显示/隐藏改成小眼睛
 
@@ -517,7 +523,7 @@ test/features-v090.mjs  v0.9 功能自检（密码库 / 采集 / 账号类型 / 
 test/features-v0101.mjs v0.10.1 自检（登录账号查重 / 店铺配置导出导入）
 test/features-v0110.mjs v0.11.0 自检（采集数据层：缺口 / 导入去重 / 查询）
 test/features-v0160.mjs v0.16.0 自检（采集开关/时间与排期统一、迁移幂等）
-test/features-v0161.mjs v0.16.1 自检（界面文案精简 / 占位符不含本机信息 / 密码小眼睛图标）
+test/features-v0161.mjs v0.16.1–v0.16.3 自检（文案精简 / 占位符脱敏 / 密码小眼睛 / 下拉框样式）
 test/platform.mjs   平台层自检（v0.10.0；含把 mac 分支在 Windows 上能验的都验掉）
 test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时档案）
 ```
@@ -553,7 +559,7 @@ node test/features-v0140.mjs   # 18 项：下载落盘 + 采集作业编排（�
 node test/features-v0150.mjs   # 22 项：定时采集（mode 分流 / 待登录跳过 / 回写 / 登录过期自动代填）
 node test/features-v0152.mjs   # 12 项：账号密码错的识别与停机（提示分类 / 状态 / 超时保护）
 node test/features-v0160.mjs   # 19 项：采集开关与时间统一到排期（迁移幂等 / tick 只认采集域 / 界面去掉重复控件）
-node test/features-v0161.mjs   # 28 项：文案精简与占位符脱敏（无长段落 / 无真实店铺名人名 / 无本机路径 / 小眼睛图标）
+node test/features-v0161.mjs   # 31 项：文案精简与占位符脱敏 / 小眼睛图标 / 下拉框样式（无长段落、无真实店铺名人名、无本机路径）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（能在 Windows 上验的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
