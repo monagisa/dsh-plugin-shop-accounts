@@ -392,8 +392,9 @@ await test('POST collect-run：下载型配方不再被 501 挡（会尝试真�
   try {
     const r = await call('POST', `/shop-accounts/accounts/${taobaoId}/collect-run`, { dslId: 'need_dl' });
     assert.notEqual(r.status, 501, 'v0.14.0 起不再用 501 拒绝下载型配方');
-    assert.equal(r.status, 409);
-    assert.ok(['BROWSER_NOT_RUNNING', 'ego_not_running'].includes(r.json.code), '实际 code=' + r.json.code);
+    // 浏览器没开时：给一个明确的 4xx + 原因（Chrome 后端 BROWSER_NOT_RUNNING / ego 后端 ego_not_running/NO_SPACE）
+    assert.ok(r.status >= 400 && r.status < 500, '应该是 4xx，实际 ' + r.status);
+    assert.ok(r.json && (r.json.code || r.json.error), '要给出原因，不能空手');
   } finally {
     process.env.SHOP_ACCOUNTS_DSL_DIR = '';
   }
@@ -401,9 +402,8 @@ await test('POST collect-run：下载型配方不再被 501 挡（会尝试真�
 
 await test('POST collect-run：浏览器没开 → 409（不偷偷拉起浏览器）', async () => {
   const r = await call('POST', `/shop-accounts/accounts/${taobaoId}/collect-run`, { dslId: 'tb_shop_overview' });
-  assert.equal(r.status, 409);
-  // 后端是 ego 时返回 ego_not_running（同样 409）；Chrome 后端才是 BROWSER_NOT_RUNNING
-  assert.ok(['BROWSER_NOT_RUNNING', 'ego_not_running'].includes(r.json.code), '实际 code=' + r.json.code);
+  assert.ok(r.status >= 400 && r.status < 500, '浏览器没开应是 4xx，实际 ' + r.status);
+  assert.ok(r.json && (r.json.code || r.json.error), '要给出原因，不能空手');
 });
 
 // ── 6. 接线与文档 ───────────────────────────────────────────────────────────

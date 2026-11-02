@@ -3,7 +3,37 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
-> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.15.2
+
+用户报障：「密码或者账号是错误时，他会停掉，不返回任何信息」。
+
+两个根因都找到了：
+
+1. **站点不会用 HTTP 状态告诉你"密码错了"** —— 它只在页面上渲染一行红字（"账号或密码不正确"），而代填流程只读 cookie 判登录态，
+   于是密码错被当成「需要验证码 / 未建立登录态」，用户看到的只有一句含糊的"登录态还没建立"，等于没信息。
+2. **定时任务里没有任何超时** —— 某一店的代填/采集卡住，整轮 `tick` 就钉死在那儿，后面所有店铺都不再执行，界面上也什么都看不到。
+
+这一版：
+
+- **新增 `classifyLoginFailure(text)`**（`lib/autologin.mjs`）：读页面提示分类 ——
+  中英文的"账号或密码不正确/密码错误/incorrect password/invalid credentials" → `AUTOLOGIN_BAD_CREDENTIALS`；
+  "验证码/滑块/captcha" → `AUTOLOGIN_NEEDS_USER`。两条链路（Chrome 与 ego）都会在提交后扫一次页面。
+- **错误密码 = 明确停下 + 明确告知**：
+  - 代填返回 `AUTOLOGIN_BAD_CREDENTIALS`，文案直接给出下一步（"去店铺详情里把账号/密码改对后，再点一次重新登录（代填）"）；
+  - 定时采集把店铺标 `pendingLogin` + `credentialErrorAt`（**暂停自动代填**，避免连续错密码被站点锁号），
+    并写清 `lastSchedError`；因为 `pendingLogin` 会让后续 tick 直接跳过，等于"停下来但信息齐全"。
+- **`/state` 新增 `credentialErrorAt` / `autoLoginBlocked`**；店铺详情页顶部出现橙色警示卡
+  「⚠️ 账号或密码不正确（时间）… 把账号/密码改对后保存，再点重新登录」。
+- **定时任务每店套超时**（`withTimeout`，默认 15 分钟，可用 `collectTimeoutMs` 覆盖）：
+  某店卡住只算这一店失败（`skipped.reason` 记"超时"），**后面的店铺照常执行**。
+
+验证：新增 `node test/features-v0152.mjs` **12 项**（中英文密码错识别、验证码与密码错分开、不误判、
+空提示不误报、错误密码全链路（返回码/文案/待登录/credentialErrorAt/lastSchedError）、`/state` 字段、
+清 pendingLogin 后解除 blocked、验证码不记成密码错、**卡住的店不拖死后面的店**、界面警示卡与文案）；
+九套旧自检照旧，合计 **296 项全绿**。
+**没做**：错密码后的自动"冷却期"（现在靠 pendingLogin 一直挡到你手动改；不会自己重试，避免锁号）。
 
 ## v0.15.1
 

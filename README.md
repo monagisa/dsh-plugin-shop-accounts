@@ -12,7 +12,7 @@
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台），
 另外支持给这些平台的 **C 端买家账号**建档（买家账号只做浏览/采集，不上架）。
 
-- 版本：**0.15.1**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.15.2**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、`node test/platform.mjs` → 12 项，合计 **244 项**全过
@@ -510,12 +510,13 @@ node test/features-v0120.mjs   # 23 项：目录层（平台域名与指标数 /
 node test/features-v0130.mjs   # 27 项：采集 DSL（编译/占位符/真实配方/登录守卫/产物/HTTP 边界）
 node test/features-v0140.mjs   # 18 项：下载落盘 + 采集作业编排（分批/重试/覆盖/交付）
 node test/features-v0150.mjs   # 22 项：定时采集（mode 分流 / 待登录跳过 / 回写 / 登录过期自动代填）
+node test/features-v0152.mjs   # 12 项：账号密码错的识别与停机（提示分类 / 状态 / 超时保护）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（能在 Windows 上验的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
 
-`npm test` 一次跑完前九套（零依赖、不碰真实账号、不启动浏览器）。
+`npm test` 一次跑完前十套（零依赖、不碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 用 `DSH_SHOP_ACCOUNTS_DIR` 把数据目录指到临时目录，**不碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真的拉起无头 Chrome（临时档案、不弹窗口、不碰店铺档案），验证
