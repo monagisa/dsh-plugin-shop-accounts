@@ -12,10 +12,13 @@
 DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688** —— 全部是**商家端**（卖家后台），
 另外支持给这些平台的 **C 端买家账号**建档（买家账号只做浏览/采集，不上架）。
 
-- 版本：**0.15.2**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.16.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
-  `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、`node test/platform.mjs` → 12 项，合计 **244 项**全过
+  `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
+  `node test/features-v0140.mjs` → 18 项、`node test/features-v0150.mjs` → 22 项、
+  `node test/features-v0152.mjs` → 12 项、`node test/features-v0160.mjs` → 19 项、
+  `node test/platform.mjs` → 12 项，合计 **315 项**全过
   （不启动浏览器、不碰真实账号；`npm test` 一次跑完）
 
 ---
@@ -39,6 +42,24 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
 ---
 
 ## 更新说明
+
+### v0.16.0：「跑不跑 / 几点跑」统一到排期
+
+之前采集卡片里还有「开启采集」勾选和「每天 __:__」时间输入 —— 那是 v0.9.0 留下的（当时采集只是配置）。
+v0.15.0 改成定时采集后，真正的执行时间由全局排期决定，那两个字段就是摆设，还跟排期表的开关打架。
+
+现在**只有一套**：
+
+| 问题 | 唯一来源 |
+| --- | --- |
+| 这个店跑不跑 | 排期表里的「开启 / 暂停」（= 账号的 `schedEnabled`；详情页那个按钮是同一个开关） |
+| 几点跑 | 全局排期槽位（详情页显示 `schedTime`，时间在「定时任务」里调） |
+| 采什么 | 采集卡片里的采集域勾选 |
+
+- 采集卡片里的勾选与时间输入已删除，改成一行状态 +「加入 / 暂停定时采集」按钮。
+- 升级迁移：老数据「选了域又把开关关掉」→ 排期里的暂停（行为不变）；`collection.time` 不再影响调度。
+- 顺带修掉两个会让人以为「插件坏了」的坑：新建店铺默认 `collection.enabled=false`，
+  只看它会把所有店铺在升级时暂停；只传采集域不改 `enabled` 会让选了域也永远不采。
 
 ### v0.15.0：定时任务改为「定时采集」
 
@@ -95,7 +116,7 @@ DSH 插件，支持 **拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东�
   代填结果会明确回报（成功 / 需要验证码 / 找不到输入框），验证码与短信仍需你手动完成。
 - **卖家 / 买家账号（v0.9.0）**：`accountType` = `seller` / `buyer`，买家有独立登录入口；
   能力位区分「能否上架」「能否填店铺 URL」「能否采集」——买家账号不做上架。
-- **数据采集（v0.9.0）**：只做**配置与调度**（选 5 个业务域、每天几点、最近 30 个完整自然日），
+- **数据采集（v0.9.0）**：只做**配置与调度**（选业务域；每天几点由定时任务排期统一决定，范围固定最近 30 个完整自然日），
   真正的抓取交给 agent/skill —— 平台改版时只改 skill，不用改插件。
 - **采集数据层（v0.11.0）**：把「采什么」变成一条带契约的管线（对照 Accio 的 `ecomctl` 结论）：
   `plan`（这店这区间缺哪些天）→ skill 采集 → `import`（逐条校验 + content_hash 去重 + 记覆盖台账）→ `query`（查已采数据）。
@@ -477,6 +498,7 @@ test/smoke.mjs      主自检（零依赖、不启动浏览器）
 test/features-v090.mjs  v0.9 功能自检（密码库 / 采集 / 账号类型 / 新路由）
 test/features-v0101.mjs v0.10.1 自检（登录账号查重 / 店铺配置导出导入）
 test/features-v0110.mjs v0.11.0 自检（采集数据层：缺口 / 导入去重 / 查询）
+test/features-v0160.mjs v0.16.0 自检（采集开关/时间与排期统一、迁移幂等）
 test/platform.mjs   平台层自检（v0.10.0；含把 mac 分支在 Windows 上能验的都验掉）
 test/live-probe.mjs 真机链路探针（会拉起一个无头 Chrome，临时档案）
 ```
@@ -511,12 +533,13 @@ node test/features-v0130.mjs   # 27 项：采集 DSL（编译/占位符/真实�
 node test/features-v0140.mjs   # 18 项：下载落盘 + 采集作业编排（分批/重试/覆盖/交付）
 node test/features-v0150.mjs   # 22 项：定时采集（mode 分流 / 待登录跳过 / 回写 / 登录过期自动代填）
 node test/features-v0152.mjs   # 12 项：账号密码错的识别与停机（提示分类 / 状态 / 超时保护）
+node test/features-v0160.mjs   # 19 项：采集开关与时间统一到排期（迁移幂等 / tick 只认采集域 / 界面去掉重复控件）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（能在 Windows 上验的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案拉一个无头 Chrome，读 cookie 再关掉 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台都过一遍（建议一个一个跑，共用档案会串 cookie）
 ```
 
-`npm test` 一次跑完前十套（零依赖、不碰真实账号、不启动浏览器）。
+`npm test` 一次跑完上面前十一套（零依赖、不碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 用 `DSH_SHOP_ACCOUNTS_DIR` 把数据目录指到临时目录，**不碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真的拉起无头 Chrome（临时档案、不弹窗口、不碰店铺档案），验证

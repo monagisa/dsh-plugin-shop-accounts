@@ -3,7 +3,54 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
-> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/features-v0160.mjs`（v0.16 采集开关与排期统一）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.16.0
+
+用户原话：「为什么你数据采集那里还做了个勾选和设置采集时间，不是统一的吗」
+
+说得对，那是历史包袱：v0.9.0 做采集时它只是「配置」，所以每店给了「开启采集」勾选和「每天 09:00」时间输入；
+v0.15.0 把定时任务改成**定时采集**后，真正的执行时间由全局排期（起跑时间 + 每组间隔 + 顺序）决定，
+那两个字段就成了摆设 —— 填了不生效，还跟排期表里的「开启 / 暂停」打架。同一个意思说两遍，必须统一。
+
+**统一后的规矩（只有一套）**
+
+| 问题 | 唯一来源 |
+| --- | --- |
+| 这个店跑不跑 | 账号的 `schedEnabled` —— 排期表里的「开启 / 暂停」，详情页那个按钮是同一个开关 |
+| 几点跑 | 全局排期槽位（`/state` 每账号的 `schedTime`） |
+| 采什么 | `collection.domains`（采集卡片只管这个） |
+
+**改动**
+
+- 详情页「数据采集」卡片：**删掉**「开启采集」勾选和「每天 __:__」输入框；换成一行状态
+  「定时采集：已加入 / 已暂停 · 每天 10:30 到点跑，时间在「定时任务」里调」+ 一个「加入/暂停定时采集」按钮
+  （按钮打的就是 `POST /accounts/:id/schedule`，和排期表同一个 `schedEnabled`，点哪边都一样）。
+- `lib/collection.mjs` 新增 `collectionReady(account)`（= 选了至少一个采集域，且没被老开关显式关掉），
+  `isCollectionDue(account, now, {time})` 改成用**排期槽位时间**判到期；`dueCollections` 支持 `timeOf` 注入。
+- `tickSchedule`：`wantsCollect = mode !== 'check' && collectionReady(account)` —— 不再看 `collection.enabled`。
+- `lib/index.js`：新增 `schedSlotOf(accountId)`（读排期槽位时间）；`/state` 每账号加 `collectionReady`，
+  `collectionDue`/`dueCollections`/`collect-prompt` 全部改用槽位时间；工具 `collections` 只看 `collectionReady`。
+- `PUT /accounts/:id/collection`：新界面只传 `domains`；老调用方传 `enabled` 会被**翻译**成 `schedEnabled`
+  （false→暂停、true→开启），免得「我在采集卡片里关掉了，结果还是到点跑」。
+
+**升级迁移（幂等，只在需要时写一次）**
+
+`migrateCollectionSchedule()` 在 `apply()` 里跑一次：老的「配了域但 `collection.enabled === false`」→ `schedEnabled: false`
+（升级后行为不变，不会突然开始自动采集）。`collection.time` **不删**，只是不再影响任何调度（降级回老版本还能看到原值）。
+
+> ⚠️ 写迁移时踩到一个真坑：新建店铺的采集配置默认就是 `{enabled:false, domains:[]}`，
+> 如果只看 `enabled === false` 就把 `schedEnabled` 关掉，**所有店铺**会在升级瞬间全被暂停。
+> 所以迁移条件是「有域 + enabled 为 false」，并且 `PUT /collection` 只传域时会顺手把 `enabled` 补成 `domains.length > 0`，
+> 不然选了域也会因为 `enabled` 还是 false 而永远不采（这两处都有专门用例）。
+
+**验证**
+
+- 新增 `node test/features-v0160.mjs`（19 项）：`collectionReady` 三种情形 / 到期判据用槽位时间（`collection.time` 23:00 不干扰 09:00 槽位）/
+  `dueCollections` 的 `timeOf` / 迁移改成排期暂停 + 幂等 + 不动 enabled=true 与没配采集的店 / tick 只认采集域 /
+  tick 0 域退回检测 / 未迁移的显式关闭仍不采 / 排期暂停的店不参与 due / PUT 只传域 / PUT enabled 翻译 / 
+  `POST schedule` 与卡片同开关 / `/state` 带 `collectionReady`+`schedTime` / 界面不再有勾选与时间输入。
+- 十套自检合计 **315 项**全绿（源码目录与宿主实际加载的已安装副本各跑一遍）。
 
 ## v0.15.2
 
