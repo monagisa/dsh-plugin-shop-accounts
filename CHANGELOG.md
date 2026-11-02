@@ -3,7 +3,29 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
-> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/features-v0160.mjs`（v0.16 采集开关与排期统一）、`node test/features-v0161.mjs`（v0.16.1 文案精简与占位符脱敏）、`node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/features-v0160.mjs`（v0.16 采集开关与排期统一）、`node test/features-v0161.mjs`（v0.16.1 文案精简与占位符脱敏，含 v0.16.2 小眼睛图标）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.16.2
+
+用户原话：「显示隐藏改成小眼睛」
+
+密码框右边原来是一个写着「显示 / 隐藏」的文字按钮，现在换成图标：
+
+- 睁眼 = 当前是明文（点一下变密文）；闭眼（杏仁轮廓 + 一道斜线）= 当前是密文。
+- 内联 SVG，`stroke="currentColor"`，跟着主题文字色走；不给颜色写死，深色/浅色都不违和。
+- 两处都换了：**新增店铺**弹窗里的密码框、**店铺详情**页的「密码与账密登录」密码框
+  （详情页原来没有切换，顺手补上）。
+- 按钮类名 `.sa-eye`：透明底、无边框、32×32 命中区、hover 才出现浅底色；
+  图标 16×16，`aria-label` 给读屏用（"显示密码 / 隐藏密码"）。
+- 闭眼图标试了三版（断口弧线 / 带瞳孔 / 杏仁+斜线）在 headless Chrome 里渲出来比过：
+  带瞳孔那一版斜线穿过瞳孔，16px 下糊成一团；断口那版像缺了一角。最后用**同一个杏仁轮廓 + 斜线**，
+  与睁眼只差一道斜线，一眼能看出是"同一件事的两种状态"。
+
+**验证**
+
+- `test/features-v0161.mjs` 加 2 项：不再是「隐藏 / 显示」文字按钮、睁眼/闭眼两个图标路径都在
+  （该套件 26 → **28 项**）。
+- 十二套自检合计 **343 项**全绿（源码目录与宿主实际加载的已安装副本各跑一遍）。
 
 ## v0.16.1
 

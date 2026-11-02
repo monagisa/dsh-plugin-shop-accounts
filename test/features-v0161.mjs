@@ -121,6 +121,23 @@ test('顶部副标题确实换成一行短句', () => {
   assert.match(clientSrc, /一店一份独立登录档案（Chrome）/);
 });
 
+// ── E. 密码框的眼睛（v0.16.2） ───────────────────────────────────────────────
+section('E. 密码框的「显示 / 隐藏」是小眼睛图标');
+
+test('不再是「隐藏 / 显示」文字按钮，改成 sa-eye + SVG', () => {
+  assert.equal(clientSrc.includes("showPw ? '隐藏' : '显示'"), false, '还是老的文字按钮');
+  assert.ok(clientSrc.includes('eyeIcon(showPw)'), '新增店铺弹窗没用小眼睛');
+  assert.ok(clientSrc.includes('eyeIcon(showPw2)'), '详情页没用小眼睛');
+  assert.ok(clientSrc.includes('.sa-eye{'), '缺 .sa-eye 样式');
+  assert.match(clientSrc, /aria-label': showPw \? '隐藏密码' : '显示密码'/);
+});
+
+test('睁眼/闭眼两个图标都有（闭眼带一道斜线）', () => {
+  assert.ok(clientSrc.includes('M3 3l18 18'), '闭眼图标少了斜线');
+  assert.ok(clientSrc.includes('M2.2 12S5.8 5.6 12 5.6'), '睁眼图标路径不在');
+  assert.ok(clientSrc.includes("h('circle', { cx: 12, cy: 12, r: 3.1 })"), '睁眼图标少了瞳孔');
+});
+
 // ── D. 提示行长度上限（防止再写长段落） ─────────────────────────────────────
 section('D. 界面里不再有超长提示句');
 
