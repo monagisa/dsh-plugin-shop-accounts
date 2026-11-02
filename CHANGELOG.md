@@ -5,6 +5,24 @@
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
 > `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/platform.mjs`（v0.10 平台层）。
 
+## v0.15.1
+
+用户纠正：「给你密码就是让你在过期时自动填的」。
+
+v0.15.0 里定时采集遇到登录过期只标「待登录」、不代填 —— 这是错的。这一版改成**过期就自动代填，填完接着采**：
+
+- `runScheduledCollection` 收到 `LOGIN_REQUIRED` 后：
+  1. 挑出因登录失效失败的那几份配方（按 `dslId`）；
+  2. 用本机加密保存的密码调 `autoLogin` 代填一次（**只代填，不改密码、不外传**）；
+  3. 代填成功 → **只重跑那几份配方**，结果并进统计，`pendingLogin` 置回 false，`lastRunNote` 里写明「已自动代填后重采 N 份」；
+  4. 代填到验证码/短信（`AUTOLOGIN_NEEDS_USER`）或填不进去时，才标「待登录」并写清原因；
+  5. 本机没存密码 → `AUTOLOGIN_NO_PASSWORD`，提示去店铺详情存一次密码。
+- 一切正常时不碰密码库（有断言守着）。
+- `runScheduledCollection(account, log, opts)` 新增可注入的 `prepareFn` / `autoLoginFn`，自检全离线。
+
+验证：`node test/features-v0150.mjs` **22 项**（原 18 + 代填 4 项：代填成功后重采、验证码才标待登录、
+没密码报错、正常时不代填），合计 **284 项全绿**。
+
 ## v0.15.0
 
 用户：「那个定时任务现在该改为定时采集了，你去 rea 他原来的就发现，那个是定时采集来的」。

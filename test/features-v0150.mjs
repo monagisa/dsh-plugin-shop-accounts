@@ -277,6 +277,135 @@ await test('tick 的 collect 失败会把 lastSchedError 记下来（界面能�
   assert.equal(row.lastSchedError, '登录失效');
 });
 
+
+// ── E. 登录过期 → 自动代填后继续采（v0.15.1，用户原话：给你密码就是让你在过期时自动填的）──
+section('E. 登录过期自动代填');
+
+/** 造一个 prepareFn：第一次这批里带 LOGIN_REQUIRED，第二次（重跑）成功。 */
+function makePrepareFn({ failDsl = 'tb_shop_overview', retryOk = true } = {}) {
+  const calls = [];
+  const fn = async (extra = {}) => {
+    calls.push(extra);
+    if (!extra.dslIds || !extra.dslIds.length) {
+      return {
+        success: true,
+        data: {
+          job_id: 'job_x', revision: 1, next_action: 'done',
+          counts: { total: 1, ok: 0, empty: 0, failed: 1, pending: 0 },
+          delivery: { artifacts: [], incomplete: [{ dslId: failDsl, state: 'failed', code: 'LOGIN_REQUIRED', attempts: 2 }] },
+        },
+      };
+    }
+    return {
+      success: true,
+      data: {
+        job_id: 'job_x', revision: 2, next_action: 'done',
+        counts: retryOk ? { total: 1, ok: 1, empty: 0, failed: 0, pending: 0 } : { total: 1, ok: 0, empty: 0, failed: 1, pending: 0 },
+        delivery: { artifacts: retryOk ? [{ dslId: failDsl, kind: 'json_string', outputKey: 'body', bytes: 10 }] : [], incomplete: retryOk ? [] : [{ dslId: failDsl, state: 'failed', code: 'STEP_FAILED' }] },
+      },
+    };
+  };
+  fn.calls = calls;
+  return fn;
+}
+
+/** 给店铺存一个密码（走 vault），并把 pendingLogin 置回 false。 */
+function ensurePassword(id) {
+  const { setPassword } = requireVault();
+  setPassword(id, 'V150-Auto@pass1');
+}
+
+let vaultMod = null;
+function requireVault() {
+  if (!vaultMod) throw new Error('vault 还没加载');
+  return vaultMod;
+}
+vaultMod = await import(url('lib/vault.mjs'));
+
+await test('登录过期 + 有密码 → 自动代填后重跑那几份配方，结果算成功', async () => {
+  const accPath = path.join(process.env.DSH_SHOP_ACCOUNTS_DIR, 'accounts.json');
+  const list = JSON.parse(fs.readFileSync(accPath, 'utf8'));
+  const arr = Array.isArray(list) ? list : (list.accounts || []);
+  const target = arr.find((a) => a.id === accCollect);
+  target.loginName = 'v150a@example.com';
+  fs.writeFileSync(accPath, JSON.stringify(list, null, 2), 'utf8');
+  ensurePassword(accCollect);
+  resetSlots();
+
+  const prepareFn = makePrepareFn();
+  const autoCalls = [];
+  const out = await host.runScheduledCollection(
+    { ...target, platform: 'taobao', collection: { enabled: true, domains: ['经营总览'] } },
+    { info: () => {}, warn: () => {} },
+    {
+      prepareFn,
+      autoLoginFn: async (acc, pw) => { autoCalls.push({ id: acc.id, pw }); return { ok: true, loggedIn: true, code: 'AUTOLOGIN_OK' }; },
+    },
+  );
+  assert.equal(autoCalls.length, 1, '应该代填一次');
+  assert.equal(autoCalls[0].pw, 'V150-Auto@pass1', '代填用的是本机保存的密码');
+  assert.equal(prepareFn.calls.length, 2, '应该跑两轮：首轮 + 代填后重跑');
+  assert.deepEqual(prepareFn.calls[1].dslIds, ['tb_shop_overview'], '只重跑登录失败的那份');
+  assert.equal(out.ok, true, out.error);
+  assert.equal(out.counts.ok, 1);
+  assert.match(out.note, /自动代填/);
+
+  const st = await call('GET', '/shop-accounts/state');
+  const row = st.json.accounts.find((a) => a.id === accCollect);
+  assert.equal(row.pendingLogin, false, '代填成功后不该还挂待登录');
+  assert.match(row.collection.lastRunNote, /自动代填/);
+});
+
+await test('登录过期 + 代填遇到验证码 → 才标待登录，并报 AUTOLOGIN_NEEDS_USER', async () => {
+  resetSlots();
+  const prepareFn = makePrepareFn();
+  const out = await host.runScheduledCollection(
+    { id: accCollect, platform: 'taobao', name: '采集店', loginName: 'v150a@example.com', collection: { enabled: true, domains: ['经营总览'] } },
+    { info: () => {}, warn: () => {} },
+    { prepareFn, autoLoginFn: async () => ({ ok: false, code: 'AUTOLOGIN_NEEDS_USER', hint: '有验证码' }) },
+  );
+  assert.equal(out.ok, false);
+  assert.equal(out.code, 'AUTOLOGIN_NEEDS_USER');
+  const st = await call('GET', '/shop-accounts/state');
+  const row = st.json.accounts.find((a) => a.id === accCollect);
+  assert.equal(row.pendingLogin, true);
+  assert.match(row.lastSchedError, /验证码/);
+});
+
+await test('登录过期 + 本机没密码 → AUTOLOGIN_NO_PASSWORD（提示去存密码）', async () => {
+  resetSlots();
+  const { clearPassword } = await import(url('lib/vault.mjs'));
+  clearPassword(accCollect);
+  const prepareFn = makePrepareFn();
+  const out = await host.runScheduledCollection(
+    { id: accCollect, platform: 'taobao', name: '采集店', loginName: 'v150a@example.com', collection: { enabled: true, domains: ['经营总览'] } },
+    { info: () => {}, warn: () => {} },
+    { prepareFn, autoLoginFn: async () => { throw new Error('不该被调用'); } },
+  );
+  assert.equal(out.code, 'AUTOLOGIN_NO_PASSWORD');
+  assert.match(out.error, /密码/);
+});
+
+await test('没有登录问题时不代填（正常采集不该碰密码库）', async () => {
+  resetSlots();
+  const prepareFn = async () => ({
+    success: true,
+    data: {
+      job_id: 'job_y', next_action: 'done',
+      counts: { total: 1, ok: 1, empty: 0, failed: 0, pending: 0 },
+      delivery: { artifacts: [{ dslId: 'tb_shop_overview', kind: 'json_string', outputKey: 'body', bytes: 5 }], incomplete: [] },
+    },
+  });
+  let autoCalled = 0;
+  const out = await host.runScheduledCollection(
+    { id: accCollect, platform: 'taobao', name: '采集店', collection: { enabled: true, domains: ['经营总览'] } },
+    { info: () => {}, warn: () => {} },
+    { prepareFn, autoLoginFn: async () => { autoCalled += 1; return { ok: true }; } },
+  );
+  assert.equal(autoCalled, 0, '一切正常时不该代填');
+  assert.equal(out.ok, true);
+});
+
 // ── D. 界面与代码接线 ───────────────────────────────────────────────────────
 section('D. 界面与接线');
 
