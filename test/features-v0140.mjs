@@ -137,7 +137,9 @@ await test('prepare：平台不匹配 / 缺业务参数 → failedToPrepare 里�
   const bad = fakeDsl('jd_only', { platform: 'jd' });
   const needParam = { id: 'need_param', platform: 'taobao', raw: { id: 'need_param', platform: 'taobao', template: { steps: [{ action: 'goto', url: 'https://x/?p={productId}' }] } }, meta: { id: 'need_param', platform: 'taobao' } };
   const out = J.prepareJob({ account: fakeAccount(), dsls: [bad, needParam], skipCovered: false }, MATCH);
-  assert.equal(out.success, true);
+  // v0.16.7 起：一条都没准备好、且不是「已采过」→ 明确失败并带错误码（否则上层会误报「今天已采过」）
+  assert.equal(out.success, false);
+  assert.ok(Array.isArray(out.errors) && out.errors.length === 2, '要带 errors');
   assert.equal(out.data.next_action, 'done');
   const reasons = out.data.plan.failedToPrepare.map((f) => f.reason).join(',');
   assert.match(reasons, /platform_mismatch/);

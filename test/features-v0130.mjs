@@ -104,16 +104,24 @@ const seeds = [
   ['pdd/pdd_shop_overview.json', 'pdd_shop_overview', 'pdd'],
 ];
 
-await test('三份种子配方全部编译通过，淘宝/京东的带登录守卫分支', () => {
+await test('种子配方：淘宝/京东可编译（带登录守卫）；拼多多需要专用后处理能力 → 明确拒绝', () => {
   for (const [rel, id, platform] of seeds) {
     const raw = readSeed(rel);
+    if (platform === 'pdd') {
+      // v0.16.7：这一族配方声明了「采集后处理能力」（需要专用解密），本插件没有 → 编译期就拒绝，
+      // 不能等跑完再报「站点没有数据」。
+      let err = null;
+      try { R.compileExecution(raw, { start: '2026-10-03', end: '2026-11-01' }); } catch (e) { err = e; }
+      assert.ok(err, rel + ' 缺能力却编译通过了');
+      assert.equal(err.code, 'UNSUPPORTED_CAPABILITY');
+      continue;
+    }
     const compiled = R.compileExecution(raw, { start: '2026-10-03', end: '2026-11-01' });
     assert.equal(compiled.dslId, id, rel + ' 的 id 不对');
     assert.equal(compiled.dsl.platform, platform);
     assert.ok(compiled.ops.length >= 5, rel + ' op 太少');
     assert.ok(compiled.ops.some((o) => o.op === 'goto'), rel + ' 没有 goto');
-    // 拼多多的概览配方没有登录守卫分支（它用的是别的短路方式），淘宝/京东有
-    if (platform !== 'pdd') assert.ok(compiled.ops.some((o) => o.op === 'branch'), rel + ' 没有登录守卫分支');
+    assert.ok(compiled.ops.some((o) => o.op === 'branch'), rel + ' 没有登录守卫分支');
   }
 });
 
@@ -121,7 +129,7 @@ await test('淘宝配方把 dateRange 填进了站内接口 URL（%7C 编码）'
   const compiled = R.compileExecution(readSeed('taobao/tb_shop_overview.json'), { start: '2026-10-03', end: '2026-11-01' });
   const api = compiled.ops.find((o) => o.op === 'goto' && /\.json/.test(String(o.url)));
   assert.ok(api, '没找到 goto 站内接口那一步');
-  assert.match(api.url, /dateRange=2026-10-03%7C2026-11-01/);
+  assert.match(api.url, /dateRange=2026-11-01%7C2026-11-01/, '按锚点单日查询（窗口仍记 30 天）');
   assert.match(api.url, /dateType=day/);
 });
 
@@ -401,6 +409,8 @@ await test('POST collect-run：下载型配方不再被 501 挡（会尝试真�
 });
 
 await test('POST collect-run：浏览器没开 → 409（不偷偷拉起浏览器）', async () => {
+  // 这一条只看「没开浏览器时不偷偷拉起」这一件事，固定走 Chrome 后端，避免本机装了 ego 时结果随环境变化
+  await call('PUT', '/shop-accounts/config', { browser: 'chrome' });
   const r = await call('POST', `/shop-accounts/accounts/${taobaoId}/collect-run`, { dslId: 'tb_shop_overview' });
   assert.ok(r.status >= 400 && r.status < 500, '浏览器没开应是 4xx，实际 ' + r.status);
   assert.ok(r.json && (r.json.code || r.json.error), '要给出原因，不能空手');
