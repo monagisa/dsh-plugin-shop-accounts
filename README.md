@@ -2,13 +2,13 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0170)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0171)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
 覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号仅用于浏览与数据采集，不参与上架）。
 
-- 版本：**0.17.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.17.1**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
@@ -17,15 +17,16 @@
   `node test/features-v0161.mjs` → 35 项、`node test/features-v0165.mjs` → 20 项、
   `node test/features-v0166.mjs` → 20 项、`node test/features-v0167.mjs` → 13 项、
   `node test/features-v0168.mjs` → 25 项、`node test/features-v0169.mjs` → 20 项、
-  `node test/features-v0170.mjs` → 18 项、`node test/platform.mjs` → 12 项，
-  合计 **466 项**，全部通过
+  `node test/features-v0170.mjs` → 18 项、`node test/features-v0171.mjs` → 9 项、
+  `node test/platform.mjs` → 12 项，
+  合计 **475 项**，全部通过
   （不启动浏览器、不触碰真实账号；`npm test` 可一次执行）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.16.9）](#更新说明v0610--v0170)
+- [更新说明（v0.6.10 → v0.16.9）](#更新说明v0610--v0171)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -43,10 +44,22 @@
 
 ---
 
-## 更新说明（v0.6.10 → v0.17.0）
+## 更新说明（v0.6.10 → v0.17.1）
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.0（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.1（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
 
+### v0.17.1：抖店代填先切换到「邮箱登录」
+
+抖店后台的登录页默认只有「手机登录」（手机号 + 验证码），账号密码表单在「邮箱登录」页签后面。代填一进页面就找账号框，找到的实为手机号框，密码框还没渲染出来 —— 结果是账号填进手机号栏、密码填不上，代填失败。
+
+这一版给代填加了「先切页签」这一步：
+
+- 先点「邮箱登录」（优先按页面结构定位，站点改样式时按页面文字定位），等表单渲染出来再填账号密码；
+- 抖店的账号框改为优先匹配邮箱输入框，提交按钮匹配登录按钮；手机号框不再被当成账号框；
+- Chrome 与 ego lite 两条后端都接上了这一步；
+- 其它平台不受影响：只有抖店声明了这一步。
+
+验证：新增 `test/features-v0171.mjs`（9 项）——流程定义、两种点法（结构 / 文字）、两条后端接线，以及真实浏览器里的对照实验：不点页签时账号落进手机号框且密码填不上，先点页签则邮箱与密码都填上并提交。全套 **19 套自检 475 项**通过。
 ### v0.17.0：登录方式可选（账号密码代填 / 扫码或手动登录）
 
 不是所有人都记得住卖家后台的账号密码，而建店原先要求必须填密码，记不住的人就卡在这一步。这一版把**登录方式**独立成一个可选项：
@@ -597,6 +610,7 @@ test/features-v0167.mjs v0.16.7 自检（条件守卫、后处理能力门控、
 test/features-v0168.mjs v0.16.8 自检（后处理能力按需、页面数字还原、页面文字转指标）
 test/features-v0169.mjs v0.16.9 自检（天猫/抖音/京东配方、登录过期识别）
 test/features-v0170.mjs v0.17.0 自检（登录方式可选：账号密码代填 / 扫码或手动登录）
+test/features-v0171.mjs v0.17.1 自检（抖店代填先切「邮箱登录」页签）
 test/platform.mjs   平台层自检（v0.10.0；在 Windows 上可验证的 macOS 分支部分均已覆盖）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 ```
@@ -639,12 +653,13 @@ node test/features-v0167.mjs   # 13 项：采集引擎四处修复（条件守�
 node test/features-v0168.mjs   # 25 项：后处理能力按需执行、页面数字字形还原、页面文字转指标
 node test/features-v0169.mjs   # 20 项：补齐天猫/抖音/京东配方、登录过期按页面统一识别
 node test/features-v0170.mjs   # 18 项：登录方式可选（账号密码代填 / 扫码或手动登录）
+node test/features-v0171.mjs   # 9 项：抖店代填先切「邮箱登录」页签（真机对照实验）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前十八套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前十九套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，**不触碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证
