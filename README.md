@@ -14,8 +14,8 @@
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
   `node test/features-v0140.mjs` → 18 项、`node test/features-v0150.mjs` → 22 项、
   `node test/features-v0152.mjs` → 12 项、`node test/features-v0160.mjs` → 19 项、
-  `node test/features-v0161.mjs` → 35 项、`node test/features-v0165.mjs` → 17 项、`node test/features-v0165.mjs  # 18 项：登录 iframe 内的账号密码代填 / frame 候选顺序
-node test/platform.mjs` → 12 项，合计 **368 项**，全部通过
+  `node test/features-v0161.mjs` → 35 项、`node test/features-v0165.mjs` → 20 项、
+  `node test/platform.mjs` → 12 项，合计 **370 项**，全部通过
   （不启动浏览器、不触碰真实账号；`npm test` 可一次执行）
 
 ---
@@ -544,7 +544,7 @@ node test/features-v0150.mjs   # 22 项：定时采集（mode 分流 / 待登录
 node test/features-v0152.mjs   # 12 项：账号密码错的识别与暂停（提示分类 / 状态 / 超时保护）
 node test/features-v0160.mjs   # 19 项：采集开关与时间统一到排期（迁移幂等 / tick 只认采集域 / 界面去掉重复控件）
 node test/features-v0161.mjs   # 35 项：文案精简与占位符脱敏 / 小眼睛图标 / 下拉框样式 / 按钮尺寸稳定（无长段落、无真实店铺名人名、无本机路径）
-node test/features-v0165.mjs   # 18 项：登录 iframe 内的账密代填（frame 候选顺序 / 真机壳页面+iframe / 填不上要明说）
+node test/features-v0165.mjs   # 20 项：登录 iframe 内的账密代填（frame 候选顺序 / 真机壳页面+iframe / ego 桥退化路径 / 失败时明确报错）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）

@@ -19,7 +19,7 @@
 - 一个输入框都没摸到时明确报 `AUTOLOGIN_FILL_FAILED`（错误里列出试过的 frame），不再悄悄变成「需要人工登录」。
 - `lib/ego.mjs`：代填 payload 增加 `frameHints`，运行时脚本注入跨 frame 求值器；返回 `fillFrame` 便于排查「填到哪个 frame」。
 
-**验证**：新增 `test/features-v0165.mjs`（17 项）—— frame 排序单测；阿里系带 / 其他平台不带的接线检查；**headless Chrome 真机验证**：壳页面主 frame `input` 为 0（复现原故障）→ 跨 frame 求值把账号密码填进 iframe 并提交（`userFilled/passFilled/submitted` 均为 true）→ 从另一个世界重读 DOM 确认值真的写上；红字在 iframe 里也能扫到；无 `frameHints` 时仍先查主 frame（老平台行为不变）；跨站 OOPIF 场景如实返回失败。另有淘宝真实登录页实测：`Page.getFrameTree` 里深度 1 的 `mini_login.htm` frame 有 3 个 `input`，在其中执行填充脚本得到 `userFilled:true, passFilled:true, submitted:true, tabClicked:true`。全套 13 套自检 **368 项**通过（源码目录与已安装副本各跑一遍）。
+**验证**：新增 `test/features-v0165.mjs`（20 项）—— frame 排序单测；阿里系带 / 其他平台不带的接线检查；**headless Chrome 真机验证**：壳页面主 frame `input` 为 0（复现原故障）→ 跨 frame 求值把账号密码填进 iframe 并提交（`userFilled/passFilled/submitted` 均为 true）→ 从另一个世界重读 DOM 确认值真的写上；红字在 iframe 里也能扫到；无 `frameHints` 时仍先查主 frame（老平台行为不变）；跨站 OOPIF 场景如实返回失败。另有淘宝真实登录页实测：`Page.getFrameTree` 里深度 1 的 `mini_login.htm` frame 有 3 个 `input`，在其中执行填充脚本得到 `userFilled:true, passFilled:true, submitted:true, tabClicked:true`。ego 侧把跨 frame 求值写进运行时脚本（`__dshEvalInFrames`），并带兜底：若 ego 的 CDP 桥不支持 `Page` 域，自动退回主 frame 单次求值，退回 v0.16.4 之前的等价行为，不会让任何平台的代填失效（两条兜底路径各有一项行为测试）。全套 13 套自检 **370 项**通过（源码目录与已安装副本各跑一遍）。
 ## v0.16.4
 
 点击按钮后按钮尺寸会变的问题：平台筛选 chip 的选中态原来额外加了 `font-weight:600`，选中时文字变粗、字宽略增，

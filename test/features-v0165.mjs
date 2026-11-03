@@ -105,6 +105,60 @@ await test('重复 frame 不会出现两次；没有 id 的 frame 被丢掉', ()
   assert.deepEqual(order.map((f) => f.id), ['a', 'main']);
 });
 
+// ── A2. ego 侧透传桥的兜底：桥不认 Page 域时退回主 frame，绝不让代填整体失效 ──
+section('A2. ego 侧透传桥的兜底');
+
+const makeFrameEval = () => new Function('page', FRAME_EVAL_SOURCE + '\nreturn __dshEvalInFrames;')();
+
+await test('桥不支持 Page 域（getFrameTree 抛错）时退回主 frame，值来自主 frame', async () => {
+  const calls = [];
+  const page = {
+    cdp: async (method, params) => {
+      calls.push(method);
+      if (method === 'Page.getFrameTree') throw new Error('Page domain unavailable');
+      if (method === 'Runtime.evaluate') return { result: { value: { userFilled: true, passFilled: true, submitted: true } } };
+      throw new Error('unexpected ' + method);
+    },
+  };
+  const res = await makeFrameEval()(page, 'expr', ['havanalogin.taobao.com'], true);
+  assert.equal(res.ok, true);
+  assert.equal(res.value.userFilled, true);
+  assert.equal(res.frameUrl, '(主 frame)');
+  assert.equal(res.depth, 0);
+  assert.equal(res.tried.length, 1);
+  assert.equal(res.tried[0].fallback, true);
+  assert.ok(calls.includes('Page.getFrameTree'));
+  assert.ok(calls.includes('Runtime.evaluate'));
+});
+
+await test('桥支持 Page 域时按 frameHints 选中登录 iframe（contextId 生效）', async () => {
+  const tree = {
+    frameTree: {
+      frame: { id: 'shell', url: 'https://loginmyseller.taobao.com/?from=x' },
+      childFrames: [
+        { frame: { id: 'form', url: 'https://havanalogin.taobao.com/mini_login.htm?appEntrance=qianniu' } },
+      ],
+    },
+  };
+  const page = {
+    cdp: async (method, params) => {
+      if (method === 'Page.getFrameTree') return tree;
+      if (method === 'Page.createIsolatedWorld') return { executionContextId: params.frameId === 'form' ? 7 : 1 };
+      if (method === 'Runtime.evaluate') {
+        const filled = params.contextId === 7;
+        return { result: { value: { userFilled: filled, passFilled: filled, submitted: filled } } };
+      }
+      throw new Error('unexpected ' + method);
+    },
+  };
+  const res = await makeFrameEval()(page, 'expr', ['havanalogin.taobao.com', 'mini_login.htm'], true);
+  assert.equal(res.ok, true);
+  assert.equal(res.value.userFilled, true);
+  assert.ok(res.frameUrl.includes('mini_login.htm'));
+  assert.equal(res.frameId, 'form');
+  assert.equal(res.depth, 1);
+});
+
 // ── B. 接线：只有阿里系带 frameHints，两条后端都走跨 frame ───────────────────
 section('B. 登录流程与两条后端链路的接线');
 
