@@ -159,6 +159,86 @@
     "artifacts": [
       {
         "role": "business",
+        "kind": "text_metrics",
+        "output_key": "home_text",
+        "domain": "经营总览",
+        "period": "d",
+        "yesterdayLabel": "昨日",
+        "metrics": [
+          {
+            "id": "gmv",
+            "label": "成交金额",
+            "kind": "money"
+          },
+          {
+            "id": "pay_ord_cnt",
+            "label": "成交订单数",
+            "kind": "count"
+          },
+          {
+            "id": "ad_cost",
+            "label": "推广花费",
+            "kind": "money"
+          },
+          {
+            "id": "uv",
+            "label": "商品访客数",
+            "kind": "count"
+          },
+          {
+            "id": "pv",
+            "label": "商品浏览量",
+            "kind": "count"
+          },
+          {
+            "id": "comment_cnt",
+            "label": "商品评价数",
+            "kind": "count"
+          },
+          {
+            "id": "todo_unpaid",
+            "label": "待付款",
+            "kind": "count"
+          },
+          {
+            "id": "todo_unshipped",
+            "label": "待发货",
+            "kind": "count"
+          },
+          {
+            "id": "todo_unreceived",
+            "label": "待收货",
+            "kind": "count"
+          },
+          {
+            "id": "todo_tickets",
+            "label": "待处理工单",
+            "kind": "count"
+          },
+          {
+            "id": "goods_check_score",
+            "label": "商品体检分",
+            "kind": "score"
+          },
+          {
+            "id": "service_score",
+            "label": "服务体验分",
+            "kind": "score"
+          },
+          {
+            "id": "experience_star",
+            "label": "综合体验星级",
+            "kind": "score"
+          },
+          {
+            "id": "consult_cvr",
+            "label": "询单转化率",
+            "kind": "rate"
+          }
+        ]
+      },
+      {
+        "role": "evidence",
         "kind": "raw_envelope",
         "pointer": ""
       }

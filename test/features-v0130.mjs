@@ -104,16 +104,16 @@ const seeds = [
   ['pdd/pdd_shop_overview.json', 'pdd_shop_overview', 'pdd'],
 ];
 
-await test('种子配方：淘宝/京东可编译（带登录守卫）；拼多多需要专用后处理能力 → 明确拒绝', () => {
+await test('种子配方：淘宝/京东可编译（带登录守卫）；拼多多带后处理声明也能编译', () => {
   for (const [rel, id, platform] of seeds) {
     const raw = readSeed(rel);
     if (platform === 'pdd') {
-      // v0.16.7：这一族配方声明了「采集后处理能力」（需要专用解密），本插件没有 → 编译期就拒绝，
-      // 不能等跑完再报「站点没有数据」。
-      let err = null;
-      try { R.compileExecution(raw, { start: '2026-10-03', end: '2026-11-01' }); } catch (e) { err = e; }
-      assert.ok(err, rel + ' 缺能力却编译通过了');
-      assert.equal(err.code, 'UNSUPPORTED_CAPABILITY');
+      // v0.16.8：「采集后处理能力」现在是按需执行（能做就做）→ 编译通过，
+      // 并把能力声明带在执行结果里，由执行期判定要不要真的还原。
+      const compiled = R.compileExecution(raw, { start: '2026-10-03', end: '2026-11-01' });
+      assert.deepEqual(compiled.postprocess, ['pdd_decrypt']);
+      assert.ok(compiled.ops.length > 0);
+      continue;
       continue;
     }
     const compiled = R.compileExecution(raw, { start: '2026-10-03', end: '2026-11-01' });

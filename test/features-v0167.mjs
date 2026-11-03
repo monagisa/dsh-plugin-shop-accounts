@@ -102,18 +102,21 @@ await test('两份执行器都改了（主执行器 + ego 注入的那份）', (
 // ── B. 后处理能力门控 ──────────────────────────────────────────────────────
 section('B. 配方要求本插件没有的后处理能力：编译期就明确拒绝');
 
-await test('拼多多种子配方需要专用解密 → UNSUPPORTED_CAPABILITY', () => {
+await test('声明了本插件没有的后处理能力 → 编译期就 UNSUPPORTED_CAPABILITY', () => {
   assert.equal(Array.isArray(pddSeed.collection.capabilities.after), true);
+  // v0.16.8 起 `pdd_decrypt` 已经支持（按需执行），所以「拒绝未知能力」要用一份合成配方来验
+  const unsupportedSeed = JSON.parse(JSON.stringify(pddSeed));
+  unsupportedSeed.collection.capabilities.after = ['pdd_decrypt', 'unknown_fancy_decrypt'];
   let err = null;
   try {
-    rpa.compileExecution(pddSeed, { start: '2026-10-04', end: '2026-11-02' });
+    rpa.compileExecution(unsupportedSeed, { start: '2026-10-04', end: '2026-11-02' });
   } catch (e) {
     err = e;
   }
   assert.ok(err, '缺能力必须拒绝，不能跑到一半才说');
   assert.equal(err.code, 'UNSUPPORTED_CAPABILITY');
-  assert.deepEqual(err.unsupported, ['pdd_decrypt']);
-  assert.match(err.message, /pdd_decrypt/);
+  assert.deepEqual(err.unsupported, ['unknown_fancy_decrypt']);
+  assert.match(err.message, /unknown_fancy_decrypt/);
 });
 
 await test('淘宝种子配方没有额外能力要求 → 正常编译出步骤', () => {
@@ -126,7 +129,10 @@ await test('淘宝种子配方没有额外能力要求 → 正常编译出步骤
 await test('prepareJob 把编译失败当成失败返回，而不是「已采过」', () => {
   storeMod.ensureDir(process.env.DSH_SHOP_ACCOUNTS_DIR);
   const account = { id: 'acc_pdd_test', platform: 'pdd', accountType: 'seller' };
-  const out = runner.prepareJob({ account, dsls: [pddItem], start: '2026-10-04', end: '2026-11-02', skipCovered: false }, rpa.compileExecution);
+  const brokenSeed = JSON.parse(JSON.stringify(pddSeed));
+  brokenSeed.collection.capabilities.after = ['pdd_decrypt', 'unknown_fancy_decrypt'];
+  const brokenItem = { meta: { id: 'pdd_shop_overview', platform: 'pdd' }, raw: brokenSeed };
+  const out = runner.prepareJob({ account, dsls: [brokenItem], start: '2026-10-04', end: '2026-11-02', skipCovered: false }, rpa.compileExecution);
   assert.equal(out.success, false);
   assert.equal(out.errors[0].code, 'UNSUPPORTED_CAPABILITY');
   assert.equal(out.errors[0].dslId, 'pdd_shop_overview');
