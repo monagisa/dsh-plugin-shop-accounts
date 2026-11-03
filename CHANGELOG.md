@@ -1,3 +1,15 @@
+## v0.16.9
+
+**问题**：定时采集只覆盖淘宝与拼多多两家的配方；天猫、京东、抖音建了店也跑不出数据（有的直接报「没有可跑配方」）。另外抖音、京东这类下载型配方没有写登录守卫，登录过期只表现为「某个选择器等不到」，看起来像站点没数据。
+
+**改动**
+
+1. 新增天猫配方 `tmall_shop_overview`：与淘宝同口径（经营总览接口 + 30 天回溯窗口 + 单日锚点查询 + 登录守卫）。
+2. 新增抖音两份下载型配方：`douyin_shop_transaction`（全店成交分析明细）、`douyin_shop_income_expense`（收支分析明细），时间档位固化为「近30天」。
+3. 新增京东下载型配方 `jd_traffic_overview`（流量汇总文件），原 `jd_shop_overview` 保留。
+4. 登录过期识别：配方执行以普通失败（步骤失败/超时/元素等不到）结束时，再看最终停留的页面是否为登录页（判据来自各平台维护的登录入口），是就统一报「登录态已过期」，从而接上自动代填。
+
+**验证**：新增 `test/features-v0169.mjs`（20 项），全套 **17 套自检 448 项**通过；两份抖音配方与京东流量配方本机没有对应店铺，只做了编译/结构/编排层验证，未做真实账号运行。
 # 变更历史
 
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
@@ -76,7 +88,7 @@
 - 一个输入框都没摸到时明确报 `AUTOLOGIN_FILL_FAILED`（错误里列出试过的 frame），不再悄悄变成「需要人工登录」。
 - `lib/ego.mjs`：代填 payload 增加 `frameHints`，运行时脚本注入跨 frame 求值器；返回 `fillFrame` 便于排查「填到哪个 frame」。
 
-**验证**：新增 `test/features-v0165.mjs`（20 项）—— frame 排序单测；阿里系带 / 其他平台不带的接线检查；**headless Chrome 真机验证**：壳页面主 frame `input` 为 0（复现原故障）→ 跨 frame 求值把账号密码填进 iframe 并提交（`userFilled/passFilled/submitted` 均为 true）→ 从另一个世界重读 DOM 确认值真的写上；红字在 iframe 里也能扫到；无 `frameHints` 时仍先查主 frame（老平台行为不变）；跨站 OOPIF 场景如实返回失败。另有淘宝真实登录页实测：`Page.getFrameTree` 里深度 1 的 `mini_login.htm` frame 有 3 个 `input`，在其中执行填充脚本得到 `userFilled:true, passFilled:true, submitted:true, tabClicked:true`。ego 侧把跨 frame 求值写进运行时脚本（`__dshEvalInFrames`），并带兜底：若 ego 的 CDP 桥不支持 `Page` 域，自动退回主 frame 单次求值，退回 v0.16.4 之前的等价行为，不会让任何平台的代填失效（两条兜底路径各有一项行为测试）。全套 13 套自检 **370 项**通过（源码目录与已安装副本各跑一遍）。
+**验证**：新增 `test/features-v0165.mjs`（20 项）—— frame 排序单测；阿里系带 / 其他平台不带的接线检查；**headless Chrome 真机验证**：壳页面主 frame `input` 为 0（复现原故障）→ 跨 frame 求值把账号密码填进 iframe 并提交（`userFilled/passFilled/submitted` 均为 true）→ 从另一个世界重读 DOM 确认值真的写上；红字在 iframe 里也能扫到；无 `frameHints` 时仍先查主 frame（老平台行为不变）；跨站 OOPIF 场景如实返回失败。另有淘宝真实登录页实测：`Page.getFrameTree` 里深度 1 的 `mini_login.htm` frame 有 3 个 `input`，在其中执行填充脚本得到 `userFilled:true, passFilled:true, submitted:true, tabClicked:true`。ego 侧把跨 frame 求值写进运行时脚本（`__dshEvalInFrames`），并带判定：若 ego 的 CDP 桥不支持 `Page` 域，自动退回主 frame 单次求值，退回 v0.16.4 之前的等价行为，不会让任何平台的代填失效（两条判定路径各有一项行为测试）。全套 13 套自检 **370 项**通过（源码目录与已安装副本各跑一遍）。
 ## v0.16.4
 
 点击按钮后按钮尺寸会变的问题：平台筛选 chip 的选中态原来额外加了 `font-weight:600`，选中时文字变粗、字宽略增，
@@ -459,7 +471,7 @@ DPAPI 加密往返+篡改检测+旧格式兼容+**密钥解不开不被覆盖**�
   改名时也挡。`egoCheckAccount()` 还会校验记着的 `egoProfile` 是否仍在列表里（不在就清掉，避免 Chrome
   用 `--profile-directory` 自动新建同名 profile 污染列表）。
 - **⑩ 中：登录判据偏弱**。拼多多原来命中 1 个 cookie 就算登录（未登录页也可能种下 `mms_b84d1838`）→
-  现在要求命中 ≥2 个且至少命中 `PASS_ID`/`SUB_PASS_ID` 之一；URL 兜底判据从 `includes()` 改成
+  现在要求命中 ≥2 个且至少命中 `PASS_ID`/`SUB_PASS_ID` 之一；URL 判定判据从 `includes()` 改成
   `urlHostInDomains()`（`new URL().hostname` + 后缀边界），`pinduoduo.com.evil.com` 不再算「在平台内」。
 - **⑪ 低危收尾**：`--remote-debugging-port="9222"` 带引号时归属查询能匹配上了（先剥引号再匹配）；
   杀进程改成 `OrdinalIgnoreCase` 且拒绝空/过短 needle（不再可能"一键关掉所有 Chrome"）；
@@ -473,7 +485,7 @@ DPAPI 加密往返+篡改检测+旧格式兼容+**密钥解不开不被覆盖**�
 
 **自检**：`node test/smoke.mjs` **99 项全过**（新增 13 项安全回归：源码不许再传 remote-allow-origins /
 URL 白名单 / CDP 端口与 ws 校验 / 档案目录边界 / 导入目录校验 / ego profile 形状 / 三条 HTTP 门禁 /
-reset 与删号都不越界删 / 自更新按 commit 落地且脏工作区不生效 / 凭据打码 / pdd 与 URL 兜底判据 /
+reset 与删号都不越界删 / 自更新按 commit 落地且脏工作区不生效 / 凭据打码 / pdd 与 URL 判定判据 /
 客户端带自定义头）。
 
 **真机验证**：Chrome 156.0.8078.74 + 插件自己的 `chrome.mjs`/`cdp.mjs` 跑无头实例 →
@@ -532,7 +544,7 @@ reset 与删号都不越界删 / 自更新按 commit 落地且脏工作区不生
 - **⑤ 请求体读一半客户端断开 → 账号锁永久泄漏**。
   症状：关设置面板/刷新页面时正发起某个动作，那家店之后所有操作都"点了没反应"，只能重启宿主。
   原因：路由先取锁再读 body，而 `readJsonBody` 只监听 `end`/`error`，客户端中断只有 `aborted`/`close` → Promise 永不 settle → `finally` 不执行。
-  现在：补 `aborted`/`close` 兜底 reject，锁一定会释放。
+  现在：补 `aborted`/`close` 判定 reject，锁一定会释放。
 - **⑥ 设置页「浏览器设置」面板被父级轮询反复卸载重建**。
   症状：打开的 `<details>` 自己收起（待登录的店铺每 2.5 秒收一次）、正在输入的路径被服务器值回填、按钮忙态被清（「更新到最新」还能被连点两次）。
   原因：`ConfigPanel` 定义在 `ShopAccountsSection` 函数体里，每次重渲染组件身份都变。
@@ -586,7 +598,7 @@ reset 与删号都不越界删 / 自更新按 commit 落地且脏工作区不生
   并报 `cleared` 计数；一个都没删掉时才回退整仓清空，并带 `wholeJar:true` 让界面知道代价。
 - **⑧ handOff 失败只记一笔、空间卡在「agent 调试中」**：现在失败重试 3 次（间隔 300 ms），成功后清掉 `handOffError`。
 - **⑪ 空间只能按名字认**：ego 里用户自建空间的 `name` 是空串、`id` 是 `0`。现在 `findEntry` 先按名字、
-  再按 `Number(spaceId) > 0 && s.id` 兜底（`id=0` 不参与匹配）；`/state` 与 agent 工具都带上 `egoSpaceId`。
+  再按 `Number(spaceId) > 0 && s.id` 判定（`id=0` 不参与匹配）；`/state` 与 agent 工具都带上 `egoSpaceId`。
 - **⑩ 上架插件（dsh-plugin-pdd-product-listing）也交还控制权**：它的 `ego_adapter.cjs` 原来开完空间不提控制权，
   列表跑完 ego 一直显示「agent 调试中」。现在连接时若空间已交还（`agentDelegatedToUser`）先用
   `takeOverTaskSpace(id)` 收回，跑完在 `session.close()` 里 `handOff()` 重试 3 次。
@@ -899,5 +911,5 @@ reset 与删号都不越界删 / 自更新按 commit 落地且脏工作区不生
   1688 未登录时 `__cn_logon__=false`（卡值）；抖店未登录页就有 `passport_csrf_token`（已从判据移除）。
 - 空档案登录页六个平台都判未登录，没有误判。
 - 端口归属不用 `Browser.getBrowserCommandLine`（它要配合 `--enable-automation`，会设置 `navigator.webdriver`），
-  改成「自己起的浏览器自己登记（`runtime.json`）+ 进程命令行查询兜底」。
+  改成「自己起的浏览器自己登记（`runtime.json`）+ 进程命令行查询判定」。
 - 验证：smoke 32 项；`live-probe.mjs` 六平台各自单跑全过（Chrome 154.0.8037.99）。

@@ -1,0 +1,237 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "douyin_shop_income_expense",
+  "platform": "douyin",
+  "description": "固定采集抖店收支分析：进入收支分析页，选择近 30 天，下载当前明细文件。",
+  "conditions": {},
+  "template": {
+    "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+    "name": "抖店收支分析（近 30 天，下载明细）",
+    "description": "固定采集抖店收支分析：进入收支分析页，选择近 30 天，下载当前明细文件。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "income_expense:打开目标页",
+        "url": "https://compass.jinritemai.com/shop/settlement-analysis",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "dy.dismiss-known-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": "button.ecom-notification-notice-close",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[class*='notification'] [class*='close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 20000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "dy.dismiss-known-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": "button.ecom-notification-notice-close",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[class*='notification'] [class*='close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitTimeout",
+        "id": "income_expense:等待首屏渲染",
+        "ms": 9000
+      },
+      {
+        "action": "waitFor",
+        "id": "income_expense:等待时间维度按钮出现-period",
+        "state": "visible",
+        "timeoutMs": 20000,
+        "description": "日期只支持「近1天/近7天/近30天」三个固定快捷周期，不进入自定义日历。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'aurora-tabs-tab-btn')][normalize-space(.)='$近30天']",
+            "nth": 0
+          }
+        ],
+        "recovery": "auto",
+        "optional": true,
+        "onError": "continue"
+      },
+      {
+        "action": "click",
+        "id": "income_expense:点击时间维度-period",
+        "timeoutMs": 15000,
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'aurora-tabs-tab-btn')][normalize-space(.)='$近30天']",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "action": "waitFor",
+        "id": "income_expense:回验时间维度已选中-period",
+        "state": "visible",
+        "timeoutMs": 15000,
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'aurora-tabs-tab-active')][.//*[normalize-space(.)='$近30天'] or normalize-space(.)='$近30天']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": ".aurora-tabs-tab-active:has-text(\"$近30天\")"
+          }
+        ],
+        "recovery": "auto",
+        "optional": true,
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "income_expense:等待日期切换渲染",
+        "ms": 6000
+      },
+      {
+        "action": "click",
+        "optional": true,
+        "id": "income_expense:关闭右上角通知警告",
+        "target": [
+          {
+            "by": "css",
+            "value": "button.aurora-notification-notice-close",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='notification'] [class*='close']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'notification')]//*[self::button or self::span][contains(@class,'close')])[1]"
+          }
+        ],
+        "timeoutMs": 5000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "通知栏非必现；关闭步骤允许失败，并使用声明的短超时。"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "income_expense:等待通知消失",
+        "ms": 800
+      },
+      {
+        "action": "waitFor",
+        "id": "income_expense:等待下载按钮出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "下载明细",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "时间筛选使用 aurora-tabs-tab-btn；容器为 aurora-tabs-tab，选中态为 aurora-tabs-tab-active。",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "downloadFile",
+        "id": "income_expense:点击下载按钮",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "下载明细",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 60000,
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "doudianIncomeExpenseFile",
+        "description": "时间筛选使用 aurora-tabs-tab-btn；容器为 aurora-tabs-tab，选中态为 aurora-tabs-tab-active。"
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 30
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "download_ref",
+        "output_key": "doudianIncomeExpenseFile"
+      }
+    ]
+  }
+}

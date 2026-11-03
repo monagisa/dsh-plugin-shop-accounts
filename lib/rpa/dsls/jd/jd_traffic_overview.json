@@ -1,0 +1,354 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "jd_traffic_overview",
+  "platform": "jd",
+  "description": "固定采集京东商智流量总览：进入流量页读取汇总文本并下载流量汇总文件。",
+  "conditions": {
+    "time": {
+      "kind": "fixed",
+      "value": "month"
+    }
+  },
+  "template": {
+    "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+    "name": "京东商智流量总览（近 30 天，下载汇总）",
+    "description": "固定采集京东商智流量总览：进入流量页读取汇总文本并下载流量汇总文件。",
+    "defaults": {
+      "timeoutMs": 8000,
+      "retries": 0,
+      "continueOnError": true,
+      "stepGapMs": 200,
+      "conditionTimeoutMs": 2000
+    },
+    "steps": [
+      {
+        "action": "waitTimeout",
+        "id": "flow_summary:页面间隔",
+        "ms": 300
+      },
+      {
+        "action": "goto",
+        "id": "flow_summary:打开商智-流量概况",
+        "url": "https://jdsz.jd.com/szweb/view/flow/flow-summary.html",
+        "waitUntil": "domcontentloaded",
+        "timeoutMs": 30000,
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "jd.dismiss-known-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ".close-modal",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'ux-modal-dialog')]//*[contains(@class,'close-modal')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is(.jmt-dialog-wrapper, .all-dialog) :is(.close-modal, .close-icon)",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "jd.dismiss-known-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ".close-modal",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'ux-modal-dialog')]//*[contains(@class,'close-modal')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is(.jmt-dialog-wrapper, .all-dialog) :is(.close-modal, .close-icon)",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitForLoadState",
+        "id": "flow_summary:等待DOM加载",
+        "loadState": "domcontentloaded"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "flow_summary:等待页面初始渲染",
+        "ms": 2500
+      },
+      {
+        "action": "when",
+        "id": "flow_summary:关闭首屏广告弹窗",
+        "condition": {
+          "kind": "element",
+          "state": "visible",
+          "target": [
+            {
+              "by": "css",
+              "value": ".close-modal",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//*[contains(@class,'ux-modal-dialog')]//*[contains(@class,'close-modal')]",
+              "nth": 0
+            }
+          ],
+          "timeoutMs": 2000
+        },
+        "then": [
+          {
+            "action": "click",
+            "id": "flow_summary:点击广告弹窗关闭按钮",
+            "target": [
+              {
+                "by": "css",
+                "value": ".close-modal",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'ux-modal-dialog')]//*[contains(@class,'close-modal')]",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 5000,
+            "retries": 1,
+            "onError": "continue"
+          },
+          {
+            "action": "waitTimeout",
+            "id": "flow_summary:等待广告弹窗关闭",
+            "ms": 1200
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "flow_summary:等待近30天档位渲染",
+        "description": "日期档位为懒加载渲染，点击前显式等待「近30天」档位可见，避免渲染未完成导致 LOCATOR_NOT_FOUND。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'jmt-combo-date-picker-list-tag') and normalize-space(.)='近30天']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "onError": "fail",
+        "recovery": "auto"
+      },
+      {
+        "action": "clickAndWait",
+        "id": "flow_summary:选择日期-近30天",
+        "description": "选择「近30天」快捷周期。onError=fail：周期切换失败时停止下载，避免把默认口径交作目标周期。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'jmt-combo-date-picker-list-tag') and normalize-space(.)='近30天']",
+            "nth": 0
+          },
+          {
+            "by": "role",
+            "role": "button",
+            "name": "近30天",
+            "match": "exact",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "近30天",
+            "match": "exact",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "30天",
+            "match": "contains",
+            "nth": 0
+          }
+        ],
+        "onError": "fail",
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 3000
+        },
+        "timeoutMs": 10000,
+        "retries": 1
+      },
+      {
+        "action": "assertElement",
+        "id": "flow_summary:确认近30天选中",
+        "description": "断言快捷周期已进入选中态（jmt-combo-date-picker-list-tag-select）。京东概况页默认停留在实时/昨天，仅点击不足以证明已切换；onError=fail 防止下载到错误周期数据。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'jmt-combo-date-picker-list-tag-select') and normalize-space(.)='近30天']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 10000,
+        "onError": "fail"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "flow_summary:等待日期筛选后渲染",
+        "ms": 1000
+      },
+      {
+        "action": "clickAndWait",
+        "id": "flow_summary:尝试打开下载数据菜单",
+        "target": [
+          {
+            "by": "role",
+            "role": "button",
+            "name": "下载数据",
+            "match": "exactThenContains",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[normalize-space(.)='下载数据' or .//*[normalize-space(.)='下载数据']])[last()]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='下载数据' or contains(normalize-space(.),'下载数据')])[last()]"
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 800
+        },
+        "timeoutMs": 3500,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "downloadFile",
+        "id": "flow_summary:尝试选择分天下载",
+        "target": [
+          {
+            "by": "text",
+            "value": "分天下载",
+            "match": "exact",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "分天数据",
+            "match": "exact",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='分天下载' or normalize-space(.)='分天数据'])[last()]"
+          }
+        ],
+        "timeoutMs": 60000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "jdFlowSummaryFile"
+      },
+      {
+        "action": "press",
+        "id": "flow_summary:关闭下载残留浮层",
+        "key": "Escape",
+        "onError": "continue"
+      },
+      {
+        "action": "press",
+        "id": "flow_summary:向下滚动-1",
+        "key": "PageDown",
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "flow_summary:等待懒加载-1",
+        "ms": 500
+      },
+      {
+        "action": "press",
+        "id": "flow_summary:向下滚动-2",
+        "key": "PageDown",
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "flow_summary:等待懒加载-2",
+        "ms": 500
+      },
+      {
+        "action": "press",
+        "id": "flow_summary:向下滚动-3",
+        "key": "PageDown",
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "flow_summary:等待懒加载-3",
+        "ms": 500
+      },
+      {
+        "action": "readText",
+        "id": "flow_summary:读取页面可见文本",
+        "target": [
+          {
+            "by": "css",
+            "value": "body",
+            "nth": 0
+          }
+        ],
+        "readMode": "innerText",
+        "trim": true,
+        "outputKey": "flow_summary_body_text",
+        "recovery": "auto"
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 30
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "download_ref",
+        "output_key": "jdFlowSummaryFile"
+      }
+    ]
+  }
+}

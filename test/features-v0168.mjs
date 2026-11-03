@@ -304,8 +304,10 @@ await test('拼多多配方：页面文字 → 经营总览指标（14 项），
   assert.ok(arts.some((a) => a.kind === 'raw_envelope'));
 });
 
-await test('版本号与文档已升到 0.16.8', () => {
-  assert.match(pkg.version, /^0\.16\.8$/);
+await test('版本号与文档已覆盖 0.16.8', () => {
+  // 版本会用「≥」而不是钉死具体版本：后续版本不该把这条用例弄红（v0.16.9 就是这么修的）。
+  const [maj, min, patch] = String(pkg.version).split('.').map(Number);
+  assert.ok(maj === 0 && (min > 16 || (min === 16 && patch >= 8)), '版本号应 ≥0.16.8，实际 ' + pkg.version);
   const changelog = src('CHANGELOG.md');
   assert.ok(changelog.includes('0.16.8'));
   const readme = src('README.md');

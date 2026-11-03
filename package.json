@@ -1,9 +1,9 @@
 {
   "name": "dsh-plugin-shop-accounts",
-  "version": "0.16.8",
+  "version": "0.16.9",
   "private": true,
   "type": "module",
-  "description": "DSH 插件：电商平台店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688，都是商家端）——一个店铺一份独立登录档案，登录一次长期复用，上架时直接挑选；浏览器优先 ego lite（每店一个 profile + TaskSpace），未安装时回退 Chrome CDP；v0.16.0 起「跑不跑 / 几点跑」统一由定时任务排期决定（采集卡片只选采哪些域）；v0.16.1 起界面文案精简、占位符不含任何本机信息；v0.16.2 起密码框的显示/隐藏改成小眼睛图标；v0.16.3 起下拉框去掉原生外观、自绘箭头；v0.16.4 起按钮的按压/选中/悬停只改颜色、不再改变尺寸；v0.14.0 起支持 DSL 下载落盘与采集作业编排（prepare/advance/status）；v0.13.0 起内置声明式采集 DSL 引擎；v0.12.0 起内置「平台→采集域→指标」目录层；v0.10.0 起支持 macOS（钥匙串加密密码、Finder 打开档案、.app 内浏览器路径）；v0.16.5 起淘宝/天猫/1688 的账密代填在登录 iframe 内执行；v0.16.6 起按平台真实能力区分账号身份（拼多多不提供买家身份，抖音买家可用但只有扫码 / 手机验证码）；v0.16.7 起修掉定时采集在真实店铺暴露的四处问题（条件守卫误判、缺后处理能力无人管、趋势接口时间口径、产物被写死成空）；v0.16.8 起采集后处理能力按需执行（拼多多页面数字按字形还原，认不全就如实报错，不把解不开的数字当业务数据），并支持把页面文字直接解析成经营指标。",
+  "description": "DSH 插件：电商平台店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688，都是商家端）——一个店铺一份独立登录档案，登录一次长期复用，上架时直接挑选；浏览器优先 ego lite（每店一个 profile + TaskSpace），未安装时回退 Chrome CDP；v0.16.0 起「跑不跑 / 几点跑」统一由定时任务排期决定（采集卡片只选采哪些域）；v0.16.1 起界面文案精简、占位符不含任何本机信息；v0.16.2 起密码框的显示/隐藏改成小眼睛图标；v0.16.3 起下拉框去掉原生外观、自绘箭头；v0.16.4 起按钮的按压/选中/悬停只改颜色、不再改变尺寸；v0.14.0 起支持 DSL 下载落盘与采集作业编排（prepare/advance/status）；v0.13.0 起内置声明式采集 DSL 引擎；v0.12.0 起内置「平台→采集域→指标」目录层；v0.10.0 起支持 macOS（钥匙串加密密码、Finder 打开档案、.app 内浏览器路径）；v0.16.5 起淘宝/天猫/1688 的账密代填在登录 iframe 内执行；v0.16.6 起按平台真实能力区分账号身份（拼多多不提供买家身份，抖音买家可用但只有扫码 / 手机验证码）；v0.16.7 起修掉定时采集在真实店铺暴露的四处问题（条件守卫误判、缺后处理能力无人管、趋势接口时间口径、产物被写死成空）；v0.16.8 起采集后处理能力按需执行（拼多多页面数字按字形还原，认不全就如实报错，不把解不开的数字当业务数据），并支持把页面文字直接解析成经营指标。；v0.16.9 起补齐天猫、抖音、京东的采集配方，并在配方没有写登录守卫时按页面 URL 统一识别登录过期",
   "keywords": [
     "dsh-plugin",
     "dsh",
@@ -39,7 +39,7 @@
     "features2": "node test/features-v0101.mjs",
     "features3": "node test/features-v0110.mjs",
     "platform": "node test/platform.mjs",
-    "test": "node test/smoke.mjs && node test/features-v090.mjs && node test/features-v0101.mjs && node test/features-v0110.mjs && node test/features-v0120.mjs && node test/features-v0130.mjs && node test/features-v0140.mjs && node test/features-v0150.mjs && node test/features-v0152.mjs && node test/features-v0160.mjs && node test/features-v0161.mjs && node test/features-v0165.mjs && node test/features-v0166.mjs && node test/features-v0167.mjs && node test/features-v0168.mjs && node test/platform.mjs",
+    "test": "node test/smoke.mjs && node test/features-v090.mjs && node test/features-v0101.mjs && node test/features-v0110.mjs && node test/features-v0120.mjs && node test/features-v0130.mjs && node test/features-v0140.mjs && node test/features-v0150.mjs && node test/features-v0152.mjs && node test/features-v0160.mjs && node test/features-v0161.mjs && node test/features-v0165.mjs && node test/features-v0166.mjs && node test/features-v0167.mjs && node test/features-v0168.mjs && node test/features-v0169.mjs && node test/platform.mjs",
     "features4": "node test/features-v0120.mjs",
     "features5": "node test/features-v0130.mjs",
     "features6": "node test/features-v0140.mjs",
@@ -50,7 +50,8 @@
     "features13": "node test/features-v0165.mjs",
     "features14": "node test/features-v0166.mjs",
     "features15": "node test/features-v0167.mjs",
-    "features16": "node test/features-v0168.mjs"
+    "features16": "node test/features-v0168.mjs",
+    "features17": "node test/features-v0169.mjs"
   },
   "dsh": {
     "manifestVersion": 1,

@@ -1,0 +1,374 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "douyin_shop_transaction",
+  "platform": "douyin",
+  "description": "固定采集抖店罗盘全店成交分析：进入成交分析页，选择近 30 天，悬停后下载当前明细文件。",
+  "conditions": {},
+  "template": {
+    "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+    "name": "抖店全店成交分析（近 30 天，下载明细）",
+    "description": "固定采集抖店罗盘全店成交分析：进入成交分析页，选择近 30 天，悬停后下载当前明细文件。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "transaction:打开目标页",
+        "url": "https://compass.jinritemai.com/shop/business-part",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "dy.dismiss-known-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": "button.ecom-notification-notice-close",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[class*='notification'] [class*='close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 20000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "dy.dismiss-known-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": "button.ecom-notification-notice-close",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[class*='notification'] [class*='close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitFor",
+        "id": "transaction:等待成交分析日期栏就绪",
+        "state": "visible",
+        "timeoutMs": 30000,
+        "onError": "fail",
+        "target": [
+          {
+            "by": "css",
+            "value": "[data-dynamic-module-component=\"BusinessAnalysisV3\"] .aurora-dorami-date-picker-wrapper [role=\"tablist\"]:visible"
+          }
+        ],
+        "description": "等待全店成交分析模块的日期栏可见；缺少日期栏时停止，不继续下载页面默认周期。",
+        "recovery": "auto"
+      },
+      {
+        "action": "click",
+        "optional": true,
+        "id": "transaction:前置关闭右上角通知警告",
+        "target": [
+          {
+            "by": "css",
+            "value": "button.aurora-notification-notice-close",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='notification'] [class*='close']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'notification')]//*[self::button or self::span][contains(@class,'close')])[1]"
+          }
+        ],
+        "timeoutMs": 3000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "transaction:前置等待通知消失",
+        "ms": 800
+      },
+      {
+        "action": "waitFor",
+        "id": "transaction:等待时间维度按钮出现-period",
+        "state": "visible",
+        "timeoutMs": 20000,
+        "description": "本采集源固定选择近30天；仅匹配成交分析日期栏中可见的目标快捷档。",
+        "target": [
+          {
+            "by": "css",
+            "value": "[data-dynamic-module-component=\"BusinessAnalysisV3\"] .aurora-dorami-date-picker-wrapper [role=\"tab\"]:visible:is(:text-is(\"$近30天\"), :has(:text-is(\"$近30天\")))"
+          }
+        ],
+        "recovery": "auto",
+        "onError": "fail",
+        "optional": true
+      },
+      {
+        "action": "click",
+        "id": "transaction:点击时间维度-period",
+        "timeoutMs": 15000,
+        "target": [
+          {
+            "by": "css",
+            "value": "[data-dynamic-module-component=\"BusinessAnalysisV3\"] .aurora-dorami-date-picker-wrapper [role=\"tab\"]:visible:is(:text-is(\"$近30天\"), :has(:text-is(\"$近30天\")))"
+          }
+        ],
+        "onError": "fail"
+      },
+      {
+        "action": "waitFor",
+        "id": "transaction:回验时间维度已选中-period",
+        "state": "visible",
+        "timeoutMs": 15000,
+        "target": [
+          {
+            "by": "css",
+            "value": "[data-dynamic-module-component=\"BusinessAnalysisV3\"] .aurora-dorami-date-picker-wrapper [role=\"tab\"][aria-selected=\"true\"]:visible:is(:text-is(\"$近30天\"), :has(:text-is(\"$近30天\")))"
+          }
+        ],
+        "recovery": "auto",
+        "onError": "fail",
+        "optional": true
+      },
+      {
+        "action": "assertElement",
+        "id": "transaction:确认日期栏选中-period",
+        "state": "visible",
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "fail",
+        "target": [
+          {
+            "by": "css",
+            "value": "[data-dynamic-module-component=\"BusinessAnalysisV3\"] .aurora-dorami-date-picker-wrapper [role=\"tab\"][aria-selected=\"true\"]:visible:is(:text-is(\"$近30天\"), :has(:text-is(\"$近30天\")))"
+          }
+        ],
+        "description": "下载前确定性确认目标日期档的 aria-selected=true；选中态无法确认时停止。"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "transaction:等待日期切换渲染",
+        "ms": 6000
+      },
+      {
+        "action": "click",
+        "optional": true,
+        "id": "transaction:关闭右上角通知警告",
+        "target": [
+          {
+            "by": "css",
+            "value": "button.aurora-notification-notice-close",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='notification'] [class*='close']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'notification')]//*[self::button or self::span][contains(@class,'close')])[1]"
+          }
+        ],
+        "timeoutMs": 5000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "通知栏非必现；关闭步骤允许失败，并使用声明的短超时。"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "transaction:等待通知消失",
+        "ms": 800
+      },
+      {
+        "action": "waitFor",
+        "id": "transaction:等待下载明细触发器出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "下载明细",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "id": "transaction:滚动到下载明细触发器",
+        "action": "scrollIntoView",
+        "description": "点击下载明细触发器前先滚入视口，确保 aurora 下载菜单能够渲染。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 8000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "hover",
+        "id": "transaction:悬停下载明细触发器",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "下载明细",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 8000,
+        "retries": 0,
+        "onError": "fail",
+        "description": "下载明细按钮为悬停触发器；悬停后出现“下载当前明细/自定义下载明细”列表，再由后续 downloadFile 点击“下载当前明细”。",
+        "recovery": "auto"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "transaction:等待下载菜单渲染",
+        "ms": 3500,
+        "description": "保持声明的固定等待，为下载菜单渲染留足时间，再检测并选择「下载当前明细」。"
+      },
+      {
+        "action": "waitFor",
+        "id": "transaction:等待下载当前明细菜单项出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'aurora-dropdown-menu-title-content')][normalize-space(.)='下载当前明细']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'dropdown-menu')]//*[normalize-space(.)='下载当前明细'][not(.//*[normalize-space(.)='下载当前明细'])]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//li[contains(@class,'aurora-dropdown-menu-item')][contains(normalize-space(.),'下载当前明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='下载当前明细'][not(.//*[normalize-space(.)='下载当前明细'])])[1]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "description": "优先定位 aurora-dropdown-menu-title-content，再使用其他菜单候选；菜单重渲染可能使 li[class*='aurora-dropdown-menu-item'] 失配。",
+        "optional": true
+      },
+      {
+        "action": "downloadFile",
+        "id": "transaction:点击-下载当前明细",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'aurora-dropdown-menu-title-content')][normalize-space(.)='下载当前明细']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'dropdown-menu')]//*[normalize-space(.)='下载当前明细'][not(.//*[normalize-space(.)='下载当前明细'])]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//li[contains(@class,'aurora-dropdown-menu-item')][contains(normalize-space(.),'下载当前明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='下载当前明细'][not(.//*[normalize-space(.)='下载当前明细'])])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 60000,
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "doudianTransactionFile",
+        "description": "优先定位 aurora-dropdown-menu-title-content，再使用其他菜单候选；菜单重渲染可能使 li[class*='aurora-dropdown-menu-item'] 失配。"
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 30
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "download_ref",
+        "output_key": "doudianTransactionFile"
+      }
+    ]
+  }
+}

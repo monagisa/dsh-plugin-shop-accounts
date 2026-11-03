@@ -1,0 +1,296 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "tmall_shop_overview",
+  "platform": "tmall",
+  "description": "固定采集天猫店铺经营总览接口：进入商家后台首页建立登录态，再按 30 天窗口读取经营总览接口的 JSON 响应。",
+  "conditions": {
+    "time": {
+      "kind": "range",
+      "bindings": {
+        "{dateRange}": "$condition.encoded"
+      }
+    }
+  },
+  "template": {
+    "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+    "name": "天猫店铺经营总览（最近 30 天）",
+    "description": "固定采集天猫店铺经营总览接口：进入商家后台首页建立登录态，再按 30 天窗口读取经营总览接口的 JSON 响应。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "id": "tmall_store_overview_30d_rpa:goto",
+        "action": "goto",
+        "url": "https://sycm.taobao.com/portal/home.htm",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "taobao.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "taobao.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "id": "tmall_store_overview_30d_rpa:wait-page-render",
+        "action": "waitTimeout",
+        "ms": 3000
+      },
+      {
+        "id": "tmall_store_overview_30d_rpa:read-login-guard-url",
+        "action": "readPageUrl",
+        "outputKey": "login_guard_entry_url",
+        "onError": "continue",
+        "retries": 0,
+        "description": "登录诊断取证：首屏 settle 后记录实际落地 URL 到 outputs.login_guard_entry_url。goto 返回的是请求 URL 而非跳转后 URL，故必须在此显式读取；供守卫漏报时结合真实 URL 判别登录失效/无权限/页面改版。onError=continue，读取失败不阻断。"
+      },
+      {
+        "id": "tmall_store_overview_30d_rpa:login-page-detected",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//input[contains(@placeholder,'账号名/邮箱/手机号')]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//iframe[@id='alibaba-login-box']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//iframe[contains(@src,'login.taobao.com/member/login.jhtml')]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//input[@id='fm-login-id']",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 8000
+        },
+        "then": [
+          {
+            "id": "tmall_store_overview_30d_rpa:LOGIN_REQUIRED__do-not-retry__未登录或登录态失效",
+            "action": "assertElement",
+            "state": "hidden",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//input[contains(@placeholder,'账号名/邮箱/手机号')]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//iframe[@id='alibaba-login-box']",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//iframe[contains(@src,'login.taobao.com/member/login.jhtml')]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//input[@id='fm-login-id']",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 500,
+            "onError": "fail",
+            "recovery": "none",
+            "description": "与第一层 when 同候选（三形态最小信号集）：when 命中的元素必然可见，hidden 断言必然失败 → LOGIN_REQUIRED 短路，不依赖页面营销文案。 主文档候选含 //input[@id='fm-login-id']，与第一层 when 同候选。"
+          }
+        ],
+        "onError": "continue",
+        "description": "登录守卫第一层（主文档三形态最小信号集，2026-10-14 收敛）：形态A 整页跳转登录→账号输入框占位符；形态B 生意参谋/千牛 Havana mini-login→iframe#alibaba-login-box；形态C 阿里妈妈万相台→iframe src 含 login.taobao.com/member/login.jhtml。8s 窗口吸收 magix 异步渲染延迟；命中即进 then 短路 LOGIN_REQUIRED。同形态冗余候选（密码/短信页签、家族特有文本、#alibaba-login-iframe、mini_login、havanalogin、style=mini、mx-view login-iframe、body.login-page）已删除。 追加主文档 //input[@id='fm-login-id']：兜住 passport 整页登录密码/短信两种页签且不依赖 placeholder 文案；该 id 在阿里妈妈/生意参谋/千牛位于跨域 iframe 内，主文档 XPath 不可达，故不误报。"
+      },
+      {
+        "id": "tmall_store_overview_30d_rpa:login-iframe-form-detected",
+        "action": "when",
+        "description": "登录守卫第二层（穿框兜底）：按协议-21 §7.4 将 frame 置于 condition 内部，穿入跨域登录 iframe（Havana #alibaba-login-box / 阿里妈妈 login.taobao.com mini 页）探测 #fm-login-id；命中即未登录短路 LOGIN_REQUIRED。frame 不放 when 顶层：when 仅有 condition/then 专属字段、无 target 语义，顶层 frame 会被忽略，导致条件仍在主文档求值、跨域表单不可达而本层永不命中。",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//input[@id='fm-login-id']",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 3000,
+          "frame": [
+            {
+              "by": "css",
+              "value": "iframe#alibaba-login-box",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "iframe[src*='login.taobao.com/member/login.jhtml']",
+              "nth": 0
+            }
+          ]
+        },
+        "then": [
+          {
+            "id": "tmall_store_overview_30d_rpa:LOGIN_REQUIRED__do-not-retry__未登录或登录态失效_跨域登录框内表单",
+            "action": "assertElement",
+            "state": "hidden",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//input[@id='fm-login-id']",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 500,
+            "onError": "fail",
+            "recovery": "none",
+            "description": "与 condition 同作用域：when 命中即 #fm-login-id 在跨域 iframe 内可见，同 frame 的 hidden 断言必然失败 → onError=fail 短路 LOGIN_REQUIRED。不再断言主文档三容器 hidden：其『必然可见』假设与本层『第一层未命中』前提互斥，容器不可见/不存在时 hidden 反而通过，断言记 success、onError=fail 不生效，未登录被静默放行。",
+            "frame": [
+              {
+                "by": "css",
+                "value": "iframe#alibaba-login-box",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "iframe[src*='login.taobao.com/member/login.jhtml']",
+                "nth": 0
+              }
+            ]
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "tmall_store_overview_30d_rpa:goto-overview-api",
+        "action": "goto",
+        "url": "https://sycm.taobao.com/portal/coreIndex/new/trend/v3.json?dateType=day&dateRange={dateRange}",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "taobao.generic.dismiss-dialog#2",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "taobao.generic.dismiss-dialog.click#2",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "id": "tmall_store_overview_30d_rpa:wait-overview-json",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "css",
+            "value": "pre",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 20000,
+        "recovery": "auto",
+        "onError": "continue",
+        "description": "",
+        "optional": true
+      },
+      {
+        "id": "tmall_store_overview_30d_rpa:read-overview-response",
+        "action": "readText",
+        "target": [
+          {
+            "by": "css",
+            "value": "pre",
+            "nth": 0
+          }
+        ],
+        "readMode": "textContent",
+        "trim": true,
+        "outputKey": "overviewResponse",
+        "timeoutMs": 20000,
+        "recovery": "auto"
+      },
+      {
+        "id": "tmall_store_overview_30d_rpa:read-url",
+        "action": "readPageUrl",
+        "outputKey": "finalUrl"
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "trailing_window",
+      "days": 30,
+      "query_anchor": "end"
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "json_string",
+        "output_key": "overviewResponse"
+      }
+    ]
+  }
+}
