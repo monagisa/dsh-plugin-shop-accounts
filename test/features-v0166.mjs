@@ -269,10 +269,10 @@ await test('详情页：没有账密登录时卡片改成「登录方式」，�
 // ── E. 文档与版本 ──────────────────────────────────────────────────────────
 section('E. 版本与文档');
 
-await test('版本 0.16.6 且文档写明身份差异', () => {
+await test('版本 ≥0.16.6 且文档写明身份差异', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-  assert.ok(/^0\.16\.[0-9]+$/.test(pkg.version), '版本号形状');
-  assert.ok(pkg.version >= '0.16.6', '至少 0.16.6，当前 ' + pkg.version);
+  const [maj, min, patchNo] = pkg.version.split('.').map(Number);
+  assert.ok(maj === 0 && (min > 16 || (min === 16 && patchNo >= 6)), '至少 0.16.6，当前 ' + pkg.version);
   const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
   assert.match(changelog, /0\.16\.6/);
   assert.match(changelog, /验证码|扫码/);
