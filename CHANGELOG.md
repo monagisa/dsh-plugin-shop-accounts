@@ -5,6 +5,29 @@
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
 > `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/features-v0160.mjs`（v0.16 采集开关与排期统一）、`node test/features-v0161.mjs`（v0.16.1 文案精简与占位符脱敏，含 v0.16.2 小眼睛图标、v0.16.3 下拉框样式、v0.16.4 按钮尺寸稳定）、`node test/platform.mjs`（v0.10 平台层）。
 
+## v0.16.6
+
+**问题**（用户反馈）：账号类型这一列不合理 —— 拼多多只给了卖家一个身份，抖音的买家身份又是猜的。
+
+**取证**（三路交叉，不是照抄别人的表）：
+
+- 真实页面（headless Chrome 真开）：拼多多 C 端 `mobile.yangkeduo.com/login.html` 只有 `#user-mobile`（手机号）与 `#input-code`（验证码）两个输入框，页面文案是「手机登录 / 扫码登录」，**没有任何密码框**；抖音 C 端 `www.douyin.com` 直接落到风控验证码中间页（`rmc.bytedance.com/verifycenter/captcha`），连登录表单都拿不到。
+- 账号密码表单确实存在的 C 端：淘宝 `login.taobao.com/havanaone/login/login.htm`、天猫 `login.tmall.com`、京东 `passport.jd.com/new/login.aspx`、1688 `login.1688.com`。
+- 卖家端六个平台都是账号密码表单（千牛 / mms / 抖店 / 京麦 / 1688 卖家）。
+
+**改动**：
+
+- `lib/platforms.mjs` 新增能力位：`loginMethods`（`password` / `sms` / `qrcode`）、`passwordLogin`、`autoLogin`、`manualLogin`，以及 `loginMethodsOf` / `supportsPasswordLogin` / `accountTypesFor` / `accountTypeSupport`。买家变体各自声明真实登录方式。
+- 拼多多买家：可选（`accountTypes: ['seller','buyer']`），但 `passwordLogin:false` —— 建号不再要求填密码，界面不显示密码框，代填按钮不出，改为提示「只能用手机验证码 / 扫码，登录一次即可」。
+- 抖音买家：不开放（`accountTypes: ['seller']`，`unsupportedReason` 说明网页端被风控挡），建号或改号会 400 `ACCOUNT_TYPE_UNSUPPORTED`。
+- 淘宝/天猫/京东/1688 买家：保留账号密码登录，买家照样能存密码、照样能代填。
+- `POST /accounts` 的密码必填从「一刀切」改成「只有该身份真的有账号密码登录时才必填」；不必填时响应带 `passwordSkipped` 说明为什么没存（传了密码也不落库）。
+- `POST /accounts/:id/autologin` 对没有账号密码的身份返回 400 `AUTOLOGIN_LOGIN_METHOD_UNSUPPORTED`；`POST /accounts/:id/open` 的自动代填同样先看身份能力，不再空跑一次。
+- `/state` 每店能力位增加 `passwordLogin` / `passwordRequired` / `loginMethods`；`platforms[]` 增加 `accountTypes` / `buyerLoginMethods` / `buyerUnsupported`，界面不再自己猜。
+- 界面：账号类型下拉由 `accountTypes` 生成（抖音不出买家选项，换平台自动落回卖家）；密码框按 `passwordLogin` 显示或换成登录方式说明；详情页在没有账密登录时把「密码与账密登录」改成「登录方式」。
+- 修复 v0.9.0 测试里「拼多多买家应标实验性」的旧断言（实测入口真实可用，只是没有密码登录）。
+
+**验证**：新增 `test/features-v0166.mjs`（19 项）—— 六个平台的登录方式与密码能力矩阵；拼多多买家建号不填密码成功且密码库确实没有条目；拼多多卖家缺密码仍拦；抖音买家建号被拒且理由含「风控 / 验证码」；淘宝买家缺密码拦、填了能建；拼多多买家点代填返回 `AUTOLOGIN_LOGIN_METHOD_UNSUPPORTED`；`/state` 能力位与平台表下发；PUT 不能把抖音卖家改成买家；界面密码框条件渲染与账号类型选项由服务端驱动。全套 **14 套自检 389 项**通过（源码目录与已安装副本各跑一遍）。
 ## v0.16.5
 
 **问题**（用户反馈）：淘宝的账号密码点了「自动登录」不会自己填进去，也没有任何提示。
