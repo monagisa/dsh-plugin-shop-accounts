@@ -2,26 +2,27 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0163)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0165)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
 覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号仅用于浏览与数据采集，不参与上架）。
 
-- 版本：**0.16.4**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.16.5**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
   `node test/features-v0140.mjs` → 18 项、`node test/features-v0150.mjs` → 22 项、
   `node test/features-v0152.mjs` → 12 项、`node test/features-v0160.mjs` → 19 项、
-  `node test/features-v0161.mjs` → 35 项、`node test/platform.mjs` → 12 项，合计 **350 项**，全部通过
+  `node test/features-v0161.mjs` → 35 项、`node test/features-v0165.mjs` → 17 项、`node test/features-v0165.mjs  # 18 项：登录 iframe 内的账号密码代填 / frame 候选顺序
+node test/platform.mjs` → 12 项，合计 **368 项**，全部通过
   （不启动浏览器、不触碰真实账号；`npm test` 可一次执行）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.16.3）](#更新说明v0610--v0163)
+- [更新说明（v0.6.10 → v0.16.5）](#更新说明v0610--v0165)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -39,9 +40,22 @@
 
 ---
 
-## 更新说明（v0.6.10 → v0.16.3）
+## 更新说明（v0.6.10 → v0.16.5）
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.16.0（v0.16.1 – v0.16.3 为界面样式与文案调整，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.16.5（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+
+### v0.16.5：淘宝 / 天猫 / 1688 的账密代填在登录 iframe 内执行
+
+淘宝系卖家的登录页由「壳页面 + 跨域 iframe」组成：主页面上没有账号与密码输入框，表单位于 `#alibaba-login-box` 指向的 iframe（`mini_login.htm`）内。此前代填脚本只在主页面上下文查找输入框，因而找不到元素，表现为点击「自动登录」后页面无任何变化。
+
+现在代填与失败提示扫描均在登录表单所在的 iframe 内执行：
+
+| 平台 | 代填执行位置 |
+| --- | --- |
+| 淘宝 / 天猫 / 1688 | 登录 iframe（`mini_login.htm`） |
+| 拼多多 / 京东 / 抖店 | 页面主上下文（原有行为，未变） |
+
+同时，若在规定范围内未找到任何账号或密码输入框，报错信息会列出已尝试的 frame，并提示确认登录页是否已正常显示，不再静默转为「需人工登录」。
 
 ### v0.16.0：采集开关与执行时间统一至排期
 
@@ -493,6 +507,7 @@ test/features-v0101.mjs v0.10.1 自检（登录账号查重 / 店铺配置导出
 test/features-v0110.mjs v0.11.0 自检（采集数据层：缺口 / 导入去重 / 查询）
 test/features-v0160.mjs v0.16.0 自检（采集开关/时间与排期统一、迁移幂等）
 test/features-v0161.mjs v0.16.1–v0.16.4 自检（文案精简 / 占位符脱敏 / 密码小眼睛 / 下拉框样式 / 按钮尺寸稳定）
+test/features-v0165.mjs v0.16.5 自检（登录 iframe 内的代填、frame 候选顺序）
 test/platform.mjs   平台层自检（v0.10.0；在 Windows 上可验证的 macOS 分支部分均已覆盖）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 ```
@@ -529,12 +544,13 @@ node test/features-v0150.mjs   # 22 项：定时采集（mode 分流 / 待登录
 node test/features-v0152.mjs   # 12 项：账号密码错的识别与暂停（提示分类 / 状态 / 超时保护）
 node test/features-v0160.mjs   # 19 项：采集开关与时间统一到排期（迁移幂等 / tick 只认采集域 / 界面去掉重复控件）
 node test/features-v0161.mjs   # 35 项：文案精简与占位符脱敏 / 小眼睛图标 / 下拉框样式 / 按钮尺寸稳定（无长段落、无真实店铺名人名、无本机路径）
+node test/features-v0165.mjs   # 18 项：登录 iframe 内的账密代填（frame 候选顺序 / 真机壳页面+iframe / 填不上要明说）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前十二套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前十三套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，**不触碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证

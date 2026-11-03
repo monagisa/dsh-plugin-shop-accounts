@@ -5,6 +5,21 @@
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
 > `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/features-v0160.mjs`（v0.16 采集开关与排期统一）、`node test/features-v0161.mjs`（v0.16.1 文案精简与占位符脱敏，含 v0.16.2 小眼睛图标、v0.16.3 下拉框样式、v0.16.4 按钮尺寸稳定）、`node test/platform.mjs`（v0.10 平台层）。
 
+## v0.16.5
+
+**问题**（用户反馈）：淘宝的账号密码点了「自动登录」不会自己填进去，也没有任何提示。
+
+**原因**：淘宝/天猫/1688 卖家的登录页是壳页面 —— 主页面只有一张欢迎图，真正的账号/密码输入框在跨域 iframe（`#alibaba-login-box` → `havanalogin.taobao.com/mini_login.htm`）里。原来的代填脚本只在主 frame 里查输入框，必然找不到（实测主 frame `input` 数量为 0），于是 `userFilled/passFilled` 全为 false，最终表现成「停在登录页没反应」。拼多多/京东/抖店的表单在主页面上，所以只有阿里系出问题。
+
+**改动**：
+
+- 新增 `lib/frames.mjs`：拍平 `Page.getFrameTree`、按优先级排候选 frame（命中 iframe 地址特征的子 frame 优先，其次主 frame，最后其余 http(s) 子 frame）；ego 运行时用同一份源码，两边不会各写一套。
+- `lib/cdp.mjs` 新增 `evaluateInFrames`：逐个候选 frame 用 `Page.createIsolatedWorld` 拿 `executionContextId`，再 `Runtime.evaluate` 带 `contextId` 执行（隔离世界只共享 DOM，填输入框够用）。
+- `lib/autologin.mjs`：阿里系三个平台（淘宝/天猫/1688）的登录流程带 `frameHints`（`havanalogin.taobao.com` / `mini_login.htm` 等），Chrome 链路与 ego 链路都改走跨 frame 执行；登录失败的红字同样在 iframe 里扫，密码错仍能识别成「账号或密码不正确」。
+- 一个输入框都没摸到时明确报 `AUTOLOGIN_FILL_FAILED`（错误里列出试过的 frame），不再悄悄变成「需要人工登录」。
+- `lib/ego.mjs`：代填 payload 增加 `frameHints`，运行时脚本注入跨 frame 求值器；返回 `fillFrame` 便于排查「填到哪个 frame」。
+
+**验证**：新增 `test/features-v0165.mjs`（17 项）—— frame 排序单测；阿里系带 / 其他平台不带的接线检查；**headless Chrome 真机验证**：壳页面主 frame `input` 为 0（复现原故障）→ 跨 frame 求值把账号密码填进 iframe 并提交（`userFilled/passFilled/submitted` 均为 true）→ 从另一个世界重读 DOM 确认值真的写上；红字在 iframe 里也能扫到；无 `frameHints` 时仍先查主 frame（老平台行为不变）；跨站 OOPIF 场景如实返回失败。另有淘宝真实登录页实测：`Page.getFrameTree` 里深度 1 的 `mini_login.htm` frame 有 3 个 `input`，在其中执行填充脚本得到 `userFilled:true, passFilled:true, submitted:true, tabClicked:true`。全套 13 套自检 **368 项**通过（源码目录与已安装副本各跑一遍）。
 ## v0.16.4
 
 点击按钮后按钮尺寸会变的问题：平台筛选 chip 的选中态原来额外加了 `font-weight:600`，选中时文字变粗、字宽略增，
