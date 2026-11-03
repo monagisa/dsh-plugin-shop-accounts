@@ -69,14 +69,14 @@ await test('variantOf：买家换登录入口（淘宝/京东/1688/拼多多）�
   const jd = P.variantOf(P.platformOf('jd'), 'buyer');
   assert.match(jd.loginUrl, /passport\.jd\.com\/new\/login/);
   const pdd = P.variantOf(P.platformOf('pdd'), 'buyer');
-  // v0.16.6：拼多多 C 端入口是真实可用的（只是没有账号密码登录），不再是"实验性"
-  assert.equal(pdd.experimental, undefined, '拼多多买家入口不再标实验性');
-  assert.deepEqual(P.loginMethodsOf('pdd', 'buyer'), ['sms', 'qrcode'], '拼多多买家只有验证码/扫码');
-  assert.equal(P.supportsPasswordLogin('pdd', 'buyer'), false, '拼多多买家没有账号密码登录');
-  assert.deepEqual(P.accountTypesFor('pdd'), ['seller', 'buyer']);
-  // 抖音 C 端网页端被风控挡住 → 不开放买家身份
-  assert.deepEqual(P.accountTypesFor('douyin'), ['seller']);
-  assert.equal(P.accountTypeSupport('douyin', 'buyer').ok, false);
+  // v0.16.6：拼多多只有商家后台入口，不提供买家身份（C 端只有手机版登录页，没有账号密码）
+  assert.deepEqual(P.accountTypesFor('pdd'), ['seller'], '拼多多不提供买家身份');
+  assert.equal(P.accountTypeSupport('pdd', 'buyer').ok, false);
+  assert.match(P.accountTypeSupport('pdd', 'buyer').reason, /买家/);
+  // 抖音买家可用：扫码 / 手机验证码，没有账号密码
+  assert.deepEqual(P.accountTypesFor('douyin'), ['seller', 'buyer']);
+  assert.deepEqual(P.loginMethodsOf('douyin', 'buyer'), ['sms', 'qrcode']);
+  assert.equal(P.supportsPasswordLogin('douyin', 'buyer'), false);
 });
 
 await test('capabilitiesOf：卖家可上架，买家只浏览/采集；店铺 URL 只给卖家且拼多多不支持', () => {

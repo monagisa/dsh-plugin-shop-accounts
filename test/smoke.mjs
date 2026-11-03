@@ -432,14 +432,21 @@ await test('GET/PUT /accounts/:id 改名换端口', async () => {
   assert.equal(ds.json.accounts[0].url, 'https://mms.pinduoduo.com/goods/goods_list');
   assert.equal(ds.json.accounts[0].loginName, '示例店铺;示例账号');
   assert.equal(ds.json.accounts[0].accountType, 'seller');
-  // 买家账号可落库，并带上「只做浏览/采集、不做上架」的能力位
+  // 买家身份：拼多多没有买家端（v0.16.6），改成买家要被拒并说明原因
   const b = await call('PUT', '/shop-accounts/accounts/' + id, { accountType: 'buyer' });
-  assert.equal(b.json.account.accountType, 'buyer');
+  assert.equal(b.status, 400);
+  assert.equal(b.json.code, 'ACCOUNT_TYPE_UNSUPPORTED');
+  // 能选买家的平台照旧可落库（抖音买家只有扫码/验证码，因此不要求填密码）
+  const dy = await call('POST', '/shop-accounts/accounts', { platform: 'douyin', accountType: 'buyer', name: '抖音买家号', loginName: '抖音买家' });
+  assert.equal(dy.status, 200, JSON.stringify(dy.json));
   const bs = await call('GET', '/shop-accounts/state');
-  const row = bs.json.accounts.find((a) => a.id === id);
+  const row = bs.json.accounts.find((a) => a.id === dy.json.account.id);
   assert.equal(row.accountType, 'buyer');
   assert.equal(row.capabilities.upload, false);
   assert.equal(row.capabilities.collection, true);
+  // 建完就删掉，后面的排期/删账号用例仍按「只有一个店铺」算
+  const delDy = await call('DELETE', '/shop-accounts/accounts/' + dy.json.account.id, {});
+  assert.equal(delDy.status, 200);
   // 非法类型要 400
   const bad = await call('PUT', '/shop-accounts/accounts/' + id, { accountType: 'vip' });
   assert.equal(bad.status, 400);

@@ -56,12 +56,12 @@ const host = await import(url('lib/index.js'));
 // ── A. 平台能力 ────────────────────────────────────────────────────────────
 section('A. 平台能力：登录方式与「能不能存密码」');
 
-await test('拼多多买家：只有验证码/扫码，没有账号密码', () => {
+await test('拼多多买家：不开放（只有商家后台入口）', () => {
   const caps = P.capabilitiesOf(P.platformOf('pdd'), 'buyer');
-  assert.deepEqual(caps.loginMethods, ['sms', 'qrcode']);
-  assert.equal(caps.passwordLogin, false, '拼多多 C 端没有密码框');
+  assert.deepEqual(caps.loginMethods, []);
+  assert.equal(caps.passwordLogin, false);
   assert.equal(caps.autoLogin, false);
-  assert.equal(caps.manualLogin, true);
+  assert.equal(caps.manualLogin, false, '没有入口就不算「可以人工登录」');
   assert.equal(caps.upload, false);
 });
 
@@ -81,14 +81,23 @@ await test('卖家一律账号密码（含拼多多卖家 mms）', () => {
   }
 });
 
-await test('抖音买家不开放：可选身份只有卖家，建号会被拒并说明原因', () => {
-  assert.deepEqual(P.accountTypesFor('douyin'), ['seller']);
-  const support = P.accountTypeSupport('douyin', 'buyer');
+await test('抖音买家可用：扫码 / 手机验证码，没有账号密码', () => {
+  const caps = P.capabilitiesOf(P.platformOf('douyin'), 'buyer');
+  assert.deepEqual(caps.loginMethods, ['sms', 'qrcode']);
+  assert.equal(caps.passwordLogin, false, '抖音 C 端登录没有密码框');
+  assert.equal(caps.manualLogin, true);
+  assert.match(P.variantOf(P.platformOf('douyin'), 'buyer').loginUrl, /douyin\.com/);
+});
+
+await test('拼多多买家不可选：建号会被拒并说明原因', () => {
+  assert.deepEqual(P.accountTypesFor('pdd'), ['seller']);
+  const support = P.accountTypeSupport('pdd', 'buyer');
   assert.equal(support.ok, false);
   assert.equal(support.code, 'ACCOUNT_TYPE_UNSUPPORTED');
-  assert.match(support.reason, /验证码|风控/, '原因要说清是网页端被风控挡');
-  // 其它平台买家可选
-  for (const id of ['pdd', 'taobao', 'tmall', 'jd', 'ali1688']) {
+  assert.match(support.reason, /买家/, '原因要说明拼多多没有买家入口');
+  // 抖音买家可选，其它平台也可以
+  assert.deepEqual(P.accountTypesFor('douyin'), ['seller', 'buyer']);
+  for (const id of ['taobao', 'tmall', 'jd', 'ali1688']) {
     assert.deepEqual(P.accountTypesFor(id), ['seller', 'buyer'], id + ' 应可选买家');
     assert.equal(P.accountTypeSupport(id, 'buyer').ok, true);
   }
@@ -98,14 +107,18 @@ await test('平台表下发：accountTypes / buyerLoginMethods / buyerUnsupporte
   const list = P.platformList();
   const pdd = list.find((p) => p.id === 'pdd');
   const dy = list.find((p) => p.id === 'douyin');
-  assert.deepEqual(pdd.accountTypes, ['seller', 'buyer']);
-  assert.deepEqual(pdd.buyerLoginMethods, ['sms', 'qrcode']);
-  assert.equal(pdd.buyerUnsupported, false);
+  assert.deepEqual(pdd.accountTypes, ['seller']);
+  assert.equal(pdd.buyerUnsupported, true);
+  assert.match(pdd.buyerUnsupportedReason, /买家/);
   assert.equal(pdd.capabilities.seller.passwordLogin, true);
-  assert.equal(pdd.capabilities.buyer.passwordLogin, false);
-  assert.deepEqual(dy.accountTypes, ['seller']);
-  assert.equal(dy.buyerUnsupported, true);
-  assert.match(dy.buyerUnsupportedReason, /风控/);
+  assert.deepEqual(dy.accountTypes, ['seller', 'buyer']);
+  assert.equal(dy.buyerUnsupported, false);
+  assert.deepEqual(dy.buyerLoginMethods, ['sms', 'qrcode']);
+  assert.equal(dy.capabilities.buyer.passwordLogin, false);
+
+  assert.deepEqual(dy.accountTypes, ['seller', 'buyer']);
+  assert.equal(dy.buyerUnsupported, false);
+  assert.deepEqual(dy.buyerLoginMethods, ['sms', 'qrcode']);
 });
 
 // ── 宿主 ───────────────────────────────────────────────────────────────────
@@ -140,37 +153,37 @@ async function call(method, p, body) {
 // ── B. 建号 ────────────────────────────────────────────────────────────────
 section('B. 建号：密码按身份必填，不再一刀切');
 
-let pddBuyer = null;
-await test('拼多多买家不填密码也能建（响应说明为什么没存密码）', async () => {
-  const r = await call('POST', '/accounts', { platform: 'pdd', accountType: 'buyer', loginName: '13800000000', name: '拼多多买家号' });
+let dyBuyer = null;
+await test('抖音买家不填密码也能建（响应说明为什么没存密码）', async () => {
+  const r = await call('POST', '/accounts', { platform: 'douyin', accountType: 'buyer', loginName: '13900000000', name: '抖音买家号' });
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.equal(r.json.ok, true);
   assert.equal(r.json.passwordSaved, false);
   assert.match(r.json.passwordSkipped, /验证码|扫码/, '要说明这个身份只有验证码/扫码');
-  pddBuyer = r.json.account;
-  assert.equal(pddBuyer.accountType, 'buyer');
+  dyBuyer = r.json.account;
+  assert.equal(dyBuyer.accountType, 'buyer');
   // 密码库里确实没有这条（不是"存了但没回显"）
-  assert.equal(vaultMod.hasPassword(pddBuyer.id), false, '拼多多买家不该有密码条目');
+  assert.equal(vaultMod.hasPassword(dyBuyer.id), false, '抖音买家不该有密码条目');
 });
 
-await test('拼多多买家即使传了密码也不会落库（也不会报错）', async () => {
-  const r = await call('POST', '/accounts', { platform: 'pdd', accountType: 'buyer', loginName: '13800000001', name: '拼多多买家号2', password: 'should-not-be-stored' });
+await test('抖音买家即使传了密码也不会落库（也不会报错）', async () => {
+  const r = await call('POST', '/accounts', { platform: 'douyin', accountType: 'buyer', loginName: '13900000001', name: '抖音买家号2', password: 'should-not-be-stored' });
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.equal(r.json.passwordSaved, false);
   assert.equal(vaultMod.hasPassword(r.json.account.id), false, '拿到密码也不该存（这个身份用不上）');
+});
+
+await test('拼多多买家不可选：建号直接被拒', async () => {
+  const r = await call('POST', '/accounts', { platform: 'pdd', accountType: 'buyer', loginName: '13800000000', name: '拼多多买家号' });
+  assert.equal(r.status, 400, JSON.stringify(r.json));
+  assert.equal(r.json.code, 'ACCOUNT_TYPE_UNSUPPORTED');
+  assert.match(r.json.error, /买家/);
 });
 
 await test('拼多多卖家缺密码仍然拦（mms 是账密登录）', async () => {
   const r = await call('POST', '/accounts', { platform: 'pdd', accountType: 'seller', loginName: 'seller-pdd-1', name: '拼多多卖家号' });
   assert.equal(r.status, 400);
   assert.equal(r.json.code, 'ACCOUNT_PASSWORD_REQUIRED');
-});
-
-await test('抖音买家直接被拒，错误里说明网页端被风控挡', async () => {
-  const r = await call('POST', '/accounts', { platform: 'douyin', accountType: 'buyer', loginName: 'dy-1', name: '抖音买家号' });
-  assert.equal(r.status, 400);
-  assert.equal(r.json.code, 'ACCOUNT_TYPE_UNSUPPORTED');
-  assert.match(r.json.error, /验证码|风控/);
 });
 
 await test('淘宝买家缺密码拦、填了密码就能建', async () => {
@@ -185,8 +198,8 @@ await test('淘宝买家缺密码拦、填了密码就能建', async () => {
 // ── C. 路由与状态 ──────────────────────────────────────────────────────────
 section('C. 路由：没有账号密码的身份不能代填');
 
-await test('拼多多买家点「代填」→ 明确报「只有验证码/扫码」', async () => {
-  const r = await call('POST', '/accounts/' + pddBuyer.id + '/autologin', {});
+await test('抖音买家点「代填」→ 明确报「只有验证码/扫码」', async () => {
+  const r = await call('POST', '/accounts/' + dyBuyer.id + '/autologin', {});
   assert.equal(r.status, 400);
   assert.equal(r.json.code, 'AUTOLOGIN_LOGIN_METHOD_UNSUPPORTED');
   assert.match(r.json.error, /验证码|扫码/);
@@ -195,19 +208,20 @@ await test('拼多多买家点「代填」→ 明确报「只有验证码/扫码
 await test('/state：每店带能力位；密码必填由身份决定', async () => {
   const r = await call('GET', '/state');
   assert.equal(r.status, 200);
-  const mine = (r.json.accounts || []).find((a) => a.id === pddBuyer.id);
+  const mine = (r.json.accounts || []).find((a) => a.id === dyBuyer.id);
   assert.equal(mine.capabilities.passwordLogin, false);
   assert.equal(mine.capabilities.passwordRequired, false);
   assert.equal(mine.capabilities.autoLoginSupported, false);
   assert.deepEqual(mine.capabilities.loginMethods, ['sms', 'qrcode']);
   const platforms = r.json.platforms || [];
   const pdd = platforms.find((p) => p.id === 'pdd');
-  assert.deepEqual(pdd.accountTypes, ['seller', 'buyer']);
-  assert.deepEqual(platforms.find((p) => p.id === 'douyin').accountTypes, ['seller']);
+  assert.deepEqual(pdd.accountTypes, ['seller']);
+  assert.equal(pdd.buyerUnsupported, true);
+  assert.deepEqual(platforms.find((p) => p.id === 'douyin').accountTypes, ['seller', 'buyer']);
 });
 
-await test('PUT 不能把抖音卖家改成买家', async () => {
-  const created = await call('POST', '/accounts', { platform: 'douyin', accountType: 'seller', loginName: 'dy-seller-1', name: '抖音卖家号', password: 'pw-dy' });
+await test('PUT 不能把拼多多卖家改成买家', async () => {
+  const created = await call('POST', '/accounts', { platform: 'pdd', accountType: 'seller', loginName: 'pdd-seller-1', name: '拼多多卖家号', password: 'pw-pdd' });
   assert.equal(created.status, 200, JSON.stringify(created.json));
   const id = created.json.account.id;
   const r = await call('PUT', '/accounts/' + id, { accountType: 'buyer' });
@@ -239,7 +253,7 @@ await test('新建弹窗：没有账号密码的身份不显示密码框，改�
   assert.match(clientSrc, /使用「|没有账号密码可存/);
 });
 
-await test('账号类型下拉由 accountTypes 生成（抖音不会出现买家选项）', () => {
+await test('账号类型下拉由 accountTypes 生成（拼多多不会出现买家选项）', () => {
   assert.match(clientSrc, /types\.map\(function \(t\) \{/);
   assert.match(clientSrc, /accountTypeOptionLabel\(props\.platforms, platform, t\)/);
   assert.match(clientSrc, /accountTypeOptionLabel\(props\.platforms, a\.platform, t\)/);
