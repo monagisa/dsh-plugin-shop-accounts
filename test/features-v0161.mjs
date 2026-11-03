@@ -180,6 +180,47 @@ test('client.js 里没有超过 100 字的中文界面文案（注释不算）',
   assert.deepEqual(longOnes, [], '还有超长文案：\n      ' + longOnes.join('\n      '));
 });
 
+// ── G. 状态反馈只改颜色（v0.16.4） ─────────────────────────────────────────
+section('G. 按压 / 选中 / hover 不允许改变按钮尺寸');
+
+test('选中态不再加粗（加粗会让文字变宽、chip 尺寸跟着变）', () => {
+  const rules = clientSrc.match(/\.sa-tab\[data-on="1"\]\{[^}]*\}/g) || [];
+  assert.ok(rules.length > 0, '找不到 .sa-tab 的选中态样式');
+  for (const r of rules) {
+    assert.equal(/font-weight/.test(r), false, '选中态还在加粗：' + r);
+    assert.equal(/font-size/.test(r), false, '选中态改了字号：' + r);
+    assert.equal(/padding|border-width|transform|letter-spacing/.test(r), false, '选中态改了盒模型：' + r);
+  }
+});
+
+test('按钮类元素都去掉了原生外观并显式继承字体（避免宿主/系统字体差异导致宽度跳变）', () => {
+  for (const cls of ['.sa-btn', '.sa-tab', '.sa-schedbtn', '.sa-schedpill', '.sa-plat']) {
+    // 同一个类可能出现在多处（比如窄面板的 @container 里只调字号），只要有一条
+    // 规则同时带了 appearance:none 与 font-family:inherit 就算合格。
+    const re = new RegExp(cls.replace('.', '\\.') + '\\{([^}]*)\\}', 'g');
+    const bodies = [...clientSrc.matchAll(re)].map((m) => m[1]);
+    assert.ok(bodies.length > 0, '缺样式 ' + cls);
+    const ok = bodies.some((b) => /appearance\s*:\s*none/.test(b) && /font-family\s*:\s*inherit/.test(b));
+    assert.ok(ok, cls + ' 没有同时声明 appearance:none 与 font-family:inherit');
+  }
+});
+
+test('每个按钮都有按压反馈，且反馈里不含任何几何属性', () => {
+  for (const cls of ['.sa-btn', '.sa-tab', '.sa-schedbtn', '.sa-schedpill', '.sa-plat']) {
+    const re = new RegExp(cls.replace('.', '\\.') + ':active[^{]*\\{([^}]*)\\}');
+    const m = re.exec(clientSrc);
+    assert.ok(m, cls + ' 没有 :active 按压反馈');
+    assert.equal(/padding|border-width|transform|scale|translate|font-size|font-weight/.test(m[1]), false, cls + ' 的按压反馈改了几何：' + m[1]);
+  }
+});
+
+test('状态类规则里没有任何 font-weight / font-size 变化', () => {
+  const stateRules = clientSrc.match(/\.sa-[a-z-]*(\[data-on="1"\]|:active|:hover)[^{]*\{[^}]*\}/g) || [];
+  assert.ok(stateRules.length > 0, '找不到状态类规则');
+  const bad = stateRules.filter((r) => /font-weight|font-size|padding|border-width|transform|scale/.test(r));
+  assert.deepEqual(bad, [], '这些状态样式会改变按钮尺寸：\n      ' + bad.join('\n      '));
+});
+
 // ── 汇总 ────────────────────────────────────────────────────────────────────
 console.log('\n' + (failures.length ? '\u2717 失败 ' + failures.length + ' 项 / 共 ' + (passed + failures.length) : '\u2713 全部通过（' + passed + ' 项）'));
 if (failures.length) {

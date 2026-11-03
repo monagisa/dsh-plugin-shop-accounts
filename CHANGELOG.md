@@ -3,7 +3,19 @@
 > 每个版本都是在本机（Windows + Chrome）真机验过的；「验证」条目就是当时的实测证据，
 > 数字都当真跑出来的看。自检项数：`node test/smoke.mjs`（主自检）、`node test/features-v090.mjs`（v0.9 功能）、
 > `node test/features-v0101.mjs`（v0.10.1 查重与配置迁移）、`node test/features-v0110.mjs`（v0.11 采集数据层）、
-> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/features-v0160.mjs`（v0.16 采集开关与排期统一）、`node test/features-v0161.mjs`（v0.16.1 文案精简与占位符脱敏，含 v0.16.2 小眼睛图标、v0.16.3 下拉框样式）、`node test/platform.mjs`（v0.10 平台层）。
+> `node test/features-v0120.mjs`（v0.12 目录层）、`node test/features-v0130.mjs`（v0.13 采集 DSL）、`node test/features-v0140.mjs`（v0.14 下载与作业编排）、`node test/features-v0150.mjs`（v0.15 定时采集）、`node test/features-v0152.mjs`（v0.15.2 密码错处理）、`node test/features-v0160.mjs`（v0.16 采集开关与排期统一）、`node test/features-v0161.mjs`（v0.16.1 文案精简与占位符脱敏，含 v0.16.2 小眼睛图标、v0.16.3 下拉框样式、v0.16.4 按钮尺寸稳定）、`node test/platform.mjs`（v0.10 平台层）。
+
+## v0.16.4
+
+点击按钮后按钮尺寸会变的问题：平台筛选 chip 的选中态原来额外加了 `font-weight:600`，选中时文字变粗、字宽略增，
+chip 宽度跟着变（窄面板下还可能触发换行，看起来像「点一下按钮就跳一下」）。现在所有按压 / 选中 / 悬停反馈
+一律只改颜色（背景、描边、透明度），不再碰 `font-weight`、`font-size`、`padding`、`border-width`、`transform`；
+同时给 `.sa-btn` / `.sa-tab` / `.sa-schedbtn` / `.sa-schedpill` / `.sa-plat` 补上 `appearance:none` 与
+`font-family:inherit`，避免按钮按系统默认字体渲染、和页面文字字体不一致带来的宽度差异。
+
+**验证**：`test/features-v0161.mjs` 31 → 35 项（新增「选中态不含字重/字号/盒模型变化」「按钮类都去原生外观并继承字体」
+「每个按钮都有按压反馈且反馈不含几何属性」「状态类规则里没有任何尺寸变化」）；用 `lib/client.js` 里真实 CSS
+在 headless Chrome 里通过 CDP 真按鼠标实测，12 个按钮在按下 / 选中前后宽高差全部 0.00px；十二套自检合计 350 项全绿。
 
 ## v0.16.3
 
