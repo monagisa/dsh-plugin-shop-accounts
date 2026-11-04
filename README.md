@@ -2,13 +2,13 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0176)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0177)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
 覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号仅用于浏览与数据采集，不参与上架）。
 
-- 版本：**0.17.6**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.17.7**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
@@ -19,15 +19,15 @@
   `node test/features-v0168.mjs` → 25 项、`node test/features-v0169.mjs` → 20 项、
   `node test/features-v0170.mjs` → 18 项、`node test/features-v0171.mjs` → 9 项、
   `node test/features-v0172.mjs` → 13 项、`node test/features-v0173.mjs` → 8 项、`node test/features-v0174.mjs` → 6 项、
-  `node test/features-v0175.mjs` → 7 项、`node test/features-v0176.mjs` → 8 项、
-  `node test/platform.mjs` → 12 项，合计 **517 项**，全部通过
+  `node test/features-v0175.mjs` → 7 项、`node test/features-v0176.mjs` → 8 项、`node test/features-v0177.mjs` → 9 项、
+  `node test/platform.mjs` → 12 项，合计 **526 项**，全部通过
   （不启动浏览器、不触碰真实账号；`npm test` 可一次执行）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.17.6）](#更新说明v0610--v0176)
+- [更新说明（v0.6.10 → v0.17.7）](#更新说明v0610--v0177)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -45,9 +45,22 @@
 
 ---
 
-## 更新说明（v0.6.10 → v0.17.6）
+## 更新说明（v0.6.10 → v0.17.7）
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.6（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.7（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+
+### v0.17.7：定时采集不再漏掉「下载型」配方
+
+抖音、京东这类平台的采集配方，产物是浏览器下载的文件（Excel）。插件自 v0.14.0 起已能把下载文件落盘，但**定时采集**在挑配方时排除了「需要下载」的配方：
+
+| 调用方式 | 挑配方 | 结果 |
+|---|---|---|
+| 手动指定配方 | 按 id 直接取 | 正常执行 |
+| 定时任务（按平台全取） | 过滤掉带下载的配方 | 这些平台「没有可跑的配方」→ 只做登录态检测 |
+
+修复后定时任务按平台取配方时包含下载型；淘宝、拼多多的配方产物是页面文本，行为不变。
+
+验证：新增 9 项自检，其中 2 项用真实店铺跑定时任务路径——抖店一次跑完两份配方（成交分析、收支分析），两份 Excel 全部落盘，采集回写为「成功 2 / 空数据 0 / 失败 0」。
 
 ### v0.17.6：站点配方里的非标准选择器与真实鼠标点击
 
@@ -698,9 +711,10 @@ test/features-v0170.mjs v0.17.0 自检（登录方式可选：账号密码代填
 test/features-v0171.mjs              v0.17.1 自检（抖店代填先切「邮箱登录」页签）
 test/features-v0172.mjs              v0.17.2 自检（平台登录账号提示、新建店铺 URL）
 test/features-v0173.mjs              v0.17.3 自检（代填自动勾选同意协议）
-test/features-v0175.mjs              v0.17.5 自检（点「登录」的多条路径）
-  test/features-v0176.mjs              v0.17.6 自检（非标准选择器与真实鼠标点击）
 test/features-v0174.mjs              v0.17.4 自检（天猫买家入口、淘宝页协议勾选）
+test/features-v0175.mjs              v0.17.5 自检（点「登录」的多条路径）
+test/features-v0176.mjs              v0.17.6 自检（非标准选择器与真实鼠标点击）
+test/features-v0177.mjs              v0.17.7 自检（定时采集包含下载型配方）
 test/platform.mjs   平台层自检（v0.10.0；在 Windows 上可验证的 macOS 分支部分均已覆盖）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 ```
@@ -744,12 +758,13 @@ node test/features-v0168.mjs   # 25 项：后处理能力按需执行、页面�
 node test/features-v0169.mjs   # 20 项：补齐天猫/抖音/京东配方、登录过期按页面统一识别
 node test/features-v0170.mjs   # 18 项：登录方式可选（账号密码代填 / 扫码或手动登录）
 node test/features-v0171.mjs   # 9 项：抖店代填先切「邮箱登录」页签（真机对照实验）
+node test/features-v0177.mjs   # 9 项：定时采集包含下载型配方（含缺陷复现与真实接口行为）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前二十四套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前二十五套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，**不触碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证
