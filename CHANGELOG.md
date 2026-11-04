@@ -1,3 +1,20 @@
+## v0.17.9（2026-11-04）
+
+### 问题
+
+- 设置 → 账号管理 点开后右侧一片空白：条目组件抛异常时，宿主用 `SlotErrorBoundary` 兜住并把内容换成空 `div`，而渲染进程的 `console.error` 不进宿主日志，事后查不到原因。
+- 宿主日志里另有一条每次启动都出现的警告：`注册工具 shop_accounts 失败：Cannot read properties of undefined (reading 'render')` —— 新版 `tools.register` 要求工具声明 `output { schema, render }`，缺了就注册不上（工具本身不可用，设置页不受影响）。
+
+### 改动
+
+- 工具的 `defineTool` 声明补上 `output: { schema: {type:'object', additionalProperties:true}, render: (_args, value) => [{type:'text', text: JSON.stringify(value)}] }`。
+- 客户端新增报错上报：`console.error` / `window.onerror` / `unhandledrejection` 三条钩子，同一条只报一次，POST 到 `/client-error`，宿主落到 `<数据目录>/client-errors.log`（保留最近 200 条、字段截断）。
+- 新增 `GET /client-errors` 便于读回；设置页自身渲染包在 try/catch 里，出错时直接把异常原文画在页面上（不再是空白）。
+
+### 验证
+
+- 新增 `test/features-v0179.mjs` 12 项：工具 output 声明（含报错原因注释）、三条上报钩子与安装调用、去重、路由落盘/读回/截断/空错误不写、版本与文档。
+
 ## v0.17.8（2026-11-04）
 
 **用户反馈**：「打开浏览器设置时有问题，简化一下选项，比如什么什么回退检测之类的，那些介绍去掉」。
