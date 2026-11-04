@@ -1,9 +1,0 @@
-﻿5: > **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏
-11: - 版本：**0.17.6**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
-12: - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
-22:   `node test/features-v0175.mjs` → 7 项、`node test/platform.mjs` → 12 项，
-23:   合计 **509 项**，全部通过
-24:   （不启动浏览器、不触碰真实账号；`npm test` 可一次执行）
-25: 
-30: - [更新说明（v0.6.10 → v0.17.6）](#更新说明v0610--v0176)
-anchors0176: 2
