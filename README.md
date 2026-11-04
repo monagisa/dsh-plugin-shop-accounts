@@ -2,13 +2,13 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0173)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0174)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
 覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号仅用于浏览与数据采集，不参与上架）。
 
-- 版本：**0.17.3**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.17.4**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
@@ -18,15 +18,15 @@
   `node test/features-v0166.mjs` → 20 项、`node test/features-v0167.mjs` → 13 项、
   `node test/features-v0168.mjs` → 25 项、`node test/features-v0169.mjs` → 20 项、
   `node test/features-v0170.mjs` → 18 项、`node test/features-v0171.mjs` → 9 项、
-  `node test/features-v0172.mjs` → 13 项、`node test/features-v0173.mjs` → 8 项、`node test/platform.mjs` → 12 项，
-  合计 **496 项**，全部通过
+  `node test/features-v0172.mjs` → 13 项、`node test/features-v0173.mjs` → 8 项、`node test/features-v0174.mjs` → 6 项、`node test/platform.mjs` → 12 项，
+  合计 **502 项**，全部通过
   （不启动浏览器、不触碰真实账号；`npm test` 可一次执行）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.17.3）](#更新说明v0610--v0173)
+- [更新说明（v0.6.10 → v0.17.4）](#更新说明v0610--v0174)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -44,9 +44,26 @@
 
 ---
 
-## 更新说明（v0.6.10 → v0.17.3）
+## 更新说明（v0.6.10 → v0.17.4）
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.3（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.4（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+
+### v0.17.4：天猫买家入口改走淘宝登录页
+
+| 平台与身份 | 登录入口 | 协议勾选 | 代填 |
+| --- | --- | --- | --- |
+| 淘宝买家 | login.taobao.com | 有（自动勾选） | 填入并提交 |
+| 天猫买家 | **login.taobao.com**（原为 login.tmall.com） | 有（自动勾选） | 填入并提交 |
+| 淘宝 / 天猫卖家 | loginmyseller.taobao.com | 无 | 填入并提交 |
+| 京东买卖家 | passport.jd.com / passport.shop.jd.com | 无 | 填入并提交 |
+| 拼多多 | mms.pinduoduo.com | 无 | 切「账号登录」后填入并提交 |
+| 1688 | login.1688.com | 无 | 填入并提交 |
+
+天猫买家的原入口 `login.tmall.com` 是壳页面，登录表单放在**跨站** iframe（`login.taobao.com`）里。跨站 iframe 由独立进程渲染，浏览器的调试接口看不到它，代填因此一个输入框都摸不到。天猫与淘宝共用同一套账号与登录态，所以买家入口直接改为淘宝登录页。
+
+淘宝买家页有「已阅读并同意以下协议」勾选框（默认不勾），由 v0.17.3 的按文字识别自动勾上；本版补了真机自检证明该行为在淘宝页同样生效。
+
+验证：新增 `test/features-v0174.mjs`（6 项）——入口与判据、卖家买家入口不混用、淘宝页协议勾选两组真机对照、版本与文档。
 
 ### v0.17.3：代填时自动勾选「同意用户协议 / 隐私条款」
 
@@ -61,7 +78,7 @@
 - 勾选发生在提交之前，勾选结果随代填结果返回（`agreeFound` / `agreeChecked` / `agreeTarget`）。
 - 只认登录须知类勾选，不会误勾「记住我」等其它选项。
 
-验证：新增 `test/features-v0173.mjs`（8 项）——流程选择器、勾选在提交之前、按文案识别不误勾「记住我」、真实浏览器三个对照实验（未勾选 → 自动勾上并提交、只有「记住我」→ 不勾、已勾选 → 不动）。全套 **21 套自检 496 项**通过。
+验证：新增 `test/features-v0173.mjs`（8 项）——流程选择器、勾选在提交之前、按文案识别不误勾「记住我」、真实浏览器三个对照实验（未勾选 → 自动勾上并提交、只有「记住我」→ 不勾、已勾选 → 不动）。全套 **22 套自检 502 项**通过。
 
 ### v0.17.2：各平台「登录账号」提示到位，新建店铺可直接填店铺 URL
 
@@ -82,7 +99,7 @@
 - 新建店铺弹窗的「登录账号」直接用上面的提示当占位文字，下方常驻一行说明；没有专属提示的平台给通用说明「不要填密码」。
 - 新建店铺时可填「店铺 URL（选填）」，只在支持店铺主页的平台显示（淘宝 / 天猫 / 京东 / 1688 / 抖店）；拼多多不显示。地址只接受 http / https。
 
-验证：新增 `test/features-v0173.mjs`（8 项）见上节；`test/features-v0172.mjs`（13 项）——提示文案按平台与身份、能力位下发、新建带 URL 落库、非法协议被拒、界面接线、版本与文档。全套 **21 套自检 496 项**通过。
+验证：新增 `test/features-v0173.mjs`（8 项）见上节；`test/features-v0172.mjs`（13 项）——提示文案按平台与身份、能力位下发、新建带 URL 落库、非法协议被拒、界面接线、版本与文档。全套 **22 套自检 502 项**通过。
 
 ### v0.17.1：抖店代填先切换到「邮箱登录」
 
@@ -650,6 +667,7 @@ test/features-v0170.mjs v0.17.0 自检（登录方式可选：账号密码代填
 test/features-v0171.mjs              v0.17.1 自检（抖店代填先切「邮箱登录」页签）
 test/features-v0172.mjs              v0.17.2 自检（平台登录账号提示、新建店铺 URL）
 test/features-v0173.mjs              v0.17.3 自检（代填自动勾选同意协议）
+test/features-v0174.mjs              v0.17.4 自检（天猫买家入口、淘宝页协议勾选）
 test/platform.mjs   平台层自检（v0.10.0；在 Windows 上可验证的 macOS 分支部分均已覆盖）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 ```
@@ -698,7 +716,7 @@ node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome�
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前二十一套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前二十二套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，**不触碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证
