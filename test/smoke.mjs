@@ -1477,13 +1477,13 @@ await test('Chrome 模式下设置页不出现 ego 专属 UI，ego 模式下才�
   assert.ok(!chrome.includes('ego-browser'), 'Chrome 模式不该出现 ego-browser 路径字段');
   assert.ok(!chrome.includes('ego profile'), 'Chrome 模式不该列 ego profile（那是 ego 模式的隐私信息）');
   assert.ok(!chrome.includes('刷新 ego'), 'Chrome 模式不该有「刷新 ego」按钮');
-  // v0.16.1 精简文案：一行说清状态即可，不再写大段解释
-  assert.ok(chrome.includes('当前用 Chrome'), 'Chrome 模式要说明当前用的是 Chrome');
+  // v0.17.8 精简：不再写「当前用 Chrome」这类说明句，只靠胶囊 + 选项本身表达
+  assert.ok(!chrome.includes('当前用 Chrome'), '不该再出现「当前用 Chrome」这类说明句');
 
-  // ② Chrome + 没装 ego：选项标「未安装」，提示只说 Chrome
+  // ② Chrome + 没装 ego：选项标「未安装」
   const noEgo = renderSettings({ backend: 'chrome', egoAvailable: false });
   assert.ok(noEgo.includes('ego lite（未安装）'), '没装 ego 时后端选项要标「未安装」');
-  assert.ok(noEgo.includes('没检测到 ego lite'), '没装 ego 时要说明只用 Chrome');
+  assert.ok(!noEgo.includes('没检测到 ego lite'), '不该再出现「没检测到 ego lite」这类说明句');
   assert.ok(!noEgo.includes('ego profile'), '没装 ego 时不该有 profile 列表');
 
   // ③ ego 模式：该有的都要有
@@ -1538,7 +1538,9 @@ await test('设置页能选浏览器后端（auto/egolite/chrome），选了真�
   }
   assert.ok(clientSrc.includes("h('option', { value: 'egolite', disabled: !egoAvail }"), 'ego 没装时该选项要禁用，别让用户选了再报错');
   assert.ok(clientSrc.includes("egoAvail ? 'ego lite' : 'ego lite（未安装）'"), '没装 ego 时选项要标「未安装」');
-  assert.ok(/title: '自动 = 有 ego 就用 ego/.test(clientSrc), '解释放在下拉框悬停提示里，不要塞进选项文案');
+  // v0.17.8：用户要求「简化选项、去掉那些介绍」→ 下拉框与胶囊都不再挂长解释
+  assert.ok(!/title: '自动 = 有 ego 就用 ego/.test(clientSrc), '后端选择的解释不该再挂在悬停提示里');
+  assert.ok(!clientSrc.includes("sa-chip', title: egoText"), '胶囊不该再挂长悬停说明');
   // 用户反馈：Chrome 模式下也不该到处是 ego 字样 → ego 专属 UI 必须挂在 egoOn 上
   assert.match(clientSrc, /var egoOn = backend === 'egolite'/, '要有「当前是否真的在用 ego」这个开关');
   assert.ok(/egoOn && h\(Field, \{ label: 'ego-browser' \}/.test(clientSrc), 'ego-browser 路径只在 ego 模式下显示');
