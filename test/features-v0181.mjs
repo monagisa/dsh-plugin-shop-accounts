@@ -63,9 +63,11 @@ test('A4 判据仍按登录态 cookie，且买家仍然不要密码', () => {
   assert.equal(P.supportsPasswordLogin('douyin', 'buyer'), false);
 });
 
-test('A5 登录页判据里带上 /jingxuan，且不残留 /user/self', () => {
+test('A5 登录页判据只认真登录页（工作台 /jingxuan 不算，也不残留 /user/self）', () => {
   const b = P.variantOf(P.platformOf('douyin'), 'buyer');
-  assert.ok(b.loginUrlHints.includes('/jingxuan'), 'loginUrlHints 没带 /jingxuan');
+  assert.ok(!b.loginUrlHints.includes('/jingxuan'), 'loginUrlHints 又把工作台当登录页了（v0.18.2 已修）');
+  assert.equal(P.looksLikeLoginPage('https://www.douyin.com/jingxuan', b), false);
+  assert.ok(b.loginUrlHints.some((h) => String(h).includes('/login')), '真登录页判据丢了');
   assert.ok(!b.loginUrlHints.some((h) => String(h).includes('/user/self')), 'loginUrlHints 还留着 /user/self');
 });
 

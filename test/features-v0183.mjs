@@ -92,7 +92,7 @@ test('B1 ego 打开用账号变体的登录页/工作台', () => {
 test('B2 Chrome 打开、登录态检测、profile 分配都按身份取平台', () => {
   const hits = (indexSrc.match(/accountPlatformOf\(account\) \|\| platformOf\(account\.platform\)/g) || []).length;
   assert.ok(hits >= 3, 'openAccount / checkAccount / egoCheckAccount 未全部改用变体：命中 ' + hits);
-  assert.ok(indexSrc.includes('const otherPlatform = accountPlatformOf(other);'), 'profile 共用判定没按身份域');
+  assert.ok(indexSrc.includes('accountPlatformOf(a) || {}).cookieDomains'), 'profile 分配/共用判定没按身份域');
 });
 
 test('B3 会话快照按身份的 cookie 名（抖音买家读 sessionid 那套）', () => {
