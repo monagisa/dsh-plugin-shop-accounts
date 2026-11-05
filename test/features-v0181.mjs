@@ -1,9 +1,10 @@
 /**
- * v0.17.11 自检：抖音买家的入口就是抖音首页（和其它买家一样落在自己平台首页）。
+ * v0.17.12 自检：抖音买家的入口 = 抖音精选电脑版 `https://www.douyin.com/jingxuan`。
  *
- * 用户确认（2026-11-05）：抖音买家应该跳 `https://www.douyin.com/`。
- * 实测补充（2026-11-05 headless Chrome）：未登录的新档案/无头环境直接开站根会被风控接到「验证码中间页」，
- * 这是抖音对新环境的正常风控，人工登录一次后回首页即正常；`/shop`、`/order` 是 404「页面不见啦」。
+ * 用户确认（2026-11-05，附截图）：要的就是 `douyin.com/jingxuan` 这个页面
+ * （未登录时会弹「扫码登录 / 验证码登录 / 密码登录」面板）。
+ * 实测（2026-11-05 headless Chrome）：站根 `https://www.douyin.com/` 与 `sso.douyin.com` 会被风控接到
+ * 「验证码中间页」（正文空白）；`/shop`、`/order` 是 404「页面不见啦」；`/jingxuan` 连开 2 次都正常。
  */
 
 import assert from 'node:assert/strict';
@@ -31,23 +32,25 @@ function test(name, fn) {
   }
 }
 
-// ── A. 抖音买家的入口 = 抖音首页 ─────────────────────────────────────────────
+// ── A. 抖音买家的入口 = 抖音精选（/jingxuan）───────────────────────────────
 
-test('A1 抖音买家的登录页就是 https://www.douyin.com/', () => {
+test('A1 抖音买家的登录页是抖音精选（/jingxuan）', () => {
   const b = P.variantOf(P.platformOf('douyin'), 'buyer');
-  assert.equal(b.loginUrl, 'https://www.douyin.com/');
+  assert.equal(b.loginUrl, 'https://www.douyin.com/jingxuan');
 });
 
-test('A2 抖音买家的主页/工作页也是抖音首页（打开即落平台首页）', () => {
+test('A2 抖音买家的主页/工作页也是抖音精选（打开即落这个页面）', () => {
   const b = P.variantOf(P.platformOf('douyin'), 'buyer');
-  assert.equal(b.homeUrl, 'https://www.douyin.com/');
-  assert.equal(b.workUrl, 'https://www.douyin.com/');
+  assert.equal(b.homeUrl, 'https://www.douyin.com/jingxuan');
+  assert.equal(b.workUrl, 'https://www.douyin.com/jingxuan');
 });
 
-test('A3 不再用 /user/self、也不再用 sso 当入口', () => {
+test('A3 不再用站根、sso、/user/self 当入口', () => {
   const b = P.variantOf(P.platformOf('douyin'), 'buyer');
-  assert.ok(!b.loginUrl.includes('/user/self'), '登录入口又回到 /user/self 了');
-  assert.ok(!b.loginUrl.includes('sso.douyin.com'), '登录入口不该是 sso');
+  assert.ok(!/^https:\/\/www\.douyin\.com\/?$/.test(b.loginUrl), '入口又退回站根了');
+  assert.ok(!b.loginUrl.includes('sso.douyin.com'), '入口不该是 sso');
+  assert.ok(!b.loginUrl.includes('/user/self'), '入口不该是 /user/self');
+  assert.ok(b.loginUrl.endsWith('/jingxuan'), '入口应是 /jingxuan');
 });
 
 test('A4 判据仍按登录态 cookie，且买家仍然不要密码', () => {
@@ -60,8 +63,9 @@ test('A4 判据仍按登录态 cookie，且买家仍然不要密码', () => {
   assert.equal(P.supportsPasswordLogin('douyin', 'buyer'), false);
 });
 
-test('A5 登录页判据里也不再残留 /user/self', () => {
+test('A5 登录页判据里带上 /jingxuan，且不残留 /user/self', () => {
   const b = P.variantOf(P.platformOf('douyin'), 'buyer');
+  assert.ok(b.loginUrlHints.includes('/jingxuan'), 'loginUrlHints 没带 /jingxuan');
   assert.ok(!b.loginUrlHints.some((h) => String(h).includes('/user/self')), 'loginUrlHints 还留着 /user/self');
 });
 
@@ -99,10 +103,11 @@ test('B3 抖音卖家仍是抖店后台（没被买家改动波及）', () => {
   assert.ok(s.workUrl.includes('fxg.jinritemai.com'), '抖音卖家工作页被改坏了：' + s.workUrl);
 });
 
-// ── C. 实测结论留在源码里（避免又被改成 sso / /shop / /order）───────────────
+// ── C. 实测结论留在源码里（避免又被改回站根 / sso / /shop / /order）──────────
 
-test('C1 platforms.mjs 记下了「新档案可能被风控接到验证码中间页」这一事实', () => {
+test('C1 platforms.mjs 记下了站根会被风控接到「验证码中间页」，且 /jingxuan 是可用入口', () => {
   assert.match(rawPlatforms, /验证码中间页/, '没写风控事实：验证码中间页');
+  assert.match(rawPlatforms, /jingxuan/, '没写 /jingxuan 这个入口');
 });
 
 test('C2 platforms.mjs 记下了 /shop 与 /order 是 404（别再往这两个地址加）', () => {
@@ -111,17 +116,17 @@ test('C2 platforms.mjs 记下了 /shop 与 /order 是 404（别再往这两个�
 
 // ── D. 版本与文档 ────────────────────────────────────────────────────────────
 
-test('D1 版本号已到 0.17.11', () => {
+test('D1 版本号已到 0.17.12', () => {
   const [maj, min, patchNum] = String(pkg.version).split('.').map(Number);
-  assert.ok(maj === 0 && (min > 17 || (min === 17 && patchNum >= 11)), 'package.json 版本还是 ' + pkg.version);
+  assert.ok(maj === 0 && (min > 17 || (min === 17 && patchNum >= 12)), 'package.json 版本还是 ' + pkg.version);
 });
 
 test('D2 CHANGELOG / README 写了这次修正', () => {
   const changelog = read('CHANGELOG.md');
   const readme = read('README.md');
-  assert.match(changelog, /v0\.17\.11/, 'CHANGELOG 没有 v0.17.11');
-  assert.match(changelog, /www\.douyin\.com/, 'CHANGELOG 没写入口 URL');
-  assert.match(readme, /0\.17\.11/, 'README 没更新版本');
+  assert.match(changelog, /v0\.17\.12/, 'CHANGELOG 没有 v0.17.12');
+  assert.match(changelog, /jingxuan/, 'CHANGELOG 没写 /jingxuan');
+  assert.match(readme, /0\.17\.12/, 'README 没更新版本');
 });
 
 console.log('\n' + passed + ' 项通过' + (failures.length ? '，' + failures.length + ' 项失败' : ''));
