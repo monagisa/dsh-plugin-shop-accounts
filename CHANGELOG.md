@@ -1,3 +1,26 @@
+## v0.18.1（2026-11-05）
+
+### 问题
+
+- 点抖音买家账号的「登录」，跳到的却是抖店后台登录页（`fxg.jinritemai.com`）。
+- 原因：打开 / 检测 / 快照都只按 `account.platform` 取平台定义，拿到的是**卖家**那套（抖店后台）；
+  买家那套（抖音精选 `www.douyin.com/jingxuan`、`douyin.com` 域的 cookie）根本没被用到。
+  平台×身份矩阵在 v0.16.6 就做对了，但「打开哪个页面、读哪些 cookie 域」没跟着身份走。
+
+### 改动
+
+- 新增 `accountPlatformOf(account)`：平台定义 × 账号身份（卖家/买家）的变体，缺身份的老记录按卖家。
+- ego 打开（`egoOpenAccount`）用它取登录页与工作台；Chrome 打开（`openAccount`）同样。
+- 登录态检测（`egoCheckAccount` / `checkAccount`）用它取 cookie 域与登录页判据 —— 抖音买家只读 `douyin.com`，
+  不再去抖店域里找 `sessionid`。
+- ego profile 共用判定（`ensureEgoProfile`）也按身份域比较，避免买家/卖家被判定为「同平台不能共用」。
+- 会话快照（`snapshotAccount`）按身份的 session/identity cookie 名单取，买家读的是 `sessionid` 那套。
+
+### 验证
+
+- `test/features-v0183.mjs` 12 项：抖音买家 → 抖音精选、抖音卖家 → 抖店、淘宝买家 → havanaone + 已买到的宝贝、
+  缺身份回落卖家、买家/卖家 cookie 域不同、拼多多买家仍无入口；打开/检测/快照/profile 判定都走变体；版本文档。
+
 ## v0.18.0（2026-11-05）
 
 ### 问题

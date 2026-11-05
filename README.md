@@ -2,13 +2,13 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0180)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0181)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
 覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号仅用于浏览与数据采集，不参与上架）。
 
-- 版本：**0.18.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.18.1**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
@@ -23,13 +23,15 @@
   `node test/features-v0176.mjs` → 8 项、`node test/features-v0177.mjs` → 9 项、
   `node test/features-v0178.mjs` → 11 项、`node test/features-v0179.mjs` → 12 项、
   `node test/features-v0181.mjs` → 12 项、`node test/features-v0182.mjs   # 12 项：ego 控制权硬停适配
-node test/platform.mjs` → 12 项，合计 **561 项**（`npm test` 可一次执行；不启动浏览器、不触碰真实账号）
+node test/features-v0183.mjs   # 12 项：打开/检测按「平台 × 身份」取参数
+node test/features-v0183.mjs v0.18.1 自检（平台 × 身份）
+test/platform.mjs` → 12 项，合计 **561 项**（`npm test` 可一次执行；不启动浏览器、不触碰真实账号）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.18.0）](#更新说明v0610--v0180)
+- [更新说明（v0.6.10 → v0.18.1）](#更新说明v0610--v0181)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -47,7 +49,19 @@ node test/platform.mjs` → 12 项，合计 **561 项**（`npm test` 可一次�
 
 ---
 
-## 更新说明（v0.6.10 → v0.18.0）
+## 更新说明（v0.6.10 → v0.18.1）
+
+### v0.18.1：打开与检测按「平台 × 身份」取参数
+
+| 身份 | 登录页 | 登录态读哪个域 |
+| --- | --- | --- |
+| 抖音卖家 | 抖店后台 `fxg.jinritemai.com` | `jinritemai.com` / `douyin.com` / `bytedance.com` |
+| 抖音买家 | 抖音精选 `www.douyin.com/jingxuan` | `douyin.com` |
+| 淘宝卖家 | 千牛卖家登录页 | `taobao.com` / `tmall.com` |
+| 淘宝买家 | havanaone 登录页，工作台是「已买到的宝贝」 | `taobao.com` / `tmall.com` |
+
+打开、登录态检测、会话快照、ego profile 共用判定都改成按「平台 × 身份」取参数；
+缺身份的历史记录仍按卖家处理，行为不变。
 
 ### v0.18.0：ego 里「窗口归用户控制」不再当成打开失败
 
@@ -59,7 +73,7 @@ node test/platform.mjs` → 12 项，合计 **561 项**（`npm test` 可一次�
 
 另外，真撞上硬停时错误会翻成中文并给出下一步（在 ego 里点「继续」再打开）；新开了备用窗口会 toast 说明。
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.18.0（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.18.1（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
 
 
 ### v0.18.0：抖音买家入口就是抖音首页
@@ -770,6 +784,7 @@ test/features-v0177.mjs v0.17.7 自检（定时采集包含下载型配方）
 test/features-v0178.mjs v0.17.8 自检（浏览器设置只留可改的选项）
 test/features-v0179.mjs v0.17.9 自检（工具 output 声明 + 客户端报错落盘）
 test/features-v0181.mjs v0.18.0 自检（抖音买家入口就是抖音首页）
+test/features-v0183.mjs v0.18.1 自检（平台 × 身份）
 test/platform.mjs   平台层自检（v0.10.0；Windows 上可验证的 macOS 分支均已覆盖）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 ```
@@ -790,7 +805,8 @@ Windows 与 macOS 共用一套代码，差异集中于 `lib/platform/`：
 
 > ⚠️ **macOS 分支尚未在真机运行**（开发机为 Windows）。验收清单见
 > [CHANGELOG v0.10.0](CHANGELOG.md)；可脱离真机验证的部分（路径表、`ps` 解析、钥匙串命名与标记格式、
-> 白名单、业务代码中无平台硬编码）均已在 `test/platform.mjs` 中覆盖。
+> 白名单、业务代码中无平台硬编码）均已在 `test/features-v0183.mjs v0.18.1 自检（平台 × 身份）
+test/platform.mjs` 中覆盖。
 
 ## 自检
 
@@ -823,7 +839,9 @@ node test/features-v0178.mjs   # 11 项：浏览器设置去掉说明性文案�
 node test/features-v0179.mjs   # 12 项：工具 output 声明 + 客户端报错落盘（设置页空白问题可定位）
 node test/features-v0181.mjs   # 12 项：抖音买家入口就是抖音首页（www.douyin.com）
 node test/features-v0182.mjs   # 12 项：ego 控制权硬停适配
-node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
+node test/features-v0183.mjs   # 12 项：打开/检测按「平台 × 身份」取参数
+node test/features-v0183.mjs v0.18.1 自检（平台 × 身份）
+test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
