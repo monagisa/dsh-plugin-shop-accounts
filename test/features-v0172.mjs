@@ -152,7 +152,9 @@ section('C. 界面接线');
 
 await test('登录账号输入框用平台提示当占位文字', () => {
   assert.ok(CLIENT.includes('caps.loginNameHint'), 'client 没读能力位里的提示');
-  assert.ok(CLIENT.includes('placeholder: loginHint ||'), '占位文字没接平台提示');
+  // v0.18.5：占位优先用「平台+身份」的短标签（例如：登录邮箱），没有短标签时仍退回平台提示
+  assert.ok(CLIENT.includes("placeholder: loginTag ? ('例如：' + loginTag)"), '占位文字没接平台短标签');
+  assert.ok(CLIENT.includes("(loginHint || '填登录用的账号名')"), '占位文字没接平台提示');
   assert.ok(CLIENT.includes('var loginHint = String(caps.loginNameHint'), '没取 loginHint');
 });
 
