@@ -111,14 +111,17 @@ test('A7 采集清单（action=collections）不列买家账号', () => {
 
 // ── B. 客户端：买家不显示「数据采集」整块 ───────────────────────────────────────
 
-test('B1 买家账号的详情页不渲染数据采集卡片', () => {
-  assert.ok(clientSrc.includes("isBuyer ? null : h('div', { className: 'sa-dsec' },"), '客户端没按身份跳过采集卡片');
+test('B1 买家账号的详情页不再渲染数据采集卡片（v0.19.0 起换成公开商品监控）', () => {
+  assert.ok(clientSrc.includes("isBuyer ? renderMonitor() : h('div', { className: 'sa-dsec' },"), '客户端没按身份切卡片');
+  assert.ok(clientSrc.includes("h('div', { className: 'sa-dsec-title' }, '数据采集')"), '卖家那套采集卡片被删了');
+  assert.ok(!clientSrc.includes("isBuyer ? null : h('div', { className: 'sa-dsec' },"), '买家分支还是空白');
 });
 
-test('B2 跳过那一行带版本注释，且用的就是详情页里的 isBuyer', () => {
-  const seg = sliceOf(clientSrc, "// v0.18.11：买家（C 端）账号没有商家后台的报表页面", "h('div', { className: 'sa-dcard' },");
-  assert.ok(seg.includes('isBuyer ? null :'), '注释下面那行不是按身份跳过');
+test('B2 切卡片那一行带版本注释，且用的就是详情页里的 isBuyer', () => {
+  const seg = sliceOf(clientSrc, '// v0.18.11：卖家账号读商家后台报表', "h('div', { className: 'sa-dcard' },");
+  assert.ok(seg.includes('isBuyer ? renderMonitor() :'), '注释下面那行不是按身份切卡片');
   assert.ok(clientSrc.includes('var isBuyer = type === \'buyer\';'), '详情页没有 isBuyer 变量');
+  assert.ok(clientSrc.includes("h('div', { className: 'sa-dsec-title' }, '数据采集')"), '卖家那套采集卡片被删了');
 });
 
 // ── C. 文档与版本 ─────────────────────────────────────────────────────────────

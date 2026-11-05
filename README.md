@@ -2,13 +2,13 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 TaskSpace，同一份「用户配置」可由不同平台的店铺共用）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v01811)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 TaskSpace，同一份「用户配置」可由不同平台的店铺共用）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0190)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
-覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号仅用于浏览与数据采集，不参与上架）。
+覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号用于「公开商品监控」：按需采公开商品页的价格 / 销量 / 评价 / SKU / 主图，不参与上架，也不做店铺后台采集）。
 
-- 版本：**0.18.11**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.19.0**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 31 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
@@ -26,13 +26,13 @@
   `node test/features-v0183.mjs` → 12 项、`node test/features-v0184.mjs` → 18 项、
   `node test/features-v0185.mjs` → 9 项、`node test/features-v0186.mjs` → 12 项、
   `node test/features-v0187.mjs` → 19 项、`node test/features-v0188.mjs` → 11 项、
-  `node test/platform.mjs` → 12 项，合计 **655 项**（`npm test` 可一次执行；不启动浏览器、不触碰真实账号）
+  `node test/features-v0190.mjs` → 17 项、`node test/platform.mjs` → 12 项，合计 **672 项**（`npm test` 可一次执行；不启动浏览器、不触碰真实账号）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.18.11）](#更新说明v0610--v01811)
+- [更新说明（v0.6.10 → v0.19.0）](#更新说明v0610--v0190)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -50,7 +50,19 @@
 
 ---
 
-## 更新说明（v0.6.10 → v0.18.11）
+## 更新说明（v0.6.10 → v0.19.0）
+
+### v0.19.0：买家账号的公开商品监控
+
+| 场景 | 之前 | 现在 |
+| --- | --- | --- |
+| 买家账号的详情页 | 没有采集入口（v0.18.11 起连「数据采集」卡片也不显示） | 有「公开商品监控」：粘商品链接加入监控，按需「采一轮」 |
+| 一轮采什么 | — | 价格（当前价 / 价格区间）、销量、评价总数、SKU、主图，并与上一轮比变化 |
+| 覆盖的平台 | — | 淘宝 / 天猫 / 1688 / 京东的 PC 商品详情页（抖音 / 拼多多公开页要安卓 App，本版不做） |
+| 什么时候采 | — | 手动触发，不进定时任务（和卖家账号的后台采集是两套） |
+
+买家账号的登录态在哪个域名下，就只能抓那个平台的商品页：淘宝 / 天猫买家可以抓淘宝与天猫的商品，1688 买家抓 1688，京东买家抓京东；抖音 / 拼多多买家目前只会提示「要用安卓 App 抓，本版不支持」。
+
 
 ### v0.18.11：买家账号不做数据采集
 
@@ -122,7 +134,7 @@
 
 另外，真撞上硬停时错误会翻成中文并给出下一步（在 ego 里点「继续」再打开）；新开了备用窗口会 toast 说明。
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.18.11（v0.16.1 – v0.16.3、v0.18.6 – v0.18.10 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.19.0（v0.16.1 – v0.16.3、v0.18.6 – v0.18.10 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
 
 
 ### v0.18.0：抖音买家入口就是抖音首页
@@ -444,6 +456,7 @@
 - **采集数据层（v0.11.0）**：将「采集范围」落实为带契约的管线：
   `plan`（该店铺该区间缺少哪些日期）→ skill 采集 → `import`（逐条校验、按 content_hash 去重、记录覆盖台账）→ `query`（查询已采数据）。
   数据存放于 `<数据目录>/collection/<账号id>/`（`coverage.json` 台账、`records.jsonl` 记录、`imports.json` 批次日志）。
+  公开商品监控的数据存放于 `<数据目录>/monitor/<账号id>/`（`targets.json` 监控条目、`snapshots/<条目id>.jsonl` 每轮快照）。
   **合法空结果同样记录台账**（仅记录覆盖、不写记录），否则同一区间会被重复采集。对应工具动作：
   `collect-plan` / `collect-import` / `collect-query`。
 - **macOS 适配（v0.10.0）**：新增 `lib/platform/`。Windows 使用 DPAPI、Program Files 探测与 PowerShell 进程匹配；
@@ -723,7 +736,7 @@ Chrome 默认关闭窗口即丢弃。这是「登录后点击保存 → 关闭�
 
 新增平台仅需在 `lib/platforms.mjs` 中补充一条记录，再执行 `node test/live-probe.mjs <新id>`，确认空档案登录页不会被误判为「已登录」。
 
-账号身份（v0.16.6）：上表列出的是**卖家**入口。**买家（C 端）**身份的支持情况为——淘宝 / 天猫 / 京东 / 1688 支持买家（账号密码登录，可保存密码与代填）；抖音支持买家，但只有扫码与手机验证码（没有账号密码，因此不要求填密码）；拼多多不提供买家身份（只有商家后台入口）。买家账号仅用于浏览与数据采集，不做上架。详见[更新说明 v0.16.6](#v0166账号身份按平台真实能力区分)。
+账号身份（v0.16.6）：上表列出的是**卖家**入口。**买家（C 端）**身份的支持情况为——淘宝 / 天猫 / 京东 / 1688 支持买家（账号密码登录，可保存密码与代填）；抖音支持买家，但只有扫码与手机验证码（没有账号密码，因此不要求填密码）；拼多多不提供买家身份（只有商家后台入口）。买家账号用于「公开商品监控」（按需采公开商品页的价格 / 销量 / 评价 / SKU / 主图），不做上架，也不做店铺后台采集。详见[更新说明 v0.16.6](#v0166账号身份按平台真实能力区分)。
 
 ## 与上架流程的对接
 
@@ -774,6 +787,7 @@ Chrome 默认关闭窗口即丢弃。这是「登录后点击保存 → 关闭�
 | 店铺清单与配置 | `%DSH_HOME%\shop-accounts\accounts.json`、`config.json` |
 | 运行期登记（各浏览器使用的端口） | `%DSH_HOME%\shop-accounts\runtime.json` |
 | 登录态（Chrome 模式） | 每店一份 `user-data-dir`：`%DSH_HOME%\shop-accounts\profiles\<账号id>\` |
+| 公开商品监控快照 | `<数据目录>/monitor/<账号id>/`：`targets.json`（监控条目）+ `snapshots/<条目id>.jsonl`（每轮快照，每个商品只留最近 200 轮） |
 | 登录态（ego 模式） | 位于 **ego 自身的** `User Data` 中，按 `accounts.json` 中记录的 `egoProfile` 对应；本插件不复制、不移动 |
 | 会话 cookie 备份（加密） | `<数据目录>/profiles/<账号id>/dsh-session-cookies.json`：AES-256-GCM，主密钥由**系统密钥后端**保护（Windows DPAPI / macOS 钥匙串） |
 | 密码库（v0.9 起） | `<数据目录>/account-secrets.enc`：同一把主密钥 + AES-256-GCM；密钥后端不可用时**整库禁用**（不保存明文） |
@@ -794,6 +808,8 @@ lib/secret.mjs      cookie 备份加密（平台密钥后端保护主密钥 + AE
 lib/vault.mjs       店铺账号密码库（v0.9.0；密钥后端不可用时整库禁用，不退明文）
 lib/autologin.mjs   账密代填（按平台选择器 + cookie 判据复核；验证码交回用户）
 lib/collection.mjs  数据采集的配置与调度（实际抓取交由 agent/skill）
+lib/monitor.mjs     公开商品监控的数据层（v0.19.0）：条目 / 快照 / 比变化
+lib/monitor-extract.mjs  公开商品页的提取表达式（v0.19.0：在页面里跑的那段，价格 / 销量 / 评价 / SKU / 主图）
 lib/datastore.mjs   采集数据层（v0.11.0）：覆盖台账 / 记录 JSONL / plan·import·query
 lib/catalog.mjs     指标目录层（v0.12.0）：平台 → 采集域 → 指标（域校验、指标查询、metricId 校验）
 lib/catalog/catalog.json  目录种子数据（593 KB / 3045 条指标，仅保留骨架，不含取值路径与聚合口径）
@@ -840,7 +856,9 @@ test/features-v0185.mjs 自检
 test/features-v0186.mjs 自检
 test/features-v0187.mjs 自检
 test/features-v0188.mjs 自检
+test/features-v0190.mjs 自检
 test/platform.mjs 自检
+test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
@@ -917,6 +935,7 @@ node test/features-v0185.mjs   # 9 项：ego 空间没有活页时新建一页�
 node test/features-v0186.mjs   # 12 项：ego 用户配置按平台共用（同平台同身份才分开）
 node test/features-v0187.mjs   # 19 项：表单按平台+身份给提示（买家叫用户名 / 用户账户，卖家叫店铺名 / 登录账号）
 node test/features-v0188.mjs   # 11 项：买家账号不做数据采集（不显示采集卡片、接口拒绝、定时只做检测）
+node test/features-v0190.mjs   # 17 项：买家账号的公开商品监控（加链接、按需采一轮、与上一轮比变化）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
