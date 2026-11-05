@@ -2,14 +2,14 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 TaskSpace，同一份「用户配置」可由不同平台的店铺共用）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v01810)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 TaskSpace，同一份「用户配置」可由不同平台的店铺共用）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v01811)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
 覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号仅用于浏览与数据采集，不参与上架）。
 
-- 版本：**0.18.10**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
-- 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
+- 版本：**0.18.11**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 31 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
   `node test/features-v0140.mjs` → 18 项、`node test/features-v0150.mjs` → 22 项、
@@ -25,13 +25,14 @@
   `node test/features-v0181.mjs` → 12 项、`node test/features-v0182.mjs` → 12 项、
   `node test/features-v0183.mjs` → 12 项、`node test/features-v0184.mjs` → 18 项、
   `node test/features-v0185.mjs` → 9 项、`node test/features-v0186.mjs` → 12 项、
-  `node test/features-v0187.mjs` → 19 项、`node test/platform.mjs` → 12 项，合计 **643 项**（`npm test` 可一次执行；不启动浏览器、不触碰真实账号）
+  `node test/features-v0187.mjs` → 19 项、`node test/features-v0188.mjs` → 11 项、
+  `node test/platform.mjs` → 12 项，合计 **655 项**（`npm test` 可一次执行；不启动浏览器、不触碰真实账号）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.18.10）](#更新说明v0610--v01810)
+- [更新说明（v0.6.10 → v0.18.11）](#更新说明v0610--v01811)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -49,7 +50,18 @@
 
 ---
 
-## 更新说明（v0.6.10 → v0.18.10）
+## 更新说明（v0.6.10 → v0.18.11）
+
+### v0.18.11：买家账号不做数据采集
+
+| 场景 | 之前 | 现在 |
+| --- | --- | --- |
+| 买家账号的详情页 | 也显示「数据采集」卡片与采集域（抖店买家能看到抖店那 5 个域） | 买家账号不做数据采集，这一块不再显示 |
+| 给买家账号配采集域 | 能存下来，定时任务到点去跑，然后失败 | 采集接口直接拒绝（`COLLECTION_UNSUPPORTED_BUYER`），并提示改用卖家账号 |
+| 定时任务 | 买家账号也会尝试采集 | 买家账号只做静默登录检测，采集清单里也不列它 |
+| 卖家改成买家 | 原来的采集域还留着，照样到点跑 | 改成买家时一并清空 |
+
+采集读的是商家后台的报表页面（千牛 / 抖店后台 / 京麦 / mms），C 端买家没有这些页面 —— 所以买家账号不做数据采集。
 
 ### v0.18.5：新增店铺的表单按平台给提示
 
@@ -110,7 +122,7 @@
 
 另外，真撞上硬停时错误会翻成中文并给出下一步（在 ego 里点「继续」再打开）；新开了备用窗口会 toast 说明。
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.18.10（v0.16.1 – v0.16.3、v0.18.6 – v0.18.10 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.18.11（v0.16.1 – v0.16.3、v0.18.6 – v0.18.10 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
 
 
 ### v0.18.0：抖音买家入口就是抖音首页
@@ -827,7 +839,12 @@ test/features-v0184.mjs 自检
 test/features-v0185.mjs 自检
 test/features-v0186.mjs 自检
 test/features-v0187.mjs 自检
+test/features-v0188.mjs 自检
 test/platform.mjs 自检
+test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
+test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
+test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
+test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
@@ -867,7 +884,7 @@ Windows 与 macOS 共用一套代码，差异集中于 `lib/platform/`：
 
 ```powershell
 node test/smoke.mjs            # 113 项：平台判据 / 持久化 / 宿主 HTTP 面 / 排期 / ego 后端 / 客户端契约 / 安全边界
-node test/features-v090.mjs    # 30 项：账号类型 / 密码库 / 账密代填 / 采集配置与调度 / 新路由
+node test/features-v090.mjs    # 31 项：账号类型 / 密码库 / 账密代填 / 采集配置与调度 / 新路由
 node test/features-v0101.mjs   # 15 项：登录账号查重 / 店铺配置导出导入（含坏数据与重复导入）
 node test/features-v0110.mjs   # 24 项：采集数据层（台账缺口 / 导入校验与去重 / 空结果台账 / 查询）
 node test/features-v0120.mjs   # 23 项：指标目录层（平台域名与指标数 / 跨平台校验 / metricId / /catalog）
@@ -899,6 +916,7 @@ node test/features-v0184.mjs   # 18 项：默认配置留给用户、登录态�
 node test/features-v0185.mjs   # 9 项：ego 空间没有活页时新建一页（不再留下 https://x/ 空窗口）
 node test/features-v0186.mjs   # 12 项：ego 用户配置按平台共用（同平台同身份才分开）
 node test/features-v0187.mjs   # 19 项：表单按平台+身份给提示（买家叫用户名 / 用户账户，卖家叫店铺名 / 登录账号）
+node test/features-v0188.mjs   # 11 项：买家账号不做数据采集（不显示采集卡片、接口拒绝、定时只做检测）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）

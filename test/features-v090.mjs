@@ -296,7 +296,7 @@ async function call(method, p, body, headers) {
 
 let accId = '';
 
-await test('POST /accounts：可建买家账号 + 带采集配置，state 里带类型/能力位/采集域表', async () => {
+await test('POST /accounts：可建买家账号（采集配置被忽略），state 里带类型/能力位/采集域表', async () => {
   const r = await call('POST', '/shop-accounts/accounts', { loginName: 'u1', password: 'Test-P@ss1',
     platform: 'taobao', name: '买家测试店', accountType: 'buyer',
     collection: { enabled: true, domains: ['商品供给'], time: '09:00' },
@@ -311,8 +311,11 @@ await test('POST /accounts：可建买家账号 + 带采集配置，state 里带
   assert.equal(row.accountType, 'buyer');
   assert.equal(row.accountTypeLabel, '买家账号');
   assert.equal(row.capabilities.upload, false);
-  assert.equal(row.collection.enabled, true);
-  assert.deepEqual(row.collection.domains, ['商品供给']);
+  // v0.18.11：买家账号不做数据采集 —— 建号时带的采集配置被忽略，state 里也不给采集域
+  assert.equal(row.collection.enabled, false);
+  assert.deepEqual(row.collection.domains, []);
+  assert.equal(row.collectionReady, false);
+  assert.deepEqual(row.collectionDomains, []);
   assert.equal(typeof s.json.vault.available, 'boolean');
 });
 
@@ -365,29 +368,47 @@ await test('「打开店铺」自带账密登录：源码里 autofill 默认开�
   assert.ok(!/confirm !== true/.test(src), 'autologin 不该再强制 confirm');
 });
 
-await test('PUT /accounts/:id/collection：校验与落盘', async () => {
+// v0.18.11：采集接口只对卖家账号开放（上面的 accId 是买家账号，这里另建一个卖家账号来测采集）
+let sellerId = '';
+await test('POST /accounts：建一个淘宝卖家账号（采集测试用）', async () => {
+  const r = await call('POST', '/shop-accounts/accounts', {
+    platform: 'taobao', accountType: 'seller', loginName: 'tb-collect-1', password: 'Test-P@ss1', name: '采集测试店',
+  });
+  assert.equal(r.status, 200);
+  sellerId = r.json.account.id;
+});
 
-  const bad = await call('PUT', `/shop-accounts/accounts/${accId}/collection`, { enabled: true, domains: [] });
+await test('PUT /accounts/:id/collection：校验与落盘', async () => {
+  // 买家账号：不做采集，接口直接拒绝
+  const buyerTry = await call('PUT', `/shop-accounts/accounts/${accId}/collection`, { enabled: true, domains: ['商品供给'] });
+  assert.equal(buyerTry.status, 400);
+  assert.equal(buyerTry.json.code, 'COLLECTION_UNSUPPORTED_BUYER');
+
+  const bad = await call('PUT', `/shop-accounts/accounts/${sellerId}/collection`, { enabled: true, domains: [] });
   assert.equal(bad.status, 400);
-  const ok = await call('PUT', `/shop-accounts/accounts/${accId}/collection`, { enabled: true, domains: ['商品供给', '服务履约'], time: '07:30' });
+  const ok = await call('PUT', `/shop-accounts/accounts/${sellerId}/collection`, { enabled: true, domains: ['商品供给', '服务履约'], time: '07:30' });
   assert.equal(ok.status, 200);
   assert.deepEqual(ok.json.account.collection.domains, ['商品供给', '服务履约']);
   assert.equal(ok.json.account.collection.time, '07:30');
 });
 
 await test('GET /accounts/:id/collect-prompt：返回可交给 agent 的提示词', async () => {
-  const r = await call('GET', `/shop-accounts/accounts/${accId}/collect-prompt`);
+  const r = await call('GET', `/shop-accounts/accounts/${sellerId}/collect-prompt`);
   assert.equal(r.status, 200);
   assert.match(r.json.prompt, /店铺数据采集/);
   assert.match(r.json.prompt, /taobao-scheduler-商品供给/);
   assert.equal(r.json.collection.enabled, true);
+  // 买家账号取提示词 → 拒绝
+  const buyerTry = await call('GET', `/shop-accounts/accounts/${accId}/collect-prompt`);
+  assert.equal(buyerTry.status, 400);
+  assert.equal(buyerTry.json.code, 'COLLECTION_UNSUPPORTED_BUYER');
 });
 
 await test('POST /accounts/:id/collect-done：回写采集结果；非法状态 400', async () => {
-  const ok = await call('POST', `/shop-accounts/accounts/${accId}/collect-done`, { status: 'ok', note: '1234 条' });
+  const ok = await call('POST', `/shop-accounts/accounts/${sellerId}/collect-done`, { status: 'ok', note: '1234 条' });
   assert.equal(ok.status, 200);
   assert.equal(ok.json.account.collection.lastRunStatus, 'ok');
-  const bad = await call('POST', `/shop-accounts/accounts/${accId}/collect-done`, { status: 'boom' });
+  const bad = await call('POST', `/shop-accounts/accounts/${sellerId}/collect-done`, { status: 'boom' });
   assert.equal(bad.status, 400);
 });
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * features-v0101.mjs —— v0.10.1 两项收尾能力：
  *   1. 登录账号查重：同平台 + 同登录账号（大小写折叠、NFC 归一）= 同一个人，不许建两条；
@@ -148,7 +148,7 @@ let exported = null;
 await test('导出结构：format/version/count/accounts，字段齐全', async () => {
   // 给第一家店补上 URL 与采集设置，验证这些字段真的会被带出去
   await call('PUT', `/shop-accounts/accounts/${firstId}`, {
-    url: 'https://myseller.taobao.com/home.htm', note: '主店', accountType: 'buyer',
+    url: 'https://myseller.taobao.com/home.htm', note: '主店', accountType: 'seller',
     collection: { enabled: true, domains: ['商品供给'], time: '08:30' },
   });
   const r = await call('GET', '/shop-accounts/export');
@@ -160,7 +160,7 @@ await test('导出结构：format/version/count/accounts，字段齐全', async 
   const a = r.json.accounts.find((x) => x.name === 'A 店');
   assert.equal(a.name, 'A 店');
   assert.equal(a.loginName, 'Alice@Example.com');
-  assert.equal(a.accountType, 'buyer');
+  assert.equal(a.accountType, 'seller');
   assert.equal(a.url, 'https://myseller.taobao.com/home.htm');
   assert.equal(a.note, '主店');
   assert.deepEqual(a.collection.domains, ['商品供给']);
@@ -206,7 +206,7 @@ await test('导入到"新机器"（先清空账号表）：配置回来了，密
   const tb = s.json.accounts.find((a) => a.name === 'A 店');
   assert.equal(tb.name, 'A 店');
   assert.equal(tb.loginName, 'Alice@Example.com');
-  assert.equal(tb.accountType, 'buyer');
+  assert.equal(tb.accountType, 'seller');
   assert.equal(tb.url, 'https://myseller.taobao.com/home.htm');
   assert.equal(tb.hasPassword, false, '导入不搬密码');
   assert.equal(tb.pendingLogin, true, '导入的店铺需要重新登录');
