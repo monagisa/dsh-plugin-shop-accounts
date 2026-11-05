@@ -420,8 +420,8 @@ await test('GET/PUT /accounts/:id 改名换端口', async () => {
   const p = await call('PUT', '/shop-accounts/accounts/' + id, { name: '改过的名字', note: '新备注', port: 9223 });
   assert.equal(p.json.account.name, '改过的名字');
   assert.equal(p.json.account.port, 9223);
-  // 「管理」详情页要写的那几个字段：店铺 URL / 账号 / 账号类型（v0.9.0 起是 seller/buyer 枚举，
-  // 老写法“商家账号”仍接受，但落库/读取时会归一成 'seller'）
+  // 「管理」详情页要写的那几个字段：账号 / 账号类型（v0.9.0 起是 seller/buyer 枚举，
+  // 老写法“商家账号”仍接受，但落库/读取时会归一成 'seller'）；url 界面已不显示，接口仍接受。
   const d = await call('PUT', '/shop-accounts/accounts/' + id, {
     url: 'https://mms.pinduoduo.com/goods/goods_list', loginName: '示例店铺;示例账号', accountType: '商家账号',
   });

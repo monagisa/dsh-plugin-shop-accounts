@@ -162,11 +162,10 @@ await test('输入框下面不再挂长说明（v0.18.7 起精简）', () => {
   assert.ok(!CLIENT.includes('账号只用来区分是哪个登录身份，不要填密码'), '登录账号下面还挂着说明');
 });
 
-await test('新建弹窗有「店铺 URL」且按平台能力显示', () => {
-  assert.ok(CLIENT.includes("label: '店铺 URL'"), '新建弹窗没有店铺 URL 栏');
-  assert.ok(CLIENT.includes('!editing && urlSupported'), '没有按平台能力控制显示');
-  assert.ok(CLIENT.includes("placeholder: '店铺主页链接（选填）'"), '占位文字不对');
-  assert.ok(CLIENT.includes('url: urlSupported ? (url || undefined) : undefined'), 'POST body 没带 url');
+await test('新建弹窗不再显示「店铺 URL」栏（v0.18.9 起界面去掉，接口仍接受 url）', () => {
+  assert.ok(!CLIENT.includes("label: '店铺 URL'"), '新建弹窗还挂着店铺 URL 栏');
+  assert.ok(!CLIENT.includes('urlSupported'), '还留着 urlSupported 那条显示逻辑');
+  assert.ok(!CLIENT.includes('url: urlSupported'), 'POST body 还带着 url');
 });
 
 // ── D. 版本与文档 ──────────────────────────────────────────────────────────
