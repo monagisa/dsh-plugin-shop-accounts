@@ -126,7 +126,7 @@ test('D2 CHANGELOG / README 写了这次修正', () => {
   const readme = read('README.md');
   assert.match(changelog, /v0\.17\.12/, 'CHANGELOG 没有 v0.17.12');
   assert.match(changelog, /jingxuan/, 'CHANGELOG 没写 /jingxuan');
-  assert.match(readme, /0\.17\.12/, 'README 没更新版本');
+  assert.match(readme, new RegExp(pkg.version.replace(/\./g, '\\.')), 'README 没更新到当前版本 ' + pkg.version);
 });
 
 console.log('\n' + passed + ' 项通过' + (failures.length ? '，' + failures.length + ' 项失败' : ''));

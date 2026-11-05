@@ -1,3 +1,27 @@
+## v0.18.0（2026-11-05）
+
+### 问题
+
+- 点「打开」偶尔直接失败，提示 `ego 没有返回结果（退出码 0）：Wait until the user explicitly asks you to continue…`。
+- 原因：ego 新版对「控制权在用户手里」的任务空间有硬停策略 —— 脚本还没跑就被拒，并明确要求
+  「等用户明确要求继续后再拿回来」。插件原来对这类空间一律调 `takeOverTaskSpace`，正好撞上硬停。
+
+### 改动
+
+- 只对 `agent` / `agentDelegatedToUser`（本插件自己的任务）用 `takeOverTaskSpace` 拿回控制权。
+- 对 `ownership = user`（用户在 ego 里结束过任务、或在浏览器里接管过）的空间**一律不碰**：不 takeOver、不 claim，
+  改用备用名字（`店铺名 (2)`、`店铺名 (3)` …）在同一个浏览器配置里新开一个窗口 —— 登录态还是同一份，照旧能打开。
+- 「关闭」「交还控制权」遇到这类窗口直接返回「已完成」，不去动它（不是关不掉，是不该碰）。
+- 万一真的撞上硬停，把 ego 的英文说明翻成中文并给出下一步（在 ego 里点「继续」后再打开），不再甩原文。
+- 新开备用窗口时，接口返回一句说明，界面直接 toast 出来。
+
+### 验证
+
+- `test/features-v0182.mjs` 12 项：硬停文案识别（真实原文 / 错误码形态 / 不误判普通失败）、
+  `acquire` 只认 agent 系且完全不调 `claimTaskSpace`、备用名字带 profileId、close/handoff 的 user 守卫、
+  handOff 仍是每个动作的最后一个浏览器命令、错误翻译与界面 toast、版本文档。
+- 真机：`egoOpen` 对 `agentDelegatedToUser` 的空间照旧成功（`ownershipBefore: agentDelegatedToUser` → `ok: true`）。
+
 ## v0.17.12（2026-11-05）
 
 ### 问题
