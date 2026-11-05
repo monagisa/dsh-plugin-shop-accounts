@@ -2,13 +2,13 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v01710)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v01711)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
 覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号仅用于浏览与数据采集，不参与上架）。
 
-- 版本：**0.17.10**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.17.11**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
@@ -18,21 +18,17 @@
   `node test/features-v0166.mjs` → 20 项、`node test/features-v0167.mjs` → 13 项、
   `node test/features-v0168.mjs` → 25 项、`node test/features-v0169.mjs` → 20 项、
   `node test/features-v0170.mjs` → 18 项、`node test/features-v0171.mjs` → 9 项、
-  `node test/features-v0172.mjs` → 13 项、`node test/features-v0173.mjs` → 8 项、`node test/features-v0174.mjs` → 6 项、
-  `node test/features-v0175.mjs` → 7 项、`node test/features-v0176.mjs` → 8 项、`node test/features-v0172.mjs   # 13 项：各平台「登录账号」提示 / 新建可直接填店铺 URL
-node test/features-v0173.mjs   # 8 项：代填时自动勾选「同意用户协议 / 隐私条款」
-node test/features-v0174.mjs   # 6 项：六平台登录页实测 / 天猫买家入口改走淘宝登录页
-node test/features-v0175.mjs   # 7 项：点「登录」按四条路径回退（按钮/文字/表单提交/回车）
-node test/features-v0176.mjs   # 8 项：非标准选择器（`:visible`/`:text-is`/xpath `$`）与真实鼠标点击
-node test/features-v0177.mjs` → 9 项、`node test/features-v0178.mjs` → 11 项、
-  `node test/features-v0178.mjs` → 11 项、`node test/features-v0179.mjs` → 12 项、`node test/features-v0180.mjs` → 11 项、`node test/platform.mjs` → 12 项，合计 **560 项**，全部通过
-  （不启动浏览器、不触碰真实账号；`npm test` 可一次执行）
+  `node test/features-v0172.mjs` → 13 项、`node test/features-v0173.mjs` → 8 项、
+  `node test/features-v0174.mjs` → 6 项、`node test/features-v0175.mjs` → 7 项、
+  `node test/features-v0176.mjs` → 8 项、`node test/features-v0177.mjs` → 9 项、
+  `node test/features-v0178.mjs` → 11 项、`node test/features-v0179.mjs` → 12 项、
+  `node test/features-v0181.mjs` → 12 项、`node test/platform.mjs` → 12 项，合计 **561 项**（`npm test` 可一次执行；不启动浏览器、不触碰真实账号）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.17.10）](#更新说明v0610--v01710)
+- [更新说明（v0.6.10 → v0.17.11）](#更新说明v0610--v01711)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -50,21 +46,21 @@ node test/features-v0177.mjs` → 9 项、`node test/features-v0178.mjs` → 11 
 
 ---
 
-## 更新说明（v0.6.10 → v0.17.10）
+## 更新说明（v0.6.10 → v0.17.11）
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.10（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.11（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
 
 
-### v0.17.10：抖音买家打开的是站内页面，不再被风控验证码页接走
+### v0.17.11：抖音买家入口就是抖音首页
 
-| 买家身份 | 登录页 | 打开后落到 |
+| 买家身份 | 入口 | 打开后落到 |
 |---|---|---|
 | 淘宝 / 天猫 | `login.taobao.com` | 已买到的宝贝（`buyertrade.taobao.com`） |
 | 京东 | `passport.jd.com` | 订单中心（`order.jd.com`） |
 | 1688 | `login.1688.com` | 1688 买家站 |
-| 抖音 | `www.douyin.com/user/self` | 抖音站内页面（页面内自带扫码 / 验证码登录面板） |
+| 抖音 | `https://www.douyin.com/` | 抖音首页 |
 
-抖音的站根与 `sso.douyin.com` 会被风控接到「验证码中间页」（正文空白），所以买家入口改为 `/user/self`；登录态判据仍是那四个 session cookie，抖音买家依旧只走扫码 / 验证码。
+抖音买家与其它买家一致：落在自己平台的首页。未登录的新档案可能先被风控接到「验证码中间页」，人工登录一次后即正常；登录态判据仍是那四个 session cookie，抖音买家只走扫码 / 验证码。
 
 ### v0.17.9：工具声明补齐 output，设置页渲染异常可定位
 
@@ -736,33 +732,34 @@ lib/schedule.mjs    排期算法（纯函数：分组、时间点、到点、下
 lib/index.js        宿主：/shop-accounts/* 路由、自更新、定时心跳
 lib/client.js       客户端 bundle：设置页「账号管理」整页 UI
 cordis.patch.yml    插件挂载点（id: shop-accounts）
-test/smoke.mjs      主自检（零依赖、不启动浏览器）
+test/smoke.mjs                主自检（零依赖、不启动浏览器）
 test/features-v090.mjs  v0.9 功能自检（密码库 / 采集 / 账号类型 / 新路由）
 test/features-v0101.mjs v0.10.1 自检（登录账号查重 / 店铺配置导出导入）
 test/features-v0110.mjs v0.11.0 自检（采集数据层：缺口 / 导入去重 / 查询）
-test/features-v0160.mjs v0.16.0 自检（采集开关/时间与排期统一、迁移幂等）
-test/features-v0161.mjs v0.16.1–v0.16.4 自检（文案精简 / 占位符脱敏 / 密码小眼睛 / 下拉框样式 / 按钮尺寸稳定）
+test/features-v0120.mjs v0.12.0 自检（指标目录层）
+test/features-v0130.mjs v0.13.0 自检（采集 DSL 引擎）
+test/features-v0140.mjs v0.14.0 自检（下载落盘 + 采集编排）
+test/features-v0150.mjs v0.15.0 自检（定时采集）
+test/features-v0152.mjs v0.15.2 自检（账号密码错识别）
+test/features-v0160.mjs v0.16.0 自检（采集开关 / 时间与排期统一、迁移幂等）
+test/features-v0161.mjs v0.16.1–v0.16.4 自检（文案精简 / 占位符脱敏 / 小眼睛 / 下拉框 / 按钮尺寸稳定）
 test/features-v0165.mjs v0.16.5 自检（登录 iframe 内的代填、frame 候选顺序）
-test/features-v0166.mjs v0.16.6 自检（账号身份能力、密码必填按身份决定、代填能力位）
+test/features-v0166.mjs v0.16.6 自检（账号身份能力、密码必填按身份决定）
 test/features-v0167.mjs v0.16.7 自检（条件守卫、后处理能力门控、单日锚点、产物归集）
 test/features-v0168.mjs v0.16.8 自检（后处理能力按需、页面数字还原、页面文字转指标）
-test/features-v0169.mjs v0.16.9 自检（天猫/抖音/京东配方、登录过期识别）
+test/features-v0169.mjs v0.16.9 自检（天猫 / 抖音 / 京东配方、登录过期识别）
 test/features-v0170.mjs v0.17.0 自检（登录方式可选：账号密码代填 / 扫码或手动登录）
-test/features-v0171.mjs              v0.17.1 自检（抖店代填先切「邮箱登录」页签）
-test/features-v0172.mjs              v0.17.2 自检（平台登录账号提示、新建店铺 URL）
-test/features-v0173.mjs              v0.17.3 自检（代填自动勾选同意协议）
-test/features-v0174.mjs              v0.17.4 自检（天猫买家入口、淘宝页协议勾选）
-test/features-v0175.mjs              v0.17.5 自检（点「登录」的多条路径）
-test/features-v0176.mjs              v0.17.6 自检（非标准选择器与真实鼠标点击）
-test/features-v0172.mjs              v0.17.2 自检（各平台登录账号提示 / 新建填店铺 URL）
-test/features-v0173.mjs              v0.17.3 自检（自动勾选同意协议）
-test/features-v0174.mjs              v0.17.4 自检（六平台登录页实测 / 天猫买家入口）
-test/features-v0175.mjs              v0.17.5 自检（点「登录」多条路径）
-test/features-v0176.mjs              v0.17.6 自检（非标准选择器与真实鼠标点击）
-test/features-v0177.mjs              v0.17.7 自检（定时采集包含下载型配方）
-test/features-v0178.mjs              v0.17.8 自检（浏览器设置去掉说明性文案）
-test/features-v0179.mjs              v0.17.9 自检（工具 output 声明 + 客户端报错落盘）
-test/platform.mjs   平台层自检（v0.10.0；在 Windows 上可验证的 macOS 分支部分均已覆盖）
+test/features-v0171.mjs v0.17.1 自检（抖店代填先切「邮箱登录」页签）
+test/features-v0172.mjs v0.17.2 自检（平台登录账号提示、新建店铺 URL）
+test/features-v0173.mjs v0.17.3 自检（代填自动勾选同意协议）
+test/features-v0174.mjs v0.17.4 自检（天猫买家入口、淘宝页协议勾选）
+test/features-v0175.mjs v0.17.5 自检（点「登录」的多条路径）
+test/features-v0176.mjs v0.17.6 自检（非标准选择器与真实鼠标点击）
+test/features-v0177.mjs v0.17.7 自检（定时采集包含下载型配方）
+test/features-v0178.mjs v0.17.8 自检（浏览器设置只留可改的选项）
+test/features-v0179.mjs v0.17.9 自检（工具 output 声明 + 客户端报错落盘）
+test/features-v0181.mjs v0.17.11 自检（抖音买家入口就是抖音首页）
+test/platform.mjs   平台层自检（v0.10.0；Windows 上可验证的 macOS 分支均已覆盖）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 ```
 
@@ -791,34 +788,35 @@ node test/smoke.mjs            # 113 项：平台判据 / 持久化 / 宿主 HTT
 node test/features-v090.mjs    # 30 项：账号类型 / 密码库 / 账密代填 / 采集配置与调度 / 新路由
 node test/features-v0101.mjs   # 15 项：登录账号查重 / 店铺配置导出导入（含坏数据与重复导入）
 node test/features-v0110.mjs   # 24 项：采集数据层（台账缺口 / 导入校验与去重 / 空结果台账 / 查询）
-node test/features-v0120.mjs   # 23 项：目录层（平台域名与指标数 / 跨平台校验 / metricId / /catalog）
-node test/features-v0130.mjs   # 27 项：采集 DSL（编译/占位符/真实配方/登录守卫/产物/HTTP 边界）
-node test/features-v0140.mjs   # 18 项：下载落盘 + 采集作业编排（分批/重试/覆盖/交付）
+node test/features-v0120.mjs   # 23 项：指标目录层（平台域名与指标数 / 跨平台校验 / metricId / /catalog）
+node test/features-v0130.mjs   # 27 项：采集 DSL（编译 / 占位符 / 真实配方 / 登录守卫 / 产物 / HTTP 边界）
+node test/features-v0140.mjs   # 18 项：下载落盘 + 采集作业编排（分批 / 重试 / 覆盖 / 交付）
 node test/features-v0150.mjs   # 22 项：定时采集（mode 分流 / 待登录跳过 / 回写 / 登录过期自动代填）
 node test/features-v0152.mjs   # 12 项：账号密码错的识别与暂停（提示分类 / 状态 / 超时保护）
-node test/features-v0160.mjs   # 19 项：采集开关与时间统一到排期（迁移幂等 / tick 只认采集域 / 界面去掉重复控件）
-node test/features-v0161.mjs   # 35 项：文案精简与占位符脱敏 / 小眼睛图标 / 下拉框样式 / 按钮尺寸稳定（无长段落、无真实店铺名人名、无本机路径）
-node test/features-v0165.mjs   # 20 项：登录 iframe 内的账密代填（frame 候选顺序 / 真机壳页面+iframe / ego 桥退化路径 / 失败时明确报错）
-node test/features-v0166.mjs   # 20 项：账号身份能力（抖音买家只有扫码/验证码、拼多多不提供买家、密码必填按身份决定）
-node test/features-v0167.mjs   # 13 项：采集引擎四处修复（条件守卫、缺后处理能力、单日锚点、产物归集）
-node test/features-v0168.mjs   # 25 项：后处理能力按需执行、页面数字字形还原、页面文字转指标
-node test/features-v0169.mjs   # 20 项：补齐天猫/抖音/京东配方、登录过期按页面统一识别
+node test/features-v0160.mjs   # 19 项：采集开关与时间统一到排期（迁移幂等 / tick 只认采集域）
+node test/features-v0161.mjs   # 35 项：文案精简与占位符脱敏 / 小眼睛图标 / 下拉框样式 / 按钮尺寸稳定
+node test/features-v0165.mjs   # 20 项：登录 iframe 内的账密代填（frame 候选顺序 / 真机壳页面）
+node test/features-v0166.mjs   # 20 项：账号身份能力（拼多多不提供买家、抖音买家只走扫码 / 验证码）
+node test/features-v0167.mjs   # 13 项：采集引擎四处修复（条件守卫 / 缺后处理能力 / 单日锚点 / 产物归集）
+node test/features-v0168.mjs   # 25 项：后处理能力按需执行 / 页面数字字形还原 / 页面文字转指标
+node test/features-v0169.mjs   # 20 项：补齐天猫 / 抖音 / 京东配方、登录过期按页面识别
 node test/features-v0170.mjs   # 18 项：登录方式可选（账号密码代填 / 扫码或手动登录）
 node test/features-v0171.mjs   # 9 项：抖店代填先切「邮箱登录」页签（真机对照实验）
 node test/features-v0172.mjs   # 13 项：各平台「登录账号」提示 / 新建可直接填店铺 URL
 node test/features-v0173.mjs   # 8 项：代填时自动勾选「同意用户协议 / 隐私条款」
 node test/features-v0174.mjs   # 6 项：六平台登录页实测 / 天猫买家入口改走淘宝登录页
-node test/features-v0175.mjs   # 7 项：点「登录」按四条路径回退（按钮/文字/表单提交/回车）
-node test/features-v0176.mjs   # 8 项：非标准选择器（`:visible`/`:text-is`/xpath `$`）与真实鼠标点击
-node test/features-v0177.mjs   # 9 项：定时采集包含下载型配方（含缺陷复现与真实接口行为）
+node test/features-v0175.mjs   # 7 项：点「登录」按四条路径回退（按钮 / 文字 / 表单提交 / 回车）
+node test/features-v0176.mjs   # 8 项：非标准选择器（`:visible` / `:text-is` / xpath `$`）与真实鼠标点击
+node test/features-v0177.mjs   # 9 项：定时采集包含下载型配方（含缺陷复现）
 node test/features-v0178.mjs   # 11 项：浏览器设置去掉说明性文案，只留可改的选项
 node test/features-v0179.mjs   # 12 项：工具 output 声明 + 客户端报错落盘（设置页空白问题可定位）
+node test/features-v0181.mjs   # 12 项：抖音买家入口就是抖音首页（www.douyin.com）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前二十八套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 28 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，**不触碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证

@@ -1,12 +1,9 @@
 /**
- * v0.17.10 自检：抖音买家的入口页（不许再用会落风控的站根）。
+ * v0.17.11 自检：抖音买家的入口就是抖音首页（和其它买家一样落在自己平台首页）。
  *
- * 背景（用户反馈）：抖音买家账号打开后跳去的是抖音的登录/验证码页，而其它买家都是落到自己平台的页面。
- * 实测（2026-11-05 headless Chrome）：
- *   · `https://www.douyin.com/`、`https://sso.douyin.com/` → 直接被风控「验证码中间页」接走（正文空白）；
- *   · `https://www.douyin.com/user/self` → 正常打开，页面内自带「扫码登录 / 验证码登录」面板，连开 3 次稳定；
- *   · `/shop`、`/order` → 「页面不见啦」404，`haohuo.jinritemai.com` → 被拉到 /follow。
- * 所以抖音买家的登录页 / 主页 / 工作页统一改成 `/user/self`。
+ * 用户确认（2026-11-05）：抖音买家应该跳 `https://www.douyin.com/`。
+ * 实测补充（2026-11-05 headless Chrome）：未登录的新档案/无头环境直接开站根会被风控接到「验证码中间页」，
+ * 这是抖音对新环境的正常风控，人工登录一次后回首页即正常；`/shop`、`/order` 是 404「页面不见啦」。
  */
 
 import assert from 'node:assert/strict';
@@ -34,33 +31,38 @@ function test(name, fn) {
   }
 }
 
-// ── A. 抖音买家的三个入口 ────────────────────────────────────────────────────
+// ── A. 抖音买家的入口 = 抖音首页 ─────────────────────────────────────────────
 
-test('A1 抖音买家的登录页走 /user/self（不再用会落风控验证码的站根）', () => {
+test('A1 抖音买家的登录页就是 https://www.douyin.com/', () => {
   const b = P.variantOf(P.platformOf('douyin'), 'buyer');
-  assert.equal(b.loginUrl, 'https://www.douyin.com/user/self');
-  assert.ok(!/^https:\/\/www\.douyin\.com\/?$/.test(b.loginUrl), '登录页又退回站根了');
-  assert.ok(!b.loginUrl.includes('sso.douyin.com'), '登录页不该是 sso（会落验证码中间页）');
+  assert.equal(b.loginUrl, 'https://www.douyin.com/');
 });
 
-test('A2 抖音买家的主页/工作页也在 /user/self（打开后看到的是平台页面而不是登录墙）', () => {
+test('A2 抖音买家的主页/工作页也是抖音首页（打开即落平台首页）', () => {
   const b = P.variantOf(P.platformOf('douyin'), 'buyer');
-  assert.equal(b.homeUrl, 'https://www.douyin.com/user/self');
-  assert.equal(b.workUrl, 'https://www.douyin.com/user/self');
+  assert.equal(b.homeUrl, 'https://www.douyin.com/');
+  assert.equal(b.workUrl, 'https://www.douyin.com/');
 });
 
-test('A3 判据仍按登录态 cookie（改成页面入口不影响登录态识别）', () => {
+test('A3 不再用 /user/self、也不再用 sso 当入口', () => {
+  const b = P.variantOf(P.platformOf('douyin'), 'buyer');
+  assert.ok(!b.loginUrl.includes('/user/self'), '登录入口又回到 /user/self 了');
+  assert.ok(!b.loginUrl.includes('sso.douyin.com'), '登录入口不该是 sso');
+});
+
+test('A4 判据仍按登录态 cookie，且买家仍然不要密码', () => {
   const b = P.variantOf(P.platformOf('douyin'), 'buyer');
   assert.deepEqual(b.sessionCookies, ['sessionid', 'sessionid_ss', 'sid_tt', 'passport_assist_user']);
   assert.equal(b.minCookieHits, 1);
   assert.deepEqual(b.cookieDomains, ['douyin.com']);
-});
-
-test('A4 抖音买家仍然不要密码（扫码 / 验证码）', () => {
-  const b = P.variantOf(P.platformOf('douyin'), 'buyer');
   assert.equal(b.passwordLogin, false);
   assert.deepEqual(b.loginMethods, ['sms', 'qrcode']);
   assert.equal(P.supportsPasswordLogin('douyin', 'buyer'), false);
+});
+
+test('A5 登录页判据里也不再残留 /user/self', () => {
+  const b = P.variantOf(P.platformOf('douyin'), 'buyer');
+  assert.ok(!b.loginUrlHints.some((h) => String(h).includes('/user/self')), 'loginUrlHints 还留着 /user/self');
 });
 
 // ── B. 其它买家各自落在自己平台 ──────────────────────────────────────────────
@@ -88,7 +90,6 @@ test('B2 买家入口不会串到卖家后台（工作页必须不同；1688 同
       assert.notEqual(seller.loginUrl, buyer.loginUrl, id + ' 的卖家/买家登录页一样了');
     }
   }
-  // 1688 的会员登录页只此一个（登录后按会员身份进卖家工作台或买家站），两家共用登录页是对的。
   assert.ok(P.variantOf(P.platformOf('ali1688'), 'buyer').loginUrl.includes('login.1688.com'));
 });
 
@@ -98,30 +99,29 @@ test('B3 抖音卖家仍是抖店后台（没被买家改动波及）', () => {
   assert.ok(s.workUrl.includes('fxg.jinritemai.com'), '抖音卖家工作页被改坏了：' + s.workUrl);
 });
 
-// ── C. 把实测证据留在源码里（避免以后又被改回站根）──────────────────────────
+// ── C. 实测结论留在源码里（避免又被改成 sso / /shop / /order）───────────────
 
-test('C1 platforms.mjs 记录了「站根会落验证码中间页」的实测结论', () => {
-  assert.match(rawPlatforms, /验证码中间页/, '没写实测证据：站根会落验证码中间页');
-  assert.match(rawPlatforms, /\/user\/self/, '没写为什么用 /user\/self');
+test('C1 platforms.mjs 记下了「新档案可能被风控接到验证码中间页」这一事实', () => {
+  assert.match(rawPlatforms, /验证码中间页/, '没写风控事实：验证码中间页');
 });
 
-test('C2 platforms.mjs 记下了 /shop 与 /order 是 404（别再有人往这两个地址加）', () => {
+test('C2 platforms.mjs 记下了 /shop 与 /order 是 404（别再往这两个地址加）', () => {
   assert.match(rawPlatforms, /页面不见啦/, '没写 /shop、/order 是 404 的事实');
 });
 
 // ── D. 版本与文档 ────────────────────────────────────────────────────────────
 
-test('D1 版本号已到 0.17.10', () => {
+test('D1 版本号已到 0.17.11', () => {
   const [maj, min, patchNum] = String(pkg.version).split('.').map(Number);
-  assert.ok(maj === 0 && (min > 17 || (min === 17 && patchNum >= 10)), 'package.json 版本还是 ' + pkg.version);
+  assert.ok(maj === 0 && (min > 17 || (min === 17 && patchNum >= 11)), 'package.json 版本还是 ' + pkg.version);
 });
 
 test('D2 CHANGELOG / README 写了这次修正', () => {
   const changelog = read('CHANGELOG.md');
   const readme = read('README.md');
-  assert.match(changelog, /v0\.17\.10/, 'CHANGELOG 没有 v0.17.10');
-  assert.match(changelog, /抖音买家/, 'CHANGELOG 没写抖音买家');
-  assert.match(readme, /0\.17\.10/, 'README 没更新版本');
+  assert.match(changelog, /v0\.17\.11/, 'CHANGELOG 没有 v0.17.11');
+  assert.match(changelog, /www\.douyin\.com/, 'CHANGELOG 没写入口 URL');
+  assert.match(readme, /0\.17\.11/, 'README 没更新版本');
 });
 
 console.log('\n' + passed + ' 项通过' + (failures.length ? '，' + failures.length + ' 项失败' : ''));
