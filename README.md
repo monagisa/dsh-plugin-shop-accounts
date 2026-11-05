@@ -2,13 +2,13 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0179)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v01710)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
 覆盖平台：**拼多多 / 淘宝 / 天猫 / 抖音（抖店）/ 京东（京麦）/ 1688**，均为**商家端**（卖家后台）；同时支持为上述平台的 **C 端买家账号**建档（买家账号仅用于浏览与数据采集，不参与上架）。
 
-- 版本：**0.17.9**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
+- 版本：**0.17.10**（变更历史见 [CHANGELOG.md](CHANGELOG.md)）
 - 自检：`node test/smoke.mjs` → 113 项、`node test/features-v090.mjs` → 30 项、
   `node test/features-v0101.mjs` → 15 项、`node test/features-v0110.mjs` → 24 项、
   `node test/features-v0120.mjs` → 23 项、`node test/features-v0130.mjs` → 27 项、
@@ -25,14 +25,14 @@ node test/features-v0174.mjs   # 6 项：六平台登录页实测 / 天猫买家
 node test/features-v0175.mjs   # 7 项：点「登录」按四条路径回退（按钮/文字/表单提交/回车）
 node test/features-v0176.mjs   # 8 项：非标准选择器（`:visible`/`:text-is`/xpath `$`）与真实鼠标点击
 node test/features-v0177.mjs` → 9 项、`node test/features-v0178.mjs` → 11 项、
-  `node test/features-v0178.mjs` → 11 项、`node test/features-v0179.mjs` → 12 项、`node test/platform.mjs` → 12 项，合计 **549 项**，全部通过
+  `node test/features-v0178.mjs` → 11 项、`node test/features-v0179.mjs` → 12 项、`node test/features-v0180.mjs` → 11 项、`node test/platform.mjs` → 12 项，合计 **560 项**，全部通过
   （不启动浏览器、不触碰真实账号；`npm test` 可一次执行）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.17.9）](#更新说明v0610--v0179)
+- [更新说明（v0.6.10 → v0.17.10）](#更新说明v0610--v01710)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -50,10 +50,21 @@ node test/features-v0177.mjs` → 9 项、`node test/features-v0178.mjs` → 11 
 
 ---
 
-## 更新说明（v0.6.10 → v0.17.9）
+## 更新说明（v0.6.10 → v0.17.10）
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.9（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.17.10（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
 
+
+### v0.17.10：抖音买家打开的是站内页面，不再被风控验证码页接走
+
+| 买家身份 | 登录页 | 打开后落到 |
+|---|---|---|
+| 淘宝 / 天猫 | `login.taobao.com` | 已买到的宝贝（`buyertrade.taobao.com`） |
+| 京东 | `passport.jd.com` | 订单中心（`order.jd.com`） |
+| 1688 | `login.1688.com` | 1688 买家站 |
+| 抖音 | `www.douyin.com/user/self` | 抖音站内页面（页面内自带扫码 / 验证码登录面板） |
+
+抖音的站根与 `sso.douyin.com` 会被风控接到「验证码中间页」（正文空白），所以买家入口改为 `/user/self`；登录态判据仍是那四个 session cookie，抖音买家依旧只走扫码 / 验证码。
 
 ### v0.17.9：工具声明补齐 output，设置页渲染异常可定位
 
@@ -807,7 +818,7 @@ node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome�
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前二十七套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前二十八套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，**不触碰真实账号、不启动任何浏览器**。
 `live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证
