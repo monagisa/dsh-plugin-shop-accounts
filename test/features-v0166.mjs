@@ -249,8 +249,9 @@ await test('客户端从 /state 取平台能力（不自己猜）', () => {
 
 await test('新建弹窗：没有账号密码的身份不显示密码框，改显示登录方式', () => {
   assert.match(clientSrc, /!editing && needsPassword && h\(Field, \{ label: '登录密码（必填）' \}/, '密码框只在需要时出现');
-  assert.match(clientSrc, /!editing && !needsPassword && h\(Field, \{ label: '登录方式' \}/, '不需要密码时换成登录方式说明');
-  assert.match(clientSrc, /使用「|没有账号密码可存/);
+  // v0.18.7：没有账号密码可存的身份（抖音买家）改显示一句「只能用…登录」
+  assert.match(clientSrc, /!editing && !canPassword && h\(Field, \{ label: '登录方式' \}/, '不需要密码时换成登录方式说明');
+  assert.match(clientSrc, /只能用「/);
 });
 
 await test('账号类型下拉由 accountTypes 生成（拼多多不会出现买家选项）', () => {

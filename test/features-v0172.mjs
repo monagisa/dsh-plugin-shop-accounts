@@ -158,8 +158,8 @@ await test('登录账号输入框用平台提示当占位文字', () => {
   assert.ok(CLIENT.includes('var loginHint = String(caps.loginNameHint'), '没取 loginHint');
 });
 
-await test('没提示时给一句通用说明（不要填密码）', () => {
-  assert.ok(CLIENT.includes('账号只用来区分是哪个登录身份，不要填密码'), '缺通用说明');
+await test('输入框下面不再挂长说明（v0.18.7 起精简）', () => {
+  assert.ok(!CLIENT.includes('账号只用来区分是哪个登录身份，不要填密码'), '登录账号下面还挂着说明');
 });
 
 await test('新建弹窗有「店铺 URL」且按平台能力显示', () => {

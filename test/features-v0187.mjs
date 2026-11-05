@@ -156,13 +156,29 @@ test('B4 弹窗标题跟着身份变（新增买家账号 / 新增卖家账号�
   assert.ok(clientSrc.includes("type === 'buyer' ? '新增买家账号' : '新增卖家账号'"), '弹窗标题没按身份分');
 });
 
-test('B5 「登录账号」标题 / 占位 / 必填报错都用平台的短标签', () => {
+test('B5 「登录账号」表头只写必填，平台填什么放占位里', () => {
   assert.ok(clientSrc.includes('function loginTagOf(platforms, id, type)'), '没有 loginTagOf');
   assert.ok(clientSrc.includes('var loginTag = loginTagOf(props.platforms, platform, type);'), '新建弹窗没取 loginTag');
-  assert.ok(clientSrc.includes("'登录账号（必填' + (loginTag ? ' · ' + loginTag : '') + '）'"), '字段标题没带短标签');
+  assert.ok(clientSrc.includes("h(Field, { label: '登录账号（必填）' }"), '字段标题不是「登录账号（必填）」');
+  assert.ok(!clientSrc.includes("' · ' + loginTag"), '表头里还拼着平台说明');
   assert.ok(clientSrc.includes("placeholder: loginTag ? ('例如：' + loginTag)"), '占位没带短标签');
-  assert.ok(clientSrc.includes("'「登录账号」必填' + (loginTag ? '（' + platformLabel(platform) + '要填' + loginTag + '）' : '')"), '必填报错没带短标签');
-  assert.ok(!clientSrc.includes('手机号 / 旺旺名 / 邮箱'), '还留着写死的通用提示');
+  assert.ok(clientSrc.includes("props.onError('「登录账号」必填');"), '必填报错不够简短');
+});
+
+test('B8 登录方式排在表单最上面（在账号类型 / 平台之前）', () => {
+  const mode1 = clientSrc.indexOf("canPassword && h(Field, { label: '登录方式' }");
+  const mode2 = clientSrc.indexOf("!canPassword && h(Field, { label: '登录方式' }");
+  const typeAt = clientSrc.indexOf("h(Field, { label: '账号类型' }");
+  const cardsAt = clientSrc.indexOf("className: 'sa-plats'");
+  assert.ok(mode1 > 0 && mode2 > 0, '找不到「登录方式」两种形态');
+  assert.ok(mode1 < typeAt && mode2 < typeAt, '「登录方式」仍排在账号类型之后');
+  assert.ok(mode1 < cardsAt && mode2 < cardsAt, '「登录方式」仍排在平台卡片之后');
+});
+
+test('B9 输入框下面不再挂长说明（登录账号那一行 + 平台选择那行）', () => {
+  assert.ok(!clientSrc.includes('账号只用来区分是哪个登录身份，不要填密码'), '登录账号下面还挂着说明');
+  assert.ok(!clientSrc.includes("'选择平台（'"), '平台卡片上面还挂着「选择平台（…）」');
+  assert.ok(clientSrc.includes("h(Field, { label: '平台' }"), '平台这一块没有表头');
 });
 
 test('B6 详情页的「账号」一行也按平台+身份给占位', () => {
@@ -181,16 +197,18 @@ test('B7 身份选项只写「卖家账号 / 买家账号」，不再把解释�
 
 // ── C. 文档 ───────────────────────────────────────────────────────────────────
 
-test('C1 版本号已到 0.18.5', () => {
-  assert.ok(versionAtLeast(pkg.version, '0.18.5'), '版本还停在 ' + pkg.version);
+test('C1 版本号已到 0.18.7', () => {
+  assert.ok(versionAtLeast(pkg.version, '0.18.7'), '版本还停在 ' + pkg.version);
 });
 
 test('C2 CHANGELOG / README 写了这次改动', () => {
   const changelog = read('CHANGELOG.md');
   assert.ok(changelog.includes('v0.18.5'), 'CHANGELOG 没写 v0.18.5');
   assert.ok(changelog.includes('买家') && changelog.includes('登录账号'), 'CHANGELOG 没说明表单提示的改动');
+  assert.ok(changelog.includes('v0.18.7'), 'CHANGELOG 没写 v0.18.7 的精简');
   const readme = read('README.md');
   assert.ok(readme.includes('0.18.5'), 'README 没写 0.18.5');
+  assert.ok(readme.includes('0.18.7'), 'README 没跟上 0.18.7');
   assert.ok(readme.includes('登录账号'), 'README 没提「登录账号」的提示');
 });
 
