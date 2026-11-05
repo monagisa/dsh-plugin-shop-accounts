@@ -2,7 +2,7 @@
 
 > DSH 插件，用于集中管理电商卖家后台的登录态。**一个店铺对应一份独立的登录档案**（ego lite 的 profile，或 Chrome 的 user-data-dir），登录一次后可长期复用，上架脚本直接复用该档案，无需重新登录。
 >
-> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 profile 与一个 TaskSpace，无需手动创建实例）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0183)。
+> **自 v0.7.0 起支持 ego lite 后端**：检测到 ego lite 时优先使用（每店一个 TaskSpace，同一份「用户配置」可由不同平台的店铺共用）；未安装时回退至 Chrome（每店一份档案与一个固定调试端口）。浏览器后端可在设置页指定，详见[更新说明](#更新说明v0610--v0184)。
 >
 > **自 v0.10.0 起支持 macOS**：密码改用**系统钥匙串**加密（Windows 使用 DPAPI），浏览器从 `/Applications` 探测，在文件夹中显示时调用 Finder。全部平台相关代码集中于 `lib/platform/`，业务代码不再判断操作系统。
 
@@ -23,14 +23,15 @@
   `node test/features-v0176.mjs` → 8 项、`node test/features-v0177.mjs` → 9 项、
   `node test/features-v0178.mjs` → 11 项、`node test/features-v0179.mjs` → 12 项、
   `node test/features-v0181.mjs` → 12 项、`node test/features-v0182.mjs` → 12 项、
-  `node test/features-v0183.mjs` → 12 项、`node test/features-v0184.mjs` → 17 项、
-  `node test/features-v0185.mjs` → 9 项、`node test/platform.mjs` → 12 项，合计 **611 项**（`npm test` 可一次执行；不启动浏览器、不触碰真实账号）
+  `node test/features-v0183.mjs` → 12 项、`node test/features-v0184.mjs` → 18 项、
+  `node test/features-v0185.mjs` → 9 项、`node test/features-v0186.mjs` → 12 项、
+  `node test/platform.mjs` → 12 项，合计 **624 项**（`npm test` 可一次执行；不启动浏览器、不触碰真实账号）
 
 ---
 
 ## 目录
 
-- [更新说明（v0.6.10 → v0.18.3）](#更新说明v0610--v0183)
+- [更新说明（v0.6.10 → v0.18.4）](#更新说明v0610--v0184)
 - [功能概览](#功能概览)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -48,7 +49,16 @@
 
 ---
 
-## 更新说明（v0.6.10 → v0.18.3）
+## 更新说明（v0.6.10 → v0.18.4）
+
+### v0.18.4：不同平台的店铺共用一份「用户配置」
+
+| 场景 | 之前 | 现在 |
+| --- | --- | --- |
+| 抖音、千牛、拼多多各开一家店 | 每家都要独占一份「用户配置」 | 可以共用一份配置，各自开自己的空间 |
+| 同一平台的两个店铺（如两个拼多多店） | 必须分开 | 仍然必须分开（同平台同身份才会互相覆盖登录态） |
+| 同一平台的买家与卖家 | 必须分开 | 可以共用一份配置 |
+| 默认配置 | 只留给用户自己 | 不变：永不分给店铺 |
 
 ### v0.18.3：ego 空间里没有标签页时新建一页
 
@@ -91,7 +101,7 @@
 
 另外，真撞上硬停时错误会翻成中文并给出下一步（在 ego 里点「继续」再打开）；新开了备用窗口会 toast 说明。
 
-> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.18.3（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
+> 本节仅记录**功能变化**，覆盖 v0.7.0 – v0.18.4（v0.16.1 – v0.16.3 为界面样式与文案调整，v0.16.4 为按钮尺寸修复、v0.17.4 为天猫买家入口修正，不在此列）；更早的版本见 [CHANGELOG.md](CHANGELOG.md)。
 
 
 ### v0.18.0：抖音买家入口就是抖音首页
@@ -806,7 +816,11 @@ test/features-v0182.mjs 自检
 test/features-v0183.mjs 自检
 test/features-v0184.mjs 自检
 test/features-v0185.mjs 自检
+test/features-v0186.mjs 自检
 test/platform.mjs 自检
+test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
+test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
+test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
 test/live-probe.mjs 真机链路探针（会启动一个无头 Chrome，使用临时档案）
@@ -864,8 +878,9 @@ node test/features-v0179.mjs   # 12 项：工具 output 声明 + 客户端报错
 node test/features-v0181.mjs   # 12 项：抖音买家入口是抖音精选（www.douyin.com/jingxuan）
 node test/features-v0182.mjs   # 12 项：ego 控制权硬停适配（不接管用户空间 / 备用窗口名）
 node test/features-v0183.mjs   # 12 项：打开与检测按「平台 × 身份」取参数
-node test/features-v0184.mjs   # 17 项：默认配置留给用户、登录态判据不再误判
+node test/features-v0184.mjs   # 18 项：默认配置留给用户、登录态判据不再误判
 node test/features-v0185.mjs   # 9 项：ego 空间没有活页时新建一页（不再留下 https://x/ 空窗口）
+node test/features-v0186.mjs   # 12 项：ego 用户配置按平台共用（同平台同身份才分开）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）

@@ -116,53 +116,67 @@ test('B3 只剩默认配置 → 拒绝，并提示去新建「用户配置」', 
   );
 });
 
-test('B4 用户配置都用满 → 默认拒绝共用（不再偷偷塞进别人的档案）', () => {
+test('B4 同平台同身份的两家店 → 不共用；只剩冲突配置时如实报错', () => {
+  const others = [
+    { id: 'acc_pdd_a', egoProfile: 'Profile 3', platform: 'pdd', accountType: 'seller' },
+    { id: 'acc_pdd_b', egoProfile: 'Profile 2', platform: 'pdd', accountType: 'seller' },
+  ];
   assert.throws(
-    () => host.allocateEgoProfile({ profiles: PROFILES, others: OTHERS_USED, cookieDomains: ['douyin.com'] }),
+    () => host.allocateEgoProfile({ profiles: PROFILES, others, platform: 'pdd', accountType: 'seller' }),
     /用户配置/,
   );
 });
 
-test('B5 显式 allowShare 时才允许「cookie 域不重叠」的共用', () => {
-  const r = host.allocateEgoProfile({ profiles: PROFILES, others: OTHERS_USED, cookieDomains: ['douyin.com'], allowShare: true });
-  assert.equal(r.shared, true);
+test('B5 不同平台的店铺可以共用同一份「用户配置」（空间各自独立）', () => {
+  const others = [
+    { id: 'acc_pdd', egoProfile: 'Profile 3', platform: 'pdd', accountType: 'seller' },
+    { id: 'acc_jd', egoProfile: 'Profile 2', platform: 'jd', accountType: 'seller' },
+  ];
+  const r = host.allocateEgoProfile({ profiles: PROFILES, others, platform: 'taobao', accountType: 'seller' });
+  assert.equal(r.shared, true, '不同平台居然没共用');
+  assert.equal(r.profileId, 'Profile 3');
   assert.notEqual(r.profileId, 'Profile 1', '共用了默认配置');
 });
 
-test('B6 allowShare 也不会共用到默认配置上（默认配置永远留给用户）', () => {
-  // 只有一份「用户配置」（被另一个抖音店铺用着，cookie 域重叠 → 不能共用）＋一份默认配置。
-  // 这种时候唯一的"可行"共用对象是默认配置，但默认配置不参与共用 → 必须拒绝。
+test('B6 同一平台的买家与卖家也可以共用（只有同身份才必须分开）', () => {
+  const others = [
+    { id: 'acc_tb_seller', egoProfile: 'Profile 3', platform: 'taobao', accountType: 'seller' },
+    { id: 'acc_tb_seller2', egoProfile: 'Profile 3', platform: 'taobao', accountType: 'seller' },
+    { id: 'acc_jd', egoProfile: 'Profile 2', platform: 'jd', accountType: 'seller' },
+  ];
+  const r = host.allocateEgoProfile({ profiles: PROFILES, others, platform: 'taobao', accountType: 'buyer' });
+  assert.equal(r.shared, true, '买家应该能和卖家共用');
+  assert.equal(r.profileId, 'Profile 3');
+});
+
+test('B7 显式 allowShare:false 时只接受完全空着的配置（不共用）', () => {
+  const others = [
+    { id: 'acc_pdd', egoProfile: 'Profile 3', platform: 'pdd', accountType: 'seller' },
+    { id: 'acc_jd', egoProfile: 'Profile 2', platform: 'jd', accountType: 'seller' },
+  ];
   assert.throws(
-    () => host.allocateEgoProfile({
-      profiles: [
-        { id: 'Profile 1', name: 'nagisa', isDefault: true },
-        { id: 'Profile 2', name: '用户配置 2', isDefault: false },
-      ],
-      others: [{ id: 'acc_dy_seller', egoProfile: 'Profile 2', cookieDomains: ['jinritemai.com', 'douyin.com', 'bytedance.com'] }],
-      cookieDomains: ['douyin.com'],
-      allowShare: true,
-    }),
+    () => host.allocateEgoProfile({ profiles: PROFILES, others, platform: 'taobao', accountType: 'seller', allowShare: false }),
     /用户配置/,
   );
 });
 
-test('B7 ensureEgoProfile 发现「共用 + 默认配置」的历史记录会清掉重新分配', () => {
+test('B8 ensureEgoProfile 发现「共用 + 默认配置」的历史记录会清掉重新分配', () => {
   assert.ok(indexSrc.includes('account.egoSharedProfile === true'), '没检查历史共用记录');
   assert.ok(indexSrc.includes('p.isDefault'), '没排除默认配置');
   assert.ok(indexSrc.includes("appendDebug('ego-profile-default-shared'"), '没记录这次自愈');
 });
 
-test('B8 分配结果写回账号时区分「独占 / 共用」', () => {
+test('B9 分配结果写回账号时区分「独占 / 共用」', () => {
   assert.ok(indexSrc.includes('egoSharedProfile: false'), '没写独占标记');
   assert.ok(indexSrc.includes('egoSharedProfile: true'), '没写共用标记');
 });
 
-test('B9 换了 profile 就清掉旧 spaceId（空间属于某个 profile，不清会开回旧档案）', () => {
+test('B10 换了 profile 就清掉旧 spaceId（空间属于某个 profile，不清会开回旧档案）', () => {
   assert.ok(indexSrc.includes('if (changed) patch.egoSpaceId = 0;'), 'profile 变了没清 spaceId');
   assert.ok(indexSrc.includes("const changed = String((findAccount(account.id) || {}).egoProfile || '') !== picked.profileId;"), '没比较新旧 profile');
 });
 
-test('B10 自愈「共用 + 默认配置」时也清掉 spaceId', () => {
+test('B11 自愈「共用 + 默认配置」时也清掉 spaceId', () => {
   assert.ok(indexSrc.includes('patchAccount(account.id, { egoProfile: \'\', egoSharedProfile: false, egoSpaceId: 0 })'), '自愈时没清 spaceId');
 });
 
