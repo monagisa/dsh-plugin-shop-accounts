@@ -40,8 +40,10 @@ test('占位符里没有本机绝对路径与邮箱', () => {
 });
 
 test('店铺名 / 备注 / 账号的占位符是中性的例子', () => {
-  assert.match(clientSrc, /placeholder: '例如：某品牌旗舰店（留空自动起名）'/);
-  assert.match(clientSrc, /placeholder: '例如：平台·店铺·运营（选填）'/);
+  assert.match(clientSrc, /'例如：某品牌旗舰店（留空自动起名）'/);
+  assert.match(clientSrc, /'例如：用户名（留空自动起名）'/);
+  assert.match(clientSrc, /'例如：平台·店铺·运营（选填）'/);
+  assert.match(clientSrc, /'例如：平台·用户·用途（选填）'/);
   assert.match(clientSrc, /'登录账号名，例如 主账号;子账号'/);
 });
 

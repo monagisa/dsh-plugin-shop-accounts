@@ -156,24 +156,26 @@ test('B3 「账号类型」排在登录方式之前（身份决定要不要密�
   assert.equal((inDialog.match(/label: '账号类型'/g) || []).length, 1, '弹窗里「账号类型」出现了不止一次');
 });
 
-test('B4 弹窗标题跟着身份变（新增买家账号 / 新增卖家账号）', () => {
-  assert.ok(clientSrc.includes("type === 'buyer' ? '新增买家账号' : '新增卖家账号'"), '弹窗标题没按身份分');
+test('B4 弹窗标题跟着身份变（新增用户 / 新增卖家账号）', () => {
+  assert.ok(
+    clientSrc.includes("editing ? (isBuyer ? '编辑用户' : '编辑店铺') : (isBuyer ? '新增用户' : '新增卖家账号')"),
+    '弹窗标题没按身份分');
 });
 
-test('B5 「登录账号」表头只写必填，平台填什么放占位里', () => {
+test('B5 「用户账户 / 登录账号」表头只写必填，平台填什么放占位里', () => {
   assert.ok(clientSrc.includes('function loginTagOf(platforms, id, type)'), '没有 loginTagOf');
   assert.ok(clientSrc.includes('var loginTag = loginTagOf(props.platforms, platform, type);'), '新建弹窗没取 loginTag');
-  assert.ok(clientSrc.includes("h(Field, { label: '登录账号（必填）' }"), '字段标题不是「登录账号（必填）」');
+  assert.ok(clientSrc.includes("h(Field, { label: accountLabel + '（必填）' }"), '字段标题没走 accountLabel');
   assert.ok(!clientSrc.includes("' · ' + loginTag"), '表头里还拼着平台说明');
   assert.ok(clientSrc.includes("placeholder: loginTag ? ('例如：' + loginTag)"), '占位没带短标签');
-  assert.ok(clientSrc.includes("props.onError('「登录账号」必填');"), '必填报错不够简短');
+  assert.ok(clientSrc.includes("props.onError('「' + accountLabel + '」必填');"), '必填报错不够简短');
 });
 
 test('B8 登录方式紧跟平台与身份之后（在店铺名之前）', () => {
   const mode1 = clientSrc.indexOf("canPassword && h(Field, { label: '登录方式' }");
   const mode2 = clientSrc.indexOf("!canPassword && h(Field, { label: '登录方式' }");
   const typeAt = clientSrc.indexOf("h(Field, { label: '账号类型' }");
-  const nameAt = clientSrc.indexOf("h(Field, { label: '店铺名' }");
+  const nameAt = clientSrc.indexOf("h(Field, { label: nameLabel }");
   assert.ok(mode1 > 0 && mode2 > 0, '找不到「登录方式」两种形态');
   assert.ok(mode1 > typeAt && mode2 > typeAt, '「登录方式」排在账号类型之前（身份没定就看不出该不该填密码）');
   assert.ok(mode1 < nameAt && mode2 < nameAt, '「登录方式」排在店铺名之后');
@@ -182,6 +184,13 @@ test('B8 登录方式紧跟平台与身份之后（在店铺名之前）', () =>
 test('B9 输入框下面不再挂长说明（登录账号那一行 + 平台选择那行）', () => {
   assert.ok(!clientSrc.includes('账号只用来区分是哪个登录身份，不要填密码'), '登录账号下面还挂着说明');
   assert.ok(!clientSrc.includes("'选择平台（'"), '平台卡片上面还挂着「选择平台（…）」');
+});
+
+test('B10 买家账号的表单叫「用户名 / 用户账户」，卖家仍是「店铺名 / 登录账号」', () => {
+  assert.ok(clientSrc.includes("var nameLabel = isBuyer ? '用户名' : '店铺名';"), '名字字段没按身份区分');
+  assert.ok(clientSrc.includes("var accountLabel = isBuyer ? '用户账户' : '登录账号';"), '账号字段没按身份区分');
+  assert.ok(clientSrc.includes("row(isBuyer ? '用户账户' : '账号'"), '详情页的账号一行没跟着身份变');
+  assert.ok(clientSrc.includes("isBuyer ? '打开用户端' : '打开工作台'"), '打开按钮还是店铺说法');
 });
 
 test('B6 详情页的「账号」一行也按平台+身份给占位', () => {
@@ -200,8 +209,8 @@ test('B7 身份选项只写「卖家账号 / 买家账号」，不再把解释�
 
 // ── C. 文档 ───────────────────────────────────────────────────────────────────
 
-test('C1 版本号已到 0.18.8', () => {
-  assert.ok(versionAtLeast(pkg.version, '0.18.8'), '版本还停在 ' + pkg.version);
+test('C1 版本号已到 0.18.10', () => {
+  assert.ok(versionAtLeast(pkg.version, '0.18.10'), '版本还停在 ' + pkg.version);
 });
 
 test('C2 CHANGELOG / README 写了这次改动', () => {
@@ -210,6 +219,7 @@ test('C2 CHANGELOG / README 写了这次改动', () => {
   assert.ok(changelog.includes('买家') && changelog.includes('登录账号'), 'CHANGELOG 没说明表单提示的改动');
   assert.ok(changelog.includes('v0.18.7'), 'CHANGELOG 没写 v0.18.7 的精简');
   assert.ok(changelog.includes('v0.18.8'), 'CHANGELOG 没写 v0.18.8 的平台置顶');
+  assert.ok(changelog.includes('v0.18.10'), 'CHANGELOG 没写 v0.18.10 的用户名文案');
   const readme = read('README.md');
   assert.ok(readme.includes('0.18.5'), 'README 没写 0.18.5');
   assert.ok(readme.includes(pkg.version), 'README 没跟上 ' + pkg.version);
