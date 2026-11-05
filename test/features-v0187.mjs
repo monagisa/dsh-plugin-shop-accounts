@@ -170,6 +170,15 @@ test('B6 详情页的「账号」一行也按平台+身份给占位', () => {
   assert.ok(clientSrc.includes("loginTag ? ('例如：' + loginTag) : '登录账号名，例如 主账号;子账号'"), '详情页占位没按平台');
 });
 
+test('B7 身份选项只写「卖家账号 / 买家账号」，不再把解释塞进表头', () => {
+  const at = clientSrc.indexOf('function accountTypeOptionLabel');
+  assert.ok(at > 0, '找不到 accountTypeOptionLabel');
+  const body = clientSrc.slice(at, clientSrc.indexOf('\n    }', at));
+  assert.ok(body.includes("return type === 'buyer' ? '买家账号' : '卖家账号'"), '身份选项还带着解释文字');
+  assert.ok(!body.includes('可上架'), '还留着带解释的卖家选项');
+  assert.ok(!body.includes('只做浏览与采集'), '还留着带解释的买家选项');
+});
+
 // ── C. 文档 ───────────────────────────────────────────────────────────────────
 
 test('C1 版本号已到 0.18.5', () => {
