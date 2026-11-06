@@ -10,9 +10,11 @@
  * 2. 前端只有在「有人在等登录」或「定时任务开着」时才轮询 `/state`，其余时候安静待着，
  *    所以状态压根不会重新拉。
  *
- * 修法：后端先问一次 ego 主程序在不在（tasklist，自带 5 秒缓存），没了就立刻 `running:false`；
+ * 修法（v0.19.2）：后端先问一次 ego 主程序在不在（tasklist，自带 5 秒缓存），没了就立刻 `running:false`；
  * 前端在从别的窗口切回来（窗口 focus / 标签页重新可见）时立刻对一次状态。
- * 不挂常驻定时器 —— 自检是在无头环境里渲染这个组件的，常驻 interval 会把进程留住不退出。
+ * 修法（v0.19.3）：面板可见时每 2 秒对一次、带 `?fresh=1` 绕过 30 秒的空间列表缓存，
+ * 只关空间窗口（ego 进程还在）也能在 2 秒内跟上。定时器只在 `document.visibilityState === 'visible'`
+ * 时挂 —— 自检是在无头环境里渲染这个组件的，常驻 interval 会把进程留住不退出。
  */
 
 import assert from 'node:assert/strict';
@@ -84,17 +86,29 @@ test('A3 不再在 ego CLI 那一段里重复问进程（只问一次）', () =>
   assert.match(pendingBody, /const r = await egoList\(/, '列空间那段没走 egoList');
 });
 
-// ── B. 前端：切回窗口时自己对状态 ────────────────────────────────────────────
-
-test('B1 不挂常驻定时器（无头自检里渲染这个组件时进程要能退出）', () => {
-  assert.ok(!panelBody.includes('}, 15000'), '又挂了一个 15 秒的常驻轮询 —— 自检会被留住不退出');
+test('A4 /state 支持 ?fresh=1 强制重列空间（界面 2 秒轮询用）', () => {
+  assert.match(indexSrc, /async function buildState\(freshEgo\)/, 'buildState 没有接 freshEgo 参数');
+  assert.match(indexSrc, /refreshEgoInfo\(freshEgo \? true : false\)/, 'buildState 没把 freshEgo 传给 refreshEgoInfo');
+  const route = slice(indexSrc, "if (method === 'GET' && p === '/state') {", '\n    }');
+  assert.match(route, /url\.searchParams\.get\('fresh'\) === '1'/, '/state 路由没读 ?fresh=1');
+  assert.match(route, /await buildState\(/, '/state 路由没把 fresh 传下去');
 });
 
-test('B2 从别的窗口切回来时立刻对一次状态', () => {
+// ── B. 前端：面板可见时自己对状态 ────────────────────────────────────────────
+
+test('B1 可见时每 2 秒对一次，且只在可见时挂定时器（无头自检要能退出）', () => {
+  assert.match(panelBody, /setInterval\(refresh, 2000\)/, '找不到 2 秒的状态轮询');
+  assert.match(panelBody, /document\.visibilityState === 'visible'/, '2 秒轮询没有「可见才挂」的守卫 —— 自检会被留住不退出');
+  assert.ok(!panelBody.includes('}, 15000'), '又出现了一个 15 秒的常驻轮询');
+});
+
+test('B2 切回窗口时立刻对一次，并且绕过 30 秒空间缓存', () => {
+  assert.match(panelBody, /function refresh\(\) \{ load\(true, true\); \}/, 'refresh 没带 fresh 参数（还会读到 30 秒的旧空间列表）');
   assert.match(panelBody, /window\.addEventListener\('focus', refresh\)/, '没有监听窗口 focus');
   assert.match(panelBody, /document\.addEventListener\('visibilitychange', refresh\)/, '没有监听 visibilitychange');
   assert.match(panelBody, /window\.removeEventListener\('focus', refresh\)/, 'focus 监听没有移除');
   assert.match(panelBody, /document\.removeEventListener\('visibilitychange', refresh\)/, 'visibilitychange 监听没有移除');
+  assert.match(panelBody, /if \(timer\) clearInterval\(timer\)/, '定时器没有随卸载清掉');
 });
 
 test('B3 原来的两种轮询还在（登录中 2.5 秒、定时开着 20 秒）', () => {
@@ -104,13 +118,13 @@ test('B3 原来的两种轮询还在（登录中 2.5 秒、定时开着 20 秒�
 
 // ── C. 文档 ───────────────────────────────────────────────────────────────────
 
-test('C1 版本号已到 0.19.2', () => {
-  assert.ok(versionAtLeast(pkg.version, '0.19.2'), '版本还停在 ' + pkg.version);
+test('C1 版本号已到 0.19.3', () => {
+  assert.ok(versionAtLeast(pkg.version, '0.19.3'), '版本还停在 ' + pkg.version);
 });
 
 test('C2 CHANGELOG / README 写了这次修正', () => {
   const changelog = read('CHANGELOG.md');
-  assert.ok(changelog.includes('v0.19.2'), 'CHANGELOG 没写 v0.19.2');
+  assert.ok(changelog.includes('v0.19.3'), 'CHANGELOG 没写 v0.19.3');
   assert.ok(changelog.includes('关闭浏览器'), 'CHANGELOG 没提「关闭浏览器」按钮');
   const readme = read('README.md');
   assert.ok(readme.includes(pkg.version), 'README 没跟上 ' + pkg.version);
