@@ -53,7 +53,7 @@
 | **Chrome** | 未安装 ego lite 时的回退方案，或店铺数量超过 ego 用户配置数量时使用 | 一店一份 `user-data-dir` 与一个 CDP 调试端口，档案可自动创建、数量不限 |
 | 自动（默认） | 安装 ego lite 时走 ego，否则回退 Chrome | — |
 
-后端可在设置页指定为「自动 / 只用 ego lite / 只用 Chrome」，切换后立即生效。
+后端可在设置页指定为「自动 / ego lite / Chrome」，切换后立即生效。
 
 ### 定时任务
 
