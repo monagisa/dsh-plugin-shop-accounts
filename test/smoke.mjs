@@ -1500,13 +1500,7 @@ await test('客户端打出的每个动作，宿主都真的接了（两边写�
   // 这种错，测试和实现会一起错下去。
   const names = new Set();
   for (const m of clientSrc.matchAll(/act\([^,]+,\s*'([a-z][a-z-]*)'/g)) names.add(m[1]);
-  for (const m of clientSrc.matchAll(/\+\s*'\/([a-z][a-z-]*)'/g)) {
-    // 只扫 /accounts/:id/<动作> 这一层；商品监控那种 /accounts/:id/monitor/<条目>/run 是子资源路径，
-    // 不是账号动作，交给 v0.19.0 那套自己验。
-    const before = clientSrc.slice(Math.max(0, m.index - 80), m.index);
-    if (before.includes("'/monitor/'")) continue;
-    names.add(m[1]);
-  }
+  for (const m of clientSrc.matchAll(/\+\s*'\/([a-z][a-z-]*)'/g)) names.add(m[1]);
   assert.ok(names.size >= 4, '至少该扫出 open/finish/close/silent-check，实际：' + [...names].join(','));
 
   for (const action of names) {
