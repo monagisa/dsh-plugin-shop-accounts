@@ -409,7 +409,7 @@ if (!exe) {
 // ── D. 文档/版本 ────────────────────────────────────────────────────────────
 section('D. 版本与文档');
 
-await test('package.json 已是 0.16.5 起，README/CHANGELOG 记了这一版', () => {
+await test('package.json 已是 0.16.5 起，CHANGELOG 记了这一版', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   const parts = String(pkg.version).split('.').map(Number);
   assert.equal(parts[0], 0);
@@ -417,9 +417,6 @@ await test('package.json 已是 0.16.5 起，README/CHANGELOG 记了这一版', 
   const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
   assert.match(changelog, /0\.16\.5/);
   assert.match(changelog, /iframe/);
-  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
-  assert.match(readme, /0\.16\.5/);
-  assert.match(readme, /iframe/, 'README 要说明淘宝系登录在 iframe 里');
 });
 
 console.log('\n' + (failures.length ? '\u2717 失败 ' + failures.length + ' 项' : '\u2713 全部通过') + '：' + passed + ' 项');

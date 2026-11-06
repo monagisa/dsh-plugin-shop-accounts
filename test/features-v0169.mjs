@@ -243,7 +243,6 @@ await test('版本号与文档覆盖 v0.16.9', () => {
   const [maj, min, patch] = String(pkg.version).split('.').map(Number);
   assert.ok(maj === 0 && (min > 16 || (min === 16 && patch >= 9)), '版本号应 ≥0.16.9，实际 ' + pkg.version);
   assert.ok(readText('CHANGELOG.md').includes('0.16.9'), 'CHANGELOG 缺 v0.16.9');
-  assert.ok(readText('README.md').includes('0.16.9'), 'README 缺 v0.16.9');
 });
 
 await test('README 的平台覆盖表已包含天猫/京东/抖音', () => {

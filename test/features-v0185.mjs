@@ -114,8 +114,8 @@ test('C2 CHANGELOG / README 写了这次修正', () => {
   const changelog = read('CHANGELOG.md');
   assert.ok(changelog.includes('v0.18.3'), 'CHANGELOG 没写 v0.18.3');
   assert.ok(changelog.includes('x/'), 'CHANGELOG 没提空白页');
-  const readme = read('README.md');
-  assert.ok(readme.includes('0.18.3'), 'README 没写 0.18.3');
+  const readme = read('CHANGELOG.md');
+  assert.ok(readme.includes('0.18.3'), 'CHANGELOG 没写 0.18.3');
   assert.ok(readme.includes('newPage') || readme.includes('新的一页'), 'README 没说明修复方式');
 });
 

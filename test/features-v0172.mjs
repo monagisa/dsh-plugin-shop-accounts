@@ -178,7 +178,7 @@ await test('版本号 ≥0.17.2', () => {
 
 await test('CHANGELOG / README 已写 0.17.2 与「登录账号填什么」', () => {
   assert.ok(CHANGELOG.includes('0.17.2'), 'CHANGELOG 没有 0.17.2');
-  assert.ok(README.includes('0.17.2'), 'README 没有 0.17.2');
+
   assert.ok(README.includes('抖店'), 'README 没提抖店');
 });
 

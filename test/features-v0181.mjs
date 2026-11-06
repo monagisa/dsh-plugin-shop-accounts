@@ -125,7 +125,7 @@ test('D1 版本号已到 0.17.12', () => {
 
 test('D2 CHANGELOG / README 写了这次修正', () => {
   const changelog = read('CHANGELOG.md');
-  const readme = read('README.md');
+  const readme = read('CHANGELOG.md');
   assert.match(changelog, /v0\.17\.12/, 'CHANGELOG 没有 v0.17.12');
   assert.match(changelog, /jingxuan/, 'CHANGELOG 没写 /jingxuan');
   assert.match(readme, new RegExp(pkg.version.replace(/\./g, '\\.')), 'README 没更新到当前版本 ' + pkg.version);

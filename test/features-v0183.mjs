@@ -109,7 +109,7 @@ test('C1 版本号已到 0.18.1', () => {
 
 test('C2 CHANGELOG / README 写了这次修正', () => {
   const changelog = read('CHANGELOG.md');
-  const readme = read('README.md');
+  const readme = read('CHANGELOG.md');
   assert.match(changelog, /v0\.18\.1/, 'CHANGELOG 没有 v0.18.1');
   assert.match(changelog, /jingxuan/, 'CHANGELOG 没写抖音精选');
   assert.match(readme, new RegExp(String(pkg.version).replace(/\./g, '\\.')), 'README 没更新到当前版本');

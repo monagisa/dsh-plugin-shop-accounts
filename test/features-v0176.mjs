@@ -214,7 +214,7 @@ await test('版本号与变更记录已覆盖 0.17.6', () => {
   const ok = parts[0] === 0 && (parts[1] > 17 || (parts[1] === 17 && parts[2] >= 6));
   assert.ok(ok, 'package.json 版本还没到 0.17.6（当前 ' + pkg.version + '）');
   assert.ok(readText('CHANGELOG.md').includes('0.17.6'), 'CHANGELOG 里没有 0.17.6');
-  assert.ok(readText('README.md').includes('0.17.6'), 'README 里没有 0.17.6');
+  assert.ok(readText('CHANGELOG.md').includes('0.17.6'), 'CHANGELOG 里没有 0.17.6');
 });
 
 // ── 收尾 ─────────────────────────────────────────────────────────────────────

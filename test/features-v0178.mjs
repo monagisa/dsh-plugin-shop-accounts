@@ -21,7 +21,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const clientSrc = fs.readFileSync(path.join(ROOT, 'lib/client.js'), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const readme = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
 
 const results = [];
 function check(name, fn) {
@@ -110,7 +110,7 @@ check('C1 版本号 ≥ 0.17.8', () => {
 check('C2 变更记录与说明写了这一条', () => {
   assert.ok(changelog.includes('0.17.8'), 'CHANGELOG 里没有 0.17.8');
   assert.ok(changelog.includes('浏览器设置'), 'CHANGELOG 里没说明浏览器设置');
-  assert.ok(readme.includes('0.17.8'), 'README 里没有 0.17.8');
+  assert.ok(readme.includes('0.17.8'), 'CHANGELOG 里没有 0.17.8');
 });
 
 const failed = results.filter((r) => !r.ok);

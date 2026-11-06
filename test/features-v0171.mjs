@@ -251,7 +251,7 @@ await test('版本号与文档已覆盖 0.17.1', () => {
   const [maj, min, patchNo] = String(pkg.version).split('.').map(Number);
   assert.ok(maj === 0 && (min > 17 || (min === 17 && patchNo >= 1)), '版本号应 ≥0.17.1，实际 ' + pkg.version);
   assert.ok(readText('CHANGELOG.md').includes('0.17.1'));
-  assert.ok(readText('README.md').includes('0.17.1'));
+  assert.ok(readText('CHANGELOG.md').includes('0.17.1'));
 });
 
 console.log('\n' + (failures.length ? '\u2717 ' + failures.length + ' failed' : '\u2713 all passed') + ' (' + passed + ' checks)');

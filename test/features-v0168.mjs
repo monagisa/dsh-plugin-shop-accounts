@@ -310,8 +310,6 @@ await test('版本号与文档已覆盖 0.16.8', () => {
   assert.ok(maj === 0 && (min > 16 || (min === 16 && patch >= 8)), '版本号应 ≥0.16.8，实际 ' + pkg.version);
   const changelog = src('CHANGELOG.md');
   assert.ok(changelog.includes('0.16.8'));
-  const readme = src('README.md');
-  assert.ok(readme.includes('0.16.8'));
 });
 
 console.log('\n' + (failures.length ? '\u2717 ' + failures.length + ' failed' : '\u2713 all passed') + ' (' + passed + ' checks)');

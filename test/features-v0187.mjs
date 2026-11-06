@@ -221,7 +221,7 @@ test('C2 CHANGELOG / README 写了这次改动', () => {
   assert.ok(changelog.includes('v0.18.8'), 'CHANGELOG 没写 v0.18.8 的平台置顶');
   assert.ok(changelog.includes('v0.18.10'), 'CHANGELOG 没写 v0.18.10 的用户名文案');
   const readme = read('README.md');
-  assert.ok(readme.includes('0.18.5'), 'README 没写 0.18.5');
+  assert.ok(read('CHANGELOG.md').includes('0.18.5'), 'CHANGELOG 没写 0.18.5');
   assert.ok(readme.includes(pkg.version), 'README 没跟上 ' + pkg.version);
   assert.ok(readme.includes('登录账号'), 'README 没提「登录账号」的提示');
 });

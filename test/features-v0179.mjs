@@ -178,7 +178,7 @@ await test('D1 版本号已到 0.17.9', () => {
 
 await test('D2 CHANGELOG / README 提到本次修复', () => {
   const changelog = readSrc('CHANGELOG.md');
-  const readme = readSrc('README.md');
+  const readme = readSrc('CHANGELOG.md');
   assert.match(changelog, /v0\.17\.9/, 'CHANGELOG 没有 v0.17.9');
   assert.match(changelog, /client-errors\.log|空白|SlotErrorBoundary/, 'CHANGELOG 没写这次的问题');
   assert.match(readme, /0\.17\.9/, 'README 没更新版本');

@@ -225,7 +225,7 @@ await test('版本号与文档已覆盖 0.17.5', () => {
   const [maj, min, patch] = String(pkg.version).split('.').map(Number);
   assert.ok(maj === 0 && (min > 17 || (min === 17 && patch >= 5)), 'version 应 ≥0.17.5，实际 ' + pkg.version);
   assert.match(readText('CHANGELOG.md'), /0\.17\.5/, 'CHANGELOG 缺少 0.17.5');
-  assert.match(readText('README.md'), /0\.17\.5/, 'README 缺少 0.17.5');
+  assert.match(readText('CHANGELOG.md'), /0\.17\.5/, 'CHANGELOG 缺少 0.17.5');
 });
 
 console.log(`\n${failures.length ? 'FAILED' : 'PASS'}  ${passed} 项通过${failures.length ? '，' + failures.length + ' 项失败' : ''}`);

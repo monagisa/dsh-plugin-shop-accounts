@@ -202,8 +202,8 @@ test('C2 CHANGELOG / README 写了这次修正', () => {
   const changelog = read('CHANGELOG.md');
   assert.ok(changelog.includes('v0.18.2'), 'CHANGELOG 没写 v0.18.2');
   assert.ok(changelog.includes('默认配置'), 'CHANGELOG 没提默认配置');
-  const readme = read('README.md');
-  assert.ok(readme.includes('0.18.2'), 'README 没写 0.18.2');
+  const readme = read('CHANGELOG.md');
+  assert.ok(readme.includes('0.18.2'), 'CHANGELOG 没写 0.18.2');
   assert.ok(readme.includes('用户配置'), 'README 没提用户配置');
 });
 

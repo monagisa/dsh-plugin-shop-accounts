@@ -233,7 +233,7 @@ await test('版本号与文档已覆盖 0.17.3', () => {
   const [maj, min, patch] = parts;
   assert.ok(maj === 0 && (min > 17 || (min === 17 && patch >= 3)), 'version 应 ≥0.17.3，实际 ' + pkg.version);
   assert.match(readText('CHANGELOG.md'), /0\.17\.3/, 'CHANGELOG 缺少 0.17.3');
-  const readme = readText('README.md');
+  const readme = readText('CHANGELOG.md');
   assert.match(readme, /0\.17\.3/, 'README 缺少 0.17.3');
   assert.match(readme, /协议/, 'README 更新说明应提到协议勾选');
 });

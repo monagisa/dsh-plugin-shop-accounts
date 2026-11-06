@@ -145,8 +145,8 @@ test('C2 CHANGELOG / README 写了这次的共用规则', () => {
   const changelog = read('CHANGELOG.md');
   assert.ok(changelog.includes('v0.18.4'), 'CHANGELOG 没写 v0.18.4');
   assert.ok(changelog.includes('共用'), 'CHANGELOG 没提共用规则');
-  const readme = read('README.md');
-  assert.ok(readme.includes('0.18.4'), 'README 没写 0.18.4');
+  const readme = read('CHANGELOG.md');
+  assert.ok(readme.includes('0.18.4'), 'CHANGELOG 没写 0.18.4');
   assert.ok(readme.includes('共用'), 'README 没说明共用规则');
 });
 

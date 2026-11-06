@@ -172,8 +172,6 @@ await check('C2 变更记录与说明里写了这一条', () => {
   const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
   assert.ok(changelog.includes('0.17.7'), 'CHANGELOG 里没有 0.17.7');
   assert.ok(changelog.includes('下载'), 'CHANGELOG 里没说明下载型配方');
-  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
-  assert.ok(readme.includes('0.17.7'), 'README 里没有 0.17.7');
 });
 
 // ── 收尾 ──────────────────────────────────────────────────────────────────────

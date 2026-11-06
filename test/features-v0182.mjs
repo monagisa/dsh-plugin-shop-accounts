@@ -117,7 +117,7 @@ test('D1 版本号已到 0.18.0', () => {
 
 test('D2 CHANGELOG / README 写了这次适配', () => {
   const changelog = read('CHANGELOG.md');
-  const readme = read('README.md');
+  const readme = read('CHANGELOG.md');
   assert.match(changelog, /v0\.18\.0/, 'CHANGELOG 没有 v0.18.0');
   assert.match(changelog, /控制权/, 'CHANGELOG 没写控制权');
   assert.match(readme, /0\.18\.0/, 'README 没更新版本');

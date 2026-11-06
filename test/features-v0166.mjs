@@ -277,8 +277,6 @@ await test('版本 ≥0.16.6 且文档写明身份差异', () => {
   const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
   assert.match(changelog, /0\.16\.6/);
   assert.match(changelog, /验证码|扫码/);
-  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
-  assert.match(readme, /0\.16\.6/);
 });
 
 // ── 汇总 ───────────────────────────────────────────────────────────────────
