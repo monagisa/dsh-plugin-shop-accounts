@@ -96,9 +96,10 @@ test('A4 /state 支持 ?fresh=1 强制重列空间（界面 2 秒轮询用）', 
 
 // ── B. 前端：面板可见时自己对状态 ────────────────────────────────────────────
 
-test('B1 可见时每 2 秒对一次，且只在可见时挂定时器（无头自检要能退出）', () => {
-  assert.match(panelBody, /setInterval\(refresh, 2000\)/, '找不到 2 秒的状态轮询');
-  assert.match(panelBody, /document\.visibilityState === 'visible'/, '2 秒轮询没有「可见才挂」的守卫 —— 自检会被留住不退出');
+test('B1 可见时定时对一次，且按「有没有开着的浏览器」自适应频率（无头自检要能退出）', () => {
+  assert.match(panelBody, /var pollMs = anyRunning \? 2000 : 10000;/, '找不到自适应轮询频率');
+  assert.match(panelBody, /setInterval\(function \(\) \{ load\(true, true\); \}, pollMs\)/, '找不到按 pollMs 的定时轮询');
+  assert.match(panelBody, /document\.visibilityState !== 'visible'/, '定时轮询没有「可见才挂」的守卫 —— 自检会被留住不退出');
   assert.ok(!panelBody.includes('}, 15000'), '又出现了一个 15 秒的常驻轮询');
 });
 
@@ -108,7 +109,8 @@ test('B2 切回窗口时立刻对一次，并且绕过 30 秒空间缓存', () =
   assert.match(panelBody, /document\.addEventListener\('visibilitychange', refresh\)/, '没有监听 visibilitychange');
   assert.match(panelBody, /window\.removeEventListener\('focus', refresh\)/, 'focus 监听没有移除');
   assert.match(panelBody, /document\.removeEventListener\('visibilitychange', refresh\)/, 'visibilitychange 监听没有移除');
-  assert.match(panelBody, /if \(timer\) clearInterval\(timer\)/, '定时器没有随卸载清掉');
+  assert.match(panelBody, /clearInterval\(timer\)/, '定时器没有随卸载清掉');
+  assert.match(panelBody, /\}, \[pollMs\]\);/, '定时器没有跟着 pollMs 重建');
 });
 
 test('B3 原来的两种轮询还在（登录中 2.5 秒、定时开着 20 秒）', () => {
