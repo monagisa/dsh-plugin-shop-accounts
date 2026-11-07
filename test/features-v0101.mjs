@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * features-v0101.mjs —— v0.10.1 两项收尾能力：
  *   1. 登录账号查重：同平台 + 同登录账号（大小写折叠、NFC 归一）= 同一个人，不许建两条；

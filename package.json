@@ -28,12 +28,16 @@
     "README.md",
     "CHANGELOG.md",
     "test",
-    "docs"
+    "tools"
   ],
   "engines": {
     "node": ">=22.19.0"
   },
   "scripts": {
+    "check": "node tools/check-syntax.mjs",
+    "readme": "node tools/rebuild-readme-blocks.mjs",
+    "doctor": "node tools/check-readme.mjs && node tools/scan-colloquial.mjs && node tools/verify-clean.mjs",
+    "suites": "node tools/run-suites.mjs",
     "smoke": "node test/smoke.mjs",
     "features": "node test/features-v090.mjs",
     "features2": "node test/features-v0101.mjs",

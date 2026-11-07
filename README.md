@@ -358,6 +358,8 @@ node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行�
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
+发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
+
 - 自检：**681 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
@@ -389,6 +391,7 @@ lib/index.js        宿主：/shop-accounts/* 路由、自更新、定时心跳
 lib/client.js       客户端 bundle：设置页「账号管理」整页 UI
 cordis.patch.yml    插件挂载点
 test/               自检脚本（smoke + 各版本 features + platform + live-probe）
+tools/              发布与校验脚本（重建自检清单 / 语法检查 / 套件汇总 / 升版辅助）
 ```
 
 ---
