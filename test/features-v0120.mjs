@@ -14,6 +14,7 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
+import { readServerSource } from './_src.mjs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -322,7 +323,7 @@ await test('PUT /collection：淘宝能存「竞争洞察」，拼多多 400', a
 // ── 7. 工具与界面 ───────────────────────────────────────────────────────────
 section('7. 工具定义与界面');
 
-const toolSrc = fs.readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8');
+const toolSrc = readServerSource(ROOT);
 const clientSrc = fs.readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8');
 
 await test('工具：新增 catalog 动作，域枚举含「竞争洞察」', () => {

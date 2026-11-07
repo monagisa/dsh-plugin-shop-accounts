@@ -30,6 +30,7 @@ export const SERVER_MODULES = [
   'lib/scheduler-run.mjs',
   'lib/server/state.mjs',
   'lib/server/routes.mjs',
+  'lib/server/tools.mjs',
   'lib/index.js',
 ];
 

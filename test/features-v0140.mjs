@@ -12,6 +12,7 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
+import { readServerSource } from './_src.mjs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -328,7 +329,7 @@ await test('GET collect-jobs：能列出作业', async () => {
 });
 
 await test('工具：action 枚举与服务端都有 collect-job / collect-advance', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8');
+  const src = readServerSource(ROOT);
   assert.ok(src.includes('collect-job'), 'index.js 里没有 collect-job');
   assert.ok(src.includes('advanceJob'), '没有接 advanceJob');
   assert.ok(src.includes('prepareJobForAccount'), '没有 prepare 包装');
