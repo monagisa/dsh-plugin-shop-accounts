@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -191,7 +192,7 @@ await test('产物按配方里声明的 artifacts 收集（有值就是有数据
 });
 
 await test('后端不再把产物写死成空数组（按任务声明的 artifacts 走）', () => {
-  const code = src('lib/index.js');
+  const code = readServerSource(ROOT);
   assert.equal(
     code.includes('collectArtifacts({ collection: { artifacts: [] } }, {})'),
     false,

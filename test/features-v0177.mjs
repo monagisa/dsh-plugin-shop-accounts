@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')), '..');
 
@@ -73,7 +74,7 @@ function check(name, fn) {
 }
 
 // ── A 源码接线 ────────────────────────────────────────────────────────────────
-const indexSrc = fs.readFileSync(path.join(ROOT, 'lib/index.js'), 'utf8');
+const indexSrc = readServerSource(ROOT);
 const runnerSrc = fs.readFileSync(path.join(ROOT, 'lib/collect-runner.mjs'), 'utf8');
 
 await check('A1 定时采集的默认 prepareFn 带上 includeDownload: true', () => {

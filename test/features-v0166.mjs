@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -230,7 +231,7 @@ await test('PUT 不能把拼多多卖家改成买家', async () => {
 });
 
 await test('打开店铺的代填只在「有账密登录」的身份上尝试', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'lib/index.js'), 'utf8');
+  const src = readServerSource(ROOT);
   assert.match(src, /supportsPasswordLogin\(account\.platform, normalizeAccountType\(account\.accountType\)\)/,
     'open 的自动代填要先看身份有没有密码登录');
 });

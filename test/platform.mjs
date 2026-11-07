@@ -18,6 +18,7 @@ import * as platform from '../lib/platform/index.mjs';
 import * as win32 from '../lib/platform/win32.mjs';
 import * as darwin from '../lib/platform/darwin.mjs';
 import * as unsupported from '../lib/platform/unsupported.mjs';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -187,7 +188,7 @@ await test('平台相关的实现只出现在 lib/platform/ 里', () => {
 });
 
 await test('/state 会告诉界面当前平台与能力位（mac 上据此显示钥匙串文案）', () => {
-  const src = read('lib/index.js');
+  const src = readServerSource(root);
   assert.match(src, /osPlatform: \{/, 'buildState 要带 osPlatform');
   assert.match(src, /secretBackend: osPlatform\.secretBackend/);
   const client = read('lib/client.js');

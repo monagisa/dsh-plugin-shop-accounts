@@ -21,6 +21,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -206,13 +207,13 @@ await test('没有账密登录的身份不能被切成账号密码代填', async
 section('D. 接线：打开店铺、定时采集、界面');
 
 await test('打开店铺时代填受登录方式门控', () => {
-  const src = readText('lib/index.js');
+  const src = readServerSource(ROOT);
   assert.match(src, /loginModeOf\(account\) !== 'qrcode'/, 'open 分支要跳过扫码模式的代填');
   assert.match(src, /body\.autofill !== false/);
 });
 
 await test('定时采集遇到登录过期：扫码模式只标待登录，不去代填', () => {
-  const src = readText('lib/index.js');
+  const src = readServerSource(ROOT);
   assert.match(src, /AUTOLOGIN_LOGIN_MODE_MANUAL/, '定时任务也要有这个码');
   assert.match(src, /扫码或手动登录/);
 });

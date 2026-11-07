@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')), '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -21,7 +22,7 @@ const mod = await import(pathToFileURL(path.join(ROOT, 'lib/index.js')).href);
 const host = (mod.default && typeof mod.default.apply === 'function') ? mod.default : mod;
 const P = await import(pathToFileURL(path.join(ROOT, 'lib/platforms.mjs')).href);
 const pkg = JSON.parse(read('package.json'));
-const indexSrc = read('lib/index.js');
+const indexSrc = readServerSource(ROOT);
 
 let passed = 0;
 const failures = [];

@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -358,7 +359,7 @@ await test('删账号会连带删掉它的采集数据目录', async () => {
 section('6. 工具动作、提示词与界面');
 
 await test('工具 action 枚举里有 collect-plan / collect-import / collect-query', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'lib/index.js'), 'utf8');
+  const src = readServerSource(ROOT);
   for (const a of ['collect-plan', 'collect-import', 'collect-query']) {
     assert.ok(src.includes(`'${a}'`), '工具 action 缺少 ' + a);
   }

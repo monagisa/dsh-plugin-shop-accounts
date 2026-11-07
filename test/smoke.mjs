@@ -21,6 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -682,7 +683,7 @@ await test('tickSchedule：ego 关着也照常检测（后台无窗口读 cookie
 section('3.6 关窗之后登录态还在不在（会话级 cookie）');
 
 const chromeSrc = fs.readFileSync(path.join(ROOT, 'lib/chrome.mjs'), 'utf8');
-const indexSrc = fs.readFileSync(path.join(ROOT, 'lib/index.js'), 'utf8');
+const indexSrc = readServerSource(ROOT);
 
 await test('启动参数带 --restore-last-session（否则会话级 cookie 关窗就丢，淘宝 unb 就是这种）', () => {
   // 实测（<本地诊断脚本>）：不加 → 会话 cookie 丢；

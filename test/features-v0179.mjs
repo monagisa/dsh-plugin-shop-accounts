@@ -11,13 +11,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { EventEmitter } from 'node:events';
 import { pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 const repo = path.resolve(here, '..');
 const readSrc = (rel) => fs.readFileSync(path.join(repo, rel), 'utf8');
 const pkg = JSON.parse(readSrc('package.json'));
 const clientSrc = readSrc('lib/client.js');
-const indexSrc = readSrc('lib/index.js');
+const indexSrc = readServerSource(repo);
 
 let passed = 0;
 const failures = [];

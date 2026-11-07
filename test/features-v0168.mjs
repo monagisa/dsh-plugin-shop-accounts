@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -283,7 +284,7 @@ await test('ego 跑配方时把 postprocess 声明与产物归集一起带上', 
 });
 
 await test('页面路由把配方元信息（dslId/declaredArtifacts/postprocess）传到执行器', () => {
-  const s = src('lib/index.js');
+  const s = readServerSource(ROOT);
   assert.ok(s.includes('compiledInfo = {}'));
   assert.ok(s.includes('postprocess: Array.isArray(task.postprocess)'));
 });

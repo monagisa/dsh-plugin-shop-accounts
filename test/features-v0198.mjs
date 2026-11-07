@@ -15,10 +15,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { readServerSource } from './_src.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')), '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-const indexSrc = read('lib/index.js');
+const indexSrc = readServerSource(ROOT);
 const egoSrc = read('lib/ego.mjs');
 const pkg = JSON.parse(read('package.json'));
 

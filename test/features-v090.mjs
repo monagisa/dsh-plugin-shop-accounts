@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -361,7 +362,7 @@ await test('POST /accounts：账号与密码都是必填，缺一即 400', async
 });
 
 await test('「打开店铺」自带账密登录：源码里 autofill 默认开、可用 autofill:false 关掉', async () => {
-  const src = fs.readFileSync(path.join(ROOT, 'lib/index.js'), 'utf8');
+  const src = readServerSource(ROOT);
   assert.match(src, /body\.autofill !== false/);
   assert.match(src, /autofill = \{ attempted/);
   // 不再要求 confirm:true 才代填
@@ -473,7 +474,7 @@ await test('autologin.mjs：代填脚本包含账号密码与页签切换，且�
 
 await test('工具定义里不再声称"不会代填"，且 action 枚举含采集/自动登录', async () => {
   // 直接读源码断言（工具注册要宿主 defineTool，自检里拿不到）
-  const src = fs.readFileSync(path.join(ROOT, 'lib/index.js'), 'utf8');
+  const src = readServerSource(ROOT);
   assert.ok(!src.includes('本工具不会（也不能）代填账号密码或代扫码'));
   for (const a of ['collections', 'collect-prompt', 'collect-done', 'autologin']) {
     assert.ok(src.includes(`'${a}'`), '工具 action 缺少 ' + a);
