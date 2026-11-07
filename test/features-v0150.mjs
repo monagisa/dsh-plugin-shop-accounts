@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -409,7 +410,7 @@ await test('没有登录问题时不代填（正常采集不该碰密码库）',
 // ── D. 界面与代码接线 ───────────────────────────────────────────────────────
 section('D. 界面与接线');
 
-const indexSrc = fs.readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8');
+const indexSrc = readServerSource(ROOT);
 const clientSrc = fs.readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8');
 
 await test('宿主里有「定时采集」动作选择与 runScheduledCollection', () => {

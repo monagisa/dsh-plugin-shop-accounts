@@ -27,6 +27,7 @@ export const SERVER_MODULES = [
   'lib/ego-backend.mjs',
   'lib/login-state.mjs',
   'lib/account-ops.mjs',
+  'lib/scheduler-run.mjs',
   'lib/index.js',
 ];
 
