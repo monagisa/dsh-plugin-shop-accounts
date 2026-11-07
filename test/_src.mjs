@@ -28,6 +28,7 @@ export const SERVER_MODULES = [
   'lib/login-state.mjs',
   'lib/account-ops.mjs',
   'lib/scheduler-run.mjs',
+  'lib/server/state.mjs',
   'lib/index.js',
 ];
 
