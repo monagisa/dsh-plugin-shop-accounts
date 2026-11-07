@@ -373,10 +373,12 @@ lib/platform/       平台适配层：win32 / darwin / unsupported + 统一入�
 lib/cdp.mjs         极简 CDP 客户端（裸 WebSocket，无第三方依赖）
 lib/chrome.mjs      浏览器查找、端口选择、启动 / 关闭 / 探测
 lib/ego.mjs         ego lite 后端（探测 CLI、在 ego 运行时中执行脚本、TaskSpace 与 profile、读 cookie）
+lib/ego-lifecycle.mjs  ego 空间与「用户配置」：分配、探活、打开 / 检测 / 关闭 / 重置 / 收尾
 lib/frames.mjs      跨 frame 求值（登录页 iframe 内的代填与读取）
 lib/secret.mjs      cookie 备份加密（系统密钥后端保护主密钥 + AES-256-GCM）
 lib/vault.mjs       店铺账号密码库（密钥后端不可用时整库禁用）
 lib/autologin.mjs   账密代填（按平台选择器 + cookie 判据复核；验证码交回使用者）
+lib/identity/       登录态判定与检测结论回写（login-state / login-check）
 lib/collection.mjs  数据采集的配置与调度
 lib/datastore.mjs   采集数据层：覆盖台账 / 记录 JSONL / plan·import·query
 lib/catalog.mjs     指标目录层：平台 → 采集域 → 指标
@@ -385,9 +387,16 @@ lib/rpa.mjs         采集 DSL 引擎：编译为操作序列 + 执行器 + Chro
 lib/rpa/dsls/       内置采集配方（淘宝 / 天猫 / 拼多多 / 京东 / 抖音）
 lib/dsls.mjs        配方库发现与读取
 lib/collect-runner.mjs  采集作业编排：prepare / advance / status、分批、一次重试、作业落盘
+lib/collect-support.mjs 采集支撑：能力门控、作业准备、诊断产物归集
+lib/scheduler-run.mjs  定时任务执行：到点巡检、单店采集、采集开关迁移
+lib/account-ops.mjs 账号操作：端口分配、打开 / 关闭 / 重置
+lib/accounts.mjs    账号表读写与店铺配置导入导出
 lib/store.mjs       accounts.json / config.json / runtime.json 的原子读写与降级
 lib/schedule.mjs    排期算法（纯函数：分组、时间点、到点、下次、记账）
-lib/index.js        宿主：/shop-accounts/* 路由、自更新、定时心跳
+lib/server/state.mjs   /state 组装（平台能力、账号行、排期视图）
+lib/server/routes.mjs  /shop-accounts/* 全部路由
+lib/server/tools.mjs   agent 工具 shop_accounts 的注册与动作实现
+lib/index.js        插件入口：挂载路由与定时心跳、注册工具（不含业务逻辑）
 lib/client.js       客户端 bundle：设置页「账号管理」整页 UI
 cordis.patch.yml    插件挂载点
 test/               自检脚本（smoke + 各版本 features + platform + live-probe）
@@ -398,7 +407,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.19.9**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.0**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 

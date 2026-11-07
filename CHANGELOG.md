@@ -1,4 +1,20 @@
-﻿## v0.19.9（2026-11-07）
+﻿## v0.20.0（2026-11-07）
+
+**需求**：v0.19.9 之后 `lib/index.js` 里还剩定时任务、状态组装、全部路由、agent 工具四块，入口文件仍不是「只注册」，按职责拆分的收尾没完成。
+
+**改动**（都是结构整理，行为不变）：
+
+- 新增 `lib/scheduler-run.mjs`：到点巡检、单店定时采集、采集开关迁移（原 index.js 的「定时任务」整段）。
+- 新增 `lib/server/state.mjs`：`/state` 组装（平台能力、账号行、排期视图）。
+- 新增 `lib/server/routes.mjs`：`/shop-accounts/*` 全部路由与请求来源校验（1098 行）。
+- 新增 `lib/server/tools.mjs`：agent 工具 `shop_accounts` 的注册与全部动作实现（507 行）。
+- 按职责归位：`lib/login-state.mjs` 与 `lib/login-check.mjs` 移进 `lib/identity/`，`lib/ego-backend.mjs` 改名 `lib/ego-lifecycle.mjs`；模块间引用与自检聚合清单同步更新。
+- `lib/index.js` 从 4508 行降到 180 行左右：只剩 import、对外导出面与 `apply()` 注册（路由、定时心跳、工具）。
+- 自检统一从 `test/_src.mjs` 的聚合源码读取（`readServerSource`），源码切片断言按拆分前的区块先后拼接；`features-v0120` / `v0140` / `v0150` 原来直读 `lib/index.js` 的断言一并迁移。
+
+**验证**：全套 681 项两处通过；`npm run check` 92 个文件语法 0 失败；`npm run doctor` 三项检查 0 命中；真机探针 `GET /state` 200、建号 200（含买家建号与自动登录拒绝路径）。
+
+## v0.19.9（2026-11-07）
 
 **需求**：宿主侧 `lib/index.js` 已经长到 4508 行、123 个顶层声明，改一处要在上千行里翻，测试也只能对着整份源码切片。
 
