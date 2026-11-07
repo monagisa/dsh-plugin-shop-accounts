@@ -29,6 +29,9 @@ const RULES = [
   ['userquote', /用户原话|他机器/],
 ];
 
+// 公开联系方式：README 的「支持与交流」区允许出现维护者的公开邮箱，其余邮箱仍按可疑处理。
+const ALLOWED_EMAILS = [/nmsmshsacsb@qq\.com/i];
+
 let total = 0;
 for (const f of files) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
@@ -39,6 +42,8 @@ for (const f of files) {
     for (const [name, re] of RULES) {
       const m = line.match(re);
       if (m) {
+        // 允许：README 里的公开联系方式
+        if (name === 'email' && ALLOWED_EMAILS.some((allow) => allow.test(line))) return;
         // 允许：测试里主动断言这些字符串不存在
         const isGuard = /const bad of|includes\(bad\)|不该带|assert\.ok\(!raw|for \(const bad/.test(line);
         if (isGuard) return;

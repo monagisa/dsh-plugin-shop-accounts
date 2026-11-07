@@ -10,8 +10,9 @@
 [![license](https://img.shields.io/github/license/monagisa/dsh-plugin-shop-accounts?style=flat-square)](LICENSE)
 [![node](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white)](package.json)
 [![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-0078D6?style=flat-square)]()
+[![support](https://img.shields.io/badge/%E7%88%B1%E5%8F%91%E7%94%B5-monagisa-ff5f5f?style=flat-square)](https://afdian.com/a/monagisa)
 
-[功能特性](#功能特性) · [支持平台](#支持的平台) · [安装](#安装) · [快速开始](#快速开始) · [数据存放](#数据存放位置) · [安全机制](#安全机制) · [更新日志](CHANGELOG.md)
+[功能特性](#功能特性) · [支持平台](#支持的平台) · [安装](#安装) · [快速开始](#快速开始) · [数据存放](#数据存放位置) · [安全机制](#安全机制) · [支持与交流](#支持与交流) · [更新日志](CHANGELOG.md)
 
 </div>
 
@@ -407,10 +408,32 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.0**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.1**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
+## 支持与交流
+
+### 反馈问题
+
+- 平台改版、登录页弹窗变化、采集失败等现场问题，可以在 [Issues](https://github.com/monagisa/dsh-plugin-shop-accounts/issues) 提交，附上 DSH Desktop 版本、插件版本与复现步骤；带日志与页面截图的问题处理最快。
+- 提交前可先看 [已知限制](#已知限制) 与 [CHANGELOG.md](CHANGELOG.md)：部分现象来自平台风控（滑块、验证码、频繁访问），不属于插件缺陷。
+- 欢迎 Pull Request：新增平台适配、新增采集配方、修正登录页选择器都可以提。
+
+### 赞助支持
+
+插件按 MIT 协议开源，维护基于个人时间投入。如果它对日常工作有所帮助，可以通过爱发电支持后续维护：
+
+[![爱发电](https://img.shields.io/badge/%E7%88%B1%E5%8F%91%E7%94%B5-monagisa-ff5f5f?style=flat-square)](https://afdian.com/a/monagisa)
+
+赞助自愿，不绑定功能优先级，也不构成定制开发承诺。
+
+### 合作与联系
+
+- 使用咨询、平台适配、企业内部署与二次开发，可发邮件至 **nmsmshsacsb@qq.com**，标题写明平台与问题类型。
+- 商业合作请说明使用场景、部署方式与交付期望，便于评估可行性与排期。
+
+---
 ## 许可
 
 [MIT](LICENSE)
