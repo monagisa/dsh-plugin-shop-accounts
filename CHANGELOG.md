@@ -1,4 +1,17 @@
-﻿## v0.19.8（2026-11-07）
+﻿## v0.19.9（2026-11-07）
+
+**需求**：宿主侧 `lib/index.js` 已经长到 4508 行、123 个顶层声明，改一处要在上千行里翻，测试也只能对着整份源码切片。
+
+**改动**（都是结构整理，行为不变）：
+
+- 新增 `tools/`：把升版、README 重建、锚点/围栏/表格检查、口语与脱敏扫描、语法检查、全套自检都搬进仓库，配上 npm 脚本（`npm run readme` / `check` / `suites` / `doctor`）。
+- `lib/index.js` 按职责拆成独立模块：`plugin-consts` / `http-json` / `text` / `login-modes` / `domains` / `collect-support` / `diagnostics` / `cookies` / `self-update` / `self-update-paths` / `accounts` / `http-guard` / `port-ownership` / `locks` / `async-util` / `login-check` / `ego-backend` / `login-state` / `account-ops`。宿主入口只保留导出面与插件注册。
+- 自检改读「聚合源码」（`test/_src.mjs`）：按拆分前的顺序拼回各模块，源码切片断言继续成立，拆模块时不用改一堆测试。
+- 新增 `node tools/check-syntax.mjs`：对 `lib/`、`test/`、`tools/` 全部源码跑一遍语法检查。
+
+**验证**：全套 681 项两处通过；`npm run check` 0 个文件失败；README 锚点 / 围栏 / 表格检查与口语、脱敏扫描 0 命中。
+
+## v0.19.8（2026-11-07）
 
 **用户反馈**：有时候打开店铺，窗口里其实已经是登录状态，但界面会把窗口导回登录页、自己又登一遍。
 
