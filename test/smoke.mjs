@@ -886,7 +886,12 @@ await test('ego 模式「完成」只存状态、不收掉空间（空间是独�
   const start = indexSrc.indexOf('async function egoFinishAccount');
   assert.ok(start > 0, '找不到 egoFinishAccount');
   const rest = indexSrc.slice(start + 10);
-  const end = rest.indexOf('\nasync function ');
+  // 拆成多模块后，聚合源码里函数后面可能紧跟另一个模块的文件头标记：
+  // 先看「下一个函数」，再看「下一个模块标记」，谁近就用谁，免得多读进别的模块的同名调用。
+  const nextFn = rest.indexOf('\nasync function ');
+  const nextModule = rest.indexOf('\n// ===== ');
+  const candidates = [nextFn, nextModule].filter((n) => n > 0);
+  const end = candidates.length ? Math.min(...candidates) : -1;
   const body = end > 0 ? rest.slice(0, end) : rest;
   assert.ok(!/egoCloseAccount\s*\(/.test(body), '「完成」里不该再调用 egoCloseAccount —— 那会把用户看得见的空间收掉');
   assert.match(body, /keptSpace: true/, '要明确告诉界面「空间留着没关」');

@@ -24,6 +24,8 @@ export const SERVER_MODULES = [
   'lib/async-util.mjs',
   'lib/login-check.mjs',
   'lib/ego-backend.mjs',
+  'lib/login-state.mjs',
+  'lib/account-ops.mjs',
   'lib/index.js',
 ];
 
