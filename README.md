@@ -347,16 +347,17 @@ node test/features-v0186.mjs   # 12 项：ego 用户配置按平台共用（同�
 node test/features-v0187.mjs   # 19 项：表单按平台+身份给提示（买家叫用户名 / 用户账户，卖家叫店铺名 / 登录账号）
 node test/features-v0188.mjs   # 11 项：买家账号不做数据采集（不显示采集卡片、接口拒绝、定时只做检测）
 node test/features-v0192.mjs   # 9 项：窗口在别处关掉后状态跟上（可见时每 10 秒对一次，不再一直显示「关闭浏览器」）
+node test/features-v0197.mjs   # 7 项：浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前 36 套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 37 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
-- 自检：**664 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**671 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -381,7 +382,6 @@ lib/rpa.mjs         采集 DSL 引擎：编译为操作序列 + 执行器 + Chro
 lib/rpa/dsls/       内置采集配方（淘宝 / 天猫 / 拼多多 / 京东 / 抖音）
 lib/dsls.mjs        配方库发现与读取
 lib/collect-runner.mjs  采集作业编排：prepare / advance / status、分批、一次重试、作业落盘
-lib/monitor.mjs     公开商品监控数据层（当前版本未启用入口）
 lib/store.mjs       accounts.json / config.json / runtime.json 的原子读写与降级
 lib/schedule.mjs    排期算法（纯函数：分组、时间点、到点、下次、记账）
 lib/index.js        宿主：/shop-accounts/* 路由、自更新、定时心跳
@@ -394,7 +394,7 @@ test/               自检脚本（smoke + 各版本 features + platform + live-
 
 ## 更新日志
 
-当前版本 **0.19.6**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.19.7**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 

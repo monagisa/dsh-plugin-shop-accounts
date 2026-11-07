@@ -1,4 +1,19 @@
-﻿## v0.19.6（2026-11-06）
+﻿## v0.19.7（2026-11-07）
+
+浏览器设置打不开。
+
+原因：`ConfigPanel` 里 `const [form, setForm] = React.useState(null)` 后面紧跟 `if (!form) return null;`，
+而「导出 / 导入店铺配置」用的 `useRef` 与 `useState` 写在这个提前返回之后 —— 首帧只跑到 4 个 hook 就返回，
+effect 填好表单后的重渲染要跑 6 个，React 报 `Rendered more hooks than during the previous render`，
+整块由错误边界兜住，界面上就是空白（客户端日志里同时能看到 Invalid hook call）。这段是 v0.10.1 加迁移卡片时埋下的。
+
+改动：
+- 把 `fileRef`（`useRef`）与 `migBusy`（`useState`）上移到 `if (!form) return null;` 之前，所有 hook 无条件先执行。
+- 新增 `test/features-v0197.mjs`（7 项）：`ConfigPanel` 不许出现「先提前返回再调 hook」，其它带 hook 的组件也不许有顶层提前返回，并把这条规则写进注释。
+
+验证：新增自检 7 项通过；全套两处通过。
+
+## v0.19.6（2026-11-06）
 
 **需求**：README 改为以功能为主，更新日志从 README 移出，单独维护在 CHANGELOG.md。
 
