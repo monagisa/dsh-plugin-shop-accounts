@@ -20,6 +20,7 @@ export const SERVER_MODULES = [
   'lib/http-guard.mjs',
   'lib/self-update-paths.mjs',
   'lib/port-ownership.mjs',
+  'lib/locks.mjs',
   'lib/index.js',
 ];
 
