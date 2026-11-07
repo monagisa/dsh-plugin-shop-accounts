@@ -12,6 +12,14 @@ export const SERVER_MODULES = [
   'lib/http-json.mjs',
   'lib/text.mjs',
   'lib/login-modes.mjs',
+  'lib/domains.mjs',
+  'lib/diagnostics.mjs',
+  'lib/cookies.mjs',
+  'lib/self-update.mjs',
+  'lib/accounts.mjs',
+  'lib/http-guard.mjs',
+  'lib/self-update-paths.mjs',
+  'lib/port-ownership.mjs',
   'lib/index.js',
 ];
 
