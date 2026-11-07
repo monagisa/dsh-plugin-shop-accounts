@@ -21,6 +21,9 @@ export const SERVER_MODULES = [
   'lib/self-update-paths.mjs',
   'lib/port-ownership.mjs',
   'lib/locks.mjs',
+  'lib/async-util.mjs',
+  'lib/login-check.mjs',
+  'lib/ego-backend.mjs',
   'lib/index.js',
 ];
 
