@@ -8,6 +8,10 @@ import path from 'node:path';
 
 // 顺序 = 拆分前各区块在 lib/index.js 里的位置（新增模块时按这个顺序插入）
 export const SERVER_MODULES = [
+  'lib/plugin-consts.mjs',
+  'lib/http-json.mjs',
+  'lib/text.mjs',
+  'lib/login-modes.mjs',
   'lib/index.js',
 ];
 
