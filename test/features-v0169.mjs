@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -165,7 +166,7 @@ await test('京东经营概览仍在，且是整份原始产物', () => {
 section('E. 登录页兜底：配方没写守卫时，按最终 URL 报 LOGIN_REQUIRED');
 
 await test('executeOps 用平台定义的登录页判据做兜底', () => {
-  const src = readText(path.join('lib', 'index.js'));
+  const src = readServerSource(ROOT);
   assert.ok(src.includes('looksLikeLoginPage(res.finalUrl'), '没有按最终 URL 判登录页');
   assert.ok(src.includes("code: 'LOGIN_REQUIRED'"), '兜底没有统一成 LOGIN_REQUIRED');
   assert.ok(src.includes("platformOf(account.platform)"), '判据没有取平台定义');
@@ -186,7 +187,7 @@ await test('登录页判据对抖音/京东/淘宝成立，对业务页不成立
 });
 
 await test('只有「普通失败」才升级成 LOGIN_REQUIRED（能力/驱动类错误原样透出）', () => {
-  const src = readText(path.join('lib', 'index.js'));
+  const src = readServerSource(ROOT);
   assert.ok(src.includes("code === 'STEP_FAILED'") && src.includes("code === 'STEP_TIMEOUT'") && src.includes("code === 'TARGET_NOT_AVAILABLE'"));
   assert.ok(!src.includes("code === 'UNSUPPORTED_CAPABILITY'))"), '不该把能力类错误吞成登录问题');
 });

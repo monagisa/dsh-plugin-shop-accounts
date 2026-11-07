@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readServerSource } from './_src.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -419,7 +420,7 @@ await test('POST collect-run：浏览器没开 → 409（不偷偷拉起浏览�
 // ── 6. 接线与文档 ───────────────────────────────────────────────────────────
 section('6. 工具/ego 接线与文档');
 
-const indexSrc = fs.readFileSync(path.join(ROOT, 'lib', 'index.js'), 'utf8');
+const indexSrc = readServerSource(ROOT);
 const egoSrc = fs.readFileSync(path.join(ROOT, 'lib', 'ego.mjs'), 'utf8');
 
 await test('工具：action 枚举含 collect-run 与 rpa-dsls，且有对应分支', () => {

@@ -13,6 +13,7 @@ export const SERVER_MODULES = [
   'lib/text.mjs',
   'lib/login-modes.mjs',
   'lib/domains.mjs',
+  'lib/collect-support.mjs',
   'lib/diagnostics.mjs',
   'lib/cookies.mjs',
   'lib/self-update.mjs',
