@@ -946,7 +946,13 @@ await test('同一个店铺的动作串行化（定时检测撞上手动操作�
 });
 
 await test('ego 关着也能后台检测：无窗口实例读 cookie（不弹窗 / 不留进程 / 串行化）', () => {
-  const tickSeg = indexSrc.slice(indexSrc.indexOf('async function tickSchedule'), indexSrc.indexOf('async function tickSchedule') + 7000);
+  const tickStart = indexSrc.indexOf('async function tickSchedule');
+  const tickNextFn = indexSrc.indexOf('\nasync function ', tickStart + 1);
+  const tickNextExportFn = indexSrc.indexOf('\nexport async function ', tickStart + 1);
+  const tickNextModule = indexSrc.indexOf('\n// ===== ', tickStart);
+  const tickCands = [tickNextFn, tickNextExportFn, tickNextModule].filter((i) => i > tickStart);
+  const tickEnd = tickCands.length ? Math.min(...tickCands) : tickStart + 7000;
+  const tickSeg = indexSrc.slice(tickStart, Math.min(tickEnd, tickStart + 7000));
   assert.ok(!/ego lite 没在运行/.test(tickSeg), '定时检测不该再拿「ego 没在跑」当跳过理由');
   const checkSeg = indexSrc.slice(indexSrc.indexOf('async function egoCheckAccount'), indexSrc.indexOf('async function egoCheckAccount') + 4500);
   assert.match(checkSeg, /egoOfflineCookies/, 'ego 关着时要走无窗口实例后台读 cookie');

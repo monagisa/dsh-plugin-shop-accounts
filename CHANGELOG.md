@@ -1,4 +1,19 @@
-﻿## v0.20.1（2026-11-07）
+## v0.20.2（2026-11-10）
+
+**用户反馈**：四个店铺的定时采集全部显示「上次失败」，产物 0 个（12:00 / 12:30 两个到点时段都失败）。
+
+**原因**：到点采集走 `egoRpa` → 在 ego 运行时的 `runEgoOp`；该动作不在「允许顺手拉起 ego」的白名单里（白名单只有 `open` / `reset`），所以 ego lite 没在运行时会直接返回 `ego_not_running`「ego lite 没在运行 —— 插件不会为了查状态把整个浏览器拉起来」。定时任务没有启动 ego 的步骤，于是这家店的每个配方都以同一句失败，汇总成 `ALL_FAILED`。
+
+**改动**：
+
+- `lib/scheduler-run.mjs` 的 `runScheduledCollection` 开头补「自动启动 ego」步骤：ego 后端先 `refreshEgoInfo(true)` 探活，不在运行就 `ensureEgoApp(readConfig())` 启动；启动失败返回 `EGO_LAUNCH_FAILED` 并把原因写回账号（`lastSchedError` 与采集卡片都记成失败，文案给出「点「启动 ego」」的手动补救入口）。
+- 启动检查排在准备作业（`prepareJobForAccount`）之前：ego 没起来时不会先建一个注定失败的作业。
+- 顺带修回拆分时丢失的 `node:os` 导入：`memGB()` 之前每轮抛 `ReferenceError` 被 `catch` 吃掉，等于永远按 0 GB 算（每组大小被压成 1 个）。
+
+**验证**：新增 `test/features-v0202.mjs`（10 项：启动分支位置、探活顺序、失败码与文案、`memGB` 真读内存、版本与文档），全套 691 项两处通过；`npm run check` 0 个文件失败。
+
+
+## v0.20.1（2026-11-07）
 
 **需求**：README 补上「支持与交流」区，说明问题反馈入口、赞助方式与合作联系渠道。
 
@@ -147,7 +162,7 @@ effect 填好表单后的重渲染要跑 6 个，React 报 `Rendered more hooks 
 
 **验证**：全套 655 项两处通过。
 
-## v0.18.11（2026-11-05）
+## v0.18.11（2026-11-05）
 
 
 
