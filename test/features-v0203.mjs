@@ -56,12 +56,13 @@ const EDGE_DIR = plant(fakeRoot, 'Microsoft/Edge/Application/157.0.4341.42/msedg
 
 console.log('\n1. 扫描与版本推断');
 
-await test('A1 平台层给出五家 Chromium 系浏览器的扫描目标', () => {
+await test('A1 平台层只给插件能用的两个扫描目标：Chrome 与 ego lite', () => {
   const osPlatform = modTargets;
   const ids = osPlatform.map((t) => t.id);
-  assert.deepEqual(ids, ['chrome', 'edge', 'brave', 'chromium', 'vivaldi']);
+  assert.deepEqual(ids, ['chrome', 'egolite']);
   const exes = osPlatform.map((t) => t.exe);
   assert.ok(exes.includes('chrome.exe') || exes.includes('Google Chrome'), '主程序名不对：' + exes.join(','));
+  assert.ok(osPlatform.every((t) => typeof t.product === 'string' && t.product), '每个目标要带产品行文字');
 });
 
 await test('A2 版本从 Application/<版本>/ 路径段推断', () => {
@@ -85,24 +86,35 @@ await test('A4 路径比较不区分大小写与斜杠', () => {
 
 await test('A5 扫临时目录：每家只留一条、带版本、能标出使用中', () => {
   const targets = [
-    { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
-    { id: 'edge', name: 'Microsoft Edge', exe: 'msedge.exe', bases: [path.join(fakeRoot, 'Microsoft', 'Edge', 'Application')] },
+    { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
+    { id: 'egolite', name: 'ego lite', exe: 'ego.exe', product: 'ego 浏览器', files: [plant(fakeRoot, 'Citro Labs/ego lite/Application/ego.exe')] },
   ];
   const s = mod.scanBrowsers({ browserPath: '' }, { targets, resolved: CHROME_STUB });
   const ids = s.browsers.map((b) => b.id);
-  assert.deepEqual(ids, ['chrome', 'edge'], '只该有 chrome 与 edge：' + ids.join(','));
+  assert.deepEqual(ids, ['chrome', 'egolite'], '只该有 chrome 与 egolite：' + ids.join(','));
   const chrome = s.browsers.find((b) => b.id === 'chrome');
   assert.equal(chrome.version, '157.0.8103.38', 'Chrome 版本应取同级最大版本目录：' + chrome.version);
   assert.equal(chrome.chosen, true, 'resolveBrowserPath 回退到的那份应标使用中');
-  const edge = s.browsers.find((b) => b.id === 'edge');
-  assert.equal(edge.chosen, false);
+  const ego = s.browsers.find((b) => b.id === 'egolite');
+  assert.equal(ego.chosen, false, 'Chrome 后端下 ego lite 不该标使用中');
+  assert.equal(ego.product, 'ego 浏览器');
   assert.ok(s.os.label === 'Windows' || s.os.label === 'macOS' || s.os.label === 'Linux', '系统名不对：' + s.os.label);
   assert.ok(s.scannedAt, '扫描结果要带时间');
 });
 
+await test('A5b 后端切到 ego 时 ego lite 才是使用中', () => {
+  const targets = [
+    { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
+    { id: 'egolite', name: 'ego lite', exe: 'ego.exe', product: 'ego 浏览器', files: [plant(fakeRoot, 'Citro Labs/ego lite/Application/ego.exe')] },
+  ];
+  const s = mod.scanBrowsers({ browser: 'egolite' }, { targets, resolved: CHROME_STUB });
+  assert.equal(s.browsers.find((b) => b.id === 'egolite').chosen, true);
+  assert.equal(s.browsers.find((b) => b.id === 'chrome').chosen, false);
+});
+
 await test('A6 指定了 browserPath 时用它标使用中', () => {
   const targets = [
-    { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
+    { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
   ];
   const s = mod.scanBrowsers({ browserPath: CHROME_DIR }, { targets });
   assert.equal(s.selectedFound, true);
@@ -115,14 +127,14 @@ await test('A7 entries 注入模式：同 id 多份只留版本最高的', () =>
     entries: [
       { id: 'chrome', name: 'Google Chrome', path: 'C:/PF/Google/Chrome/Application/chrome.exe', version: '157.0.8103.38' },
       { id: 'chrome', name: 'Google Chrome', path: 'C:/PF/Google/Chrome/Application/100.0/chrome.exe', version: '100.0.1.1' },
-      { id: 'edge', name: 'Microsoft Edge', path: 'C:/PF/Microsoft/Edge/Application/157.0.4341.42/msedge.exe', version: '157.0.4341.42' },
+      { id: 'egolite', name: 'ego lite', path: 'C:/Program Files/Citro Labs/ego lite/Application/ego.exe', version: '' },
     ],
   });
   assert.equal(s.browsers.length, 2);
   assert.equal(s.browsers.find((b) => b.id === 'chrome').version, '157.0.8103.38');
   assert.equal(s.browsers.find((b) => b.id === 'chrome').path, 'C:/PF/Google/Chrome/Application/chrome.exe');
   assert.equal(s.browsers.find((b) => b.id === 'chrome').chosen, false, '配置指向 100.0，不是留下的那份');
-  assert.equal(s.browsers.find((b) => b.id === 'edge').chosen, false);
+  assert.equal(s.browsers.find((b) => b.id === 'egolite').chosen, false);
 });
 
 console.log('\n2. 接线：路由与界面');
@@ -151,16 +163,16 @@ await test('B2 界面有「用户浏览器」面板、重新扫描与切换按�
 await test('B3 浏览器行有图标、版本芯片与展开', () => {
   assert.match(clientSrc, /function browserLogoSvg\(id\)/, '要有内联 SVG 图标');
   assert.ok(clientSrc.includes("id === 'chrome'") && clientSrc.includes('#ea4335'), 'Chrome 图标要按产品配色');
-  assert.ok(clientSrc.includes("id === 'edge'"), 'Edge 也要有图标');
+  assert.ok(clientSrc.includes("id === 'egolite'"), 'ego lite 也要有图标');
   assert.ok(clientSrc.includes('setScanOpen'), '行要能展开/收起');
   assert.match(clientSrc, /'M' \+ String\(b\.version \|\| ''\)\.split\('\.'\)\[0\]/, '版本芯片显示 M<主版本号>');
 });
 
 console.log('\n3. 版本与文档');
 
-await test('C1 版本号已到 0.20.4', () => {
+await test('C1 版本号已到 0.20.5', () => {
   const parts = String(pkg.version).split('.').map((x) => Number(x));
-  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 4))), '版本应 ≥ 0.20.4：' + pkg.version);
+  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 5))), '版本应 ≥ 0.20.5：' + pkg.version);
 });
 
 await test('C2 CHANGELOG 与 README 同步', () => {
