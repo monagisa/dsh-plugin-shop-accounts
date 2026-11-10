@@ -135,22 +135,32 @@ await test('B1 路由里有只读扫描接口', () => {
   assert.ok(!/writeConfig|launchBrowser/.test(seg), '扫描接口必须只读（不能写配置、不能起进程）');
 });
 
-await test('B2 界面有「本机浏览器」块、重新扫描与切换按钮', () => {
+await test('B2 界面有「用户浏览器」面板、重新扫描与切换按钮', () => {
   assert.ok(clientSrc.includes("'/browser-scan'"), '客户端要调 /browser-scan');
   assert.match(clientSrc, /function loadScan\(\)/, '要有 loadScan');
   assert.ok(clientSrc.includes('重新扫描'), '要有「重新扫描」按钮');
-  assert.ok(clientSrc.includes('本机浏览器'), '要有「本机浏览器」小标题');
+  assert.ok(clientSrc.includes('用户浏览器'), '要有「用户浏览器」小标题');
+  assert.ok(clientSrc.includes('系统环境'), '要有「系统环境」小标题');
+  assert.ok(clientSrc.includes('系统架构'), '要有「系统架构」一行');
   assert.ok(clientSrc.includes('使用中'), '要标出使用中的浏览器');
   assert.ok(clientSrc.includes('使用这个'), '要能一键切换');
   assert.match(clientSrc, /browserPath: b\.path/, '切换时写 browserPath');
   assert.match(clientSrc, /scan\.os\.label/, '要显示系统环境');
 });
 
+await test('B3 浏览器行有图标、版本芯片与展开', () => {
+  assert.match(clientSrc, /function browserLogoSvg\(id\)/, '要有内联 SVG 图标');
+  assert.ok(clientSrc.includes("id === 'chrome'") && clientSrc.includes('#ea4335'), 'Chrome 图标要按产品配色');
+  assert.ok(clientSrc.includes("id === 'edge'"), 'Edge 也要有图标');
+  assert.ok(clientSrc.includes('setScanOpen'), '行要能展开/收起');
+  assert.match(clientSrc, /'M' \+ String\(b\.version \|\| ''\)\.split\('\.'\)\[0\]/, '版本芯片显示 M<主版本号>');
+});
+
 console.log('\n3. 版本与文档');
 
-await test('C1 版本号已到 0.20.3', () => {
+await test('C1 版本号已到 0.20.4', () => {
   const parts = String(pkg.version).split('.').map((x) => Number(x));
-  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 3))), '版本应 ≥ 0.20.3：' + pkg.version);
+  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 4))), '版本应 ≥ 0.20.4：' + pkg.version);
 });
 
 await test('C2 CHANGELOG 与 README 同步', () => {

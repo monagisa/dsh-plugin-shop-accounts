@@ -56,7 +56,7 @@
 
 后端可在设置页指定为「自动 / ego lite / Chrome」，切换后立即生效。
 
-Chrome 后端用哪个浏览器可以在设置页「本机浏览器」里选：点「重新扫描」会列出这台机器上装着的 Chromium 内核浏览器（Chrome / Edge / Brave / Chromium / Vivaldi，带版本与路径），并标出当前使用的那个；点「使用这个」即写入 `browserPath` 并立即生效。留空时按 Chrome → Edge 的顺序自动探测。
+Chrome 后端用哪个浏览器可以在设置页「用户浏览器」里选：点「重新扫描」会列出这台机器上装着的 Chromium 内核浏览器（Chrome / Edge / Brave / Chromium / Vivaldi，带版本与路径），并标出当前使用的那个；点「使用这个」即写入 `browserPath` 并立即生效。留空时按 Chrome → Edge 的顺序自动探测。
 
 ### 定时任务
 
@@ -352,7 +352,7 @@ node test/features-v0188.mjs   # 11 项：买家账号不做数据采集（不�
 node test/features-v0192.mjs   # 9 项：窗口在别处关掉后状态跟上（可见时每 10 秒对一次，不再一直显示「关闭浏览器」）
 node test/features-v0198.mjs   # 10 项：窗口里已经登录时不再自动代填
 node test/features-v0202.mjs   # 10 项：定时采集到点自己启动 ego（以前要手动先打开一次）
-node test/features-v0203.mjs   # 11 项：本机浏览器扫描（设置页列出可用浏览器并标出使用中）
+node test/features-v0203.mjs   # 12 项：本机浏览器扫描（设置页列出可用浏览器并标出使用中）
 node test/features-v0197.mjs   # 7 项：浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
@@ -365,7 +365,7 @@ node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行�
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**702 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**703 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -412,7 +412,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.3**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.4**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
