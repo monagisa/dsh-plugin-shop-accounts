@@ -11,6 +11,7 @@
 | `check-syntax.mjs` | 对 `lib/`、`test/`、`tools/` 下所有 `.js` / `.mjs` 跑一遍 `node --check` | `npm run check` |
 | `run-suites.mjs` | 依次跑全部自检套件并汇总项数，结果写到 `suite-result.txt` | `npm run suites` |
 | `bump-version.mjs` | 升版的机械动作：版本号、描述、CHANGELOG 段头、README 版本行、重建自检块（版本特有的正文仍需人工补） | 直接执行 |
+| `migrate-collect-naming.mjs` | 把已有采集数据整理成新命名（作业目录带时间、产物带配方前缀、补 manifest、按上限清理），`--dry` 只打印 |
 
 ## 升版流程
 

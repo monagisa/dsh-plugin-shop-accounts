@@ -275,12 +275,15 @@ cookie 罐本地备份：`--restore-last-session` 无法覆盖使用者直接点
 | 登录态（ego 模式） | 位于 ego 自身的 `User Data` 中，按 `accounts.json` 记录的 `egoProfile` 对应；插件不复制、不移动 |
 | 会话 cookie 备份（加密） | `<数据目录>/profiles/<账号 id>/dsh-session-cookies.json`：AES-256-GCM，主密钥由系统密钥后端保护（Windows DPAPI / macOS 钥匙串） |
 | 密码库 | `<数据目录>/account-secrets.enc`：同一把主密钥 + AES-256-GCM；密钥后端不可用时整库禁用，不保存明文 |
-| 采集数据 | `<数据目录>/collection/<账号 id>/`：`coverage.json` 覆盖台账、`records.jsonl` 记录、`imports.json` 导入记录、`jobs/` 作业 |
+| 采集数据（记录） | `<数据目录>/collection/<账号 id>/`：`dsl-coverage.json` 配方覆盖台账、`records.jsonl` 记录、`imports.json` 导入记录 |
+| 采集数据（产物） | `<数据目录>/collection/<账号 id>/jobs/job_<YYYYMMDD-HHmm>_<随机 6 位>/`：`job.json` 作业、`artifacts/<配方 id>_<YYYYMMDD-HHmm>_<原始文件名>` 产物、`artifacts/manifest.json` 本次交付清单 |
 | 调试端口 | Chrome 模式从 `portBase`（默认 9222）起自动寻找空闲端口，一店一端口；ego 模式无端口 |
 
 数据目录的优先级是：环境变量 `DSH_SHOP_ACCOUNTS_DIR` > 指针文件 `%DSH_HOME%\shop-accounts.dir` > 默认目录 `%DSH_HOME%\shop-accounts`。
 
 设置页「数据目录」那一块会显示当前目录与默认目录：可以一键打开、复制路径，也可以「更改」——填一个绝对路径，勾上「把现有配置与采集数据复制过去」会把账号表、设置、密码库与采集记录搬过去（浏览器档案留在旧位置，账号表里的路径仍然有效；新目录里已有同名项会跳过、不覆盖）。改完重启 DSH Desktop 生效。
+
+采集数据的命名是固定规则：作业目录名带本地时间（`job_20261111-1230_ab12cd`），产物文件名是「配方 id + 时间 + 平台原始文件名」，每个作业另有一份 `artifacts/manifest.json` 记清交付了什么。作业不会无限堆积：有数据的留最近 20 次、只有失败或空数据的留最近 3 次。老数据可以用 `node tools/migrate-collect-naming.mjs` 一次性整理（`--dry` 先预览）。
 
 ---
 
@@ -357,19 +360,20 @@ node test/features-v0202.mjs   # 10 项：定时采集到点自己启动 ego（�
 node test/features-v0203.mjs   # 17 项：本机浏览器扫描（只列插件能用的 Google Chrome 与 ego lite）
 node test/features-v0216.mjs   # 6 项：设置页显示采集数据保存在哪，并能一键打开目录
 node test/features-v0217.mjs   # 9 项：数据目录可以看、可以打开、也可以换一个（可选把数据搬过去）
+node test/features-v0218.mjs   # 9 项：采集数据命名规范（作业目录带时间、产物带配方前缀、manifest 与保留上限）
 node test/features-v0197.mjs   # 7 项：浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前 42 套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 43 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**723 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**732 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -416,7 +420,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.17**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.18**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
