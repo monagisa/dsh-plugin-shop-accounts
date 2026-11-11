@@ -331,6 +331,14 @@ await test('迁移工具按采集项名改名并补 items', () => {
   assert.ok(tool.includes('item: dslItemName(dslId)'), '迁移工具的 manifest 没标采集项');
 });
 
+await test('迁移工具把 job.json 里的产物路径改回实际文件（旧目录名 + 旧文件名）', () => {
+  const tool = read('tools/migrate-collect-naming.mjs');
+  assert.ok(tool.includes('function syncJobPaths(jobDir, job)'), '迁移工具没有 syncJobPaths');
+  assert.ok(tool.includes('a.filePath = next;'), 'syncJobPaths 没写回 filePath');
+  assert.ok(tool.includes("writeJson(path.join(jobDir, 'job.json'), job)"), 'syncJobPaths 没写回 job.json');
+  assert.ok(tool.includes('syncJobPaths(moved.jobDir, moved.job)'), '主流程没调用 syncJobPaths');
+});
+
 section('F. 版本与文档');
 
 await test('版本号已到 0.20.21', () => {

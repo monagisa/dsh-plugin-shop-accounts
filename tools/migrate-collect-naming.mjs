@@ -61,7 +61,7 @@ function listFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isFile()).map((d) => d.name);
 }
 
-const report = { collectionDir, dry, renamed: [], artifacts: [], tables: [], manifests: [], pruned: [], skipped: [] };
+const report = { collectionDir, dry, renamed: [], artifacts: [], tables: [], jobPaths: [], manifests: [], pruned: [], skipped: [] };
 
 /** 作业目录改名（旧随机 id → 可读 id），返回新目录与 job 对象。 */
 function renameJobDir(jobDir, jobFile) {
@@ -131,6 +131,34 @@ function renameArtifactFiles(jobDir, job) {
     }
   }
   return renamed;
+}
+
+/** v0.20.22：job.json 里的产物路径是旧的绝对路径（旧作业目录名 + 旧文件名），按 artifacts 目录里的实际文件改回来。 */
+function syncJobPaths(jobDir, job) {
+  const artRoot = path.join(jobDir, 'artifacts');
+  let fixed = 0;
+  for (const t of job.tasks || []) {
+    const dir = path.join(artRoot, String((t && t.taskId) || 'task'));
+    const files = listFiles(dir);
+    if (!files.length) continue;
+    for (const a of (t && t.artifacts) || []) {
+      if (!a || !a.present) continue;
+      const base = a.fileName ? String(a.fileName) : a.filePath ? path.basename(String(a.filePath)) : '';
+      if (!base) continue;
+      const hit = files.find((x) => x === base) || files.find((x) => x.endsWith(base)) || (files.length === 1 ? files[0] : '');
+      if (!hit) continue;
+      const next = path.join(dir, hit);
+      if (String(a.filePath || '') === next) continue;
+      a.filePath = next;
+      a.fileName = hit;
+      fixed += 1;
+    }
+  }
+  if (fixed) {
+    report.jobPaths.push({ job: path.basename(jobDir), fixed });
+    if (!dry) writeJson(path.join(jobDir, 'job.json'), job);
+  }
+  return fixed;
 }
 
 /** 写这次作业的 manifest.json：交付了哪些文件、各多少字节。 */
@@ -273,6 +301,7 @@ for (const accountId of listDirs(collectionDir)) {
     if (!moved) continue;
     if (dry) continue;
     renameArtifactFiles(moved.jobDir, moved.job);
+  syncJobPaths(moved.jobDir, moved.job);
     writeManifest(moved.jobDir, moved.job);
   }
   {
@@ -280,7 +309,8 @@ for (const accountId of listDirs(collectionDir)) {
     for (const name of listDirs(jobsDir)) {
       const jobDir = path.join(jobsDir, name);
       const job = readJson(path.join(jobDir, 'job.json'));
-      if (job) writeTables(jobDir, job);
+      if (job) syncJobPaths(jobDir, job);
+  if (job) writeTables(jobDir, job);
     }
   }
   pruneJobs(accountDir);
