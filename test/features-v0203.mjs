@@ -174,8 +174,8 @@ await test('B2 界面有「用户浏览器」面板、重新扫描与切换按�
   assert.ok(clientSrc.includes('用户浏览器'), '要有「用户浏览器」小标题');
   assert.ok(clientSrc.includes('系统环境'), '要有「系统环境」小标题');
   assert.ok(clientSrc.includes('系统架构'), '要有「系统架构」一行');
-  assert.ok(clientSrc.includes('使用中'), '要标出使用中的浏览器');
-  assert.ok(clientSrc.includes('使用这个'), '要能一键切换');
+  assert.ok(clientSrc.includes("'默认'"), '要标出当前默认的浏览器');
+  assert.ok(clientSrc.includes('设为默认'), '要能一键设为默认');
   assert.match(clientSrc, /browserPath: b\.path/, '切换时写 browserPath');
   assert.match(clientSrc, /scan\.os\.label/, '要显示系统环境');
 });
