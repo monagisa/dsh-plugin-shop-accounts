@@ -49,6 +49,7 @@ const SUITES = [
   ['features-v0202.mjs', 10, '定时采集到点自己启动 ego（以前要手动先打开一次）'],
   ['features-v0203.mjs', 17, '本机浏览器扫描（只列插件能用的 Google Chrome 与 ego lite）'],
   ['features-v0216.mjs', 6, '设置页显示采集数据保存在哪，并能一键打开目录'],
+  ['features-v0217.mjs', 9, '数据目录可以看、可以打开、也可以换一个（可选把数据搬过去）'],
   ['features-v0197.mjs', 7, '浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）'],
   ['platform.mjs', 12, '平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）'],
 ];
