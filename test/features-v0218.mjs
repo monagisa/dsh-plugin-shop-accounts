@@ -217,6 +217,7 @@ await test('tools/migrate-collect-naming.mjs 能换算目录名、补 manifest�
   assert.ok(tool.includes("'--dry'") || tool.includes('--dry'), '迁移工具缺 --dry 预览');
   assert.ok(tool.includes('jobItemsLabel('), '迁移工具没有把采集项补进老作业的目录名');
   assert.ok(tool.includes('READABLE_WITH_LABEL'), '迁移工具分不清「带采集项」与「不带采集项」的可读 id');
+  assert.ok(tool.includes("'无采集项'"), '迁移工具没给没有任务的空作业一个名字');
   assert.ok(fs.existsSync(path.join(ROOT, 'tools', 'migrate-collect-naming.mjs')));
 });
 

@@ -78,7 +78,7 @@ function renameJobDir(jobDir, jobFile) {
   const parsed = /^job_(\d{8}-\d{4})_([a-z0-9]{3,12})(?:_([^\\/:*?"<>|]+))?$/.exec(base);
   const stamp = parsed ? parsed[1] : '';
   const tail = parsed ? parsed[2] : (base.split('_').pop() || '');
-  const label = jobItemsLabel((job.tasks || []).map((t) => t.dslId));
+  const label = jobItemsLabel((job.tasks || []).map((t) => t.dslId)) || '无采集项';
   const nextId = parsed
     ? 'job_' + stamp + '_' + tail + (label ? '_' + label : '')
     : readableJobId(created, tail, label);
