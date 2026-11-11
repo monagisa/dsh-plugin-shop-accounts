@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { readServerSource } from './_src.mjs';
+import { normalizeExePath } from '../lib/self-update-paths.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')), '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -147,6 +148,15 @@ await test('A8 主程序在安装根目录时，版本取同目录下的版本�
   assert.equal(mod.dirVersionOf(path.join(TMP, 'no-such-dir', 'ego.exe')), '');
 });
 
+await test('A9 把 ego 的 exe 填进「浏览器路径」时，报错要说清怎么用', () => {
+  // v0.20.10：用户点了 ego lite 那一行的「使用这个」，原来会被路径校验拒成
+  // 「这个文件名不在可用的浏览器名单里：ego.exe」，看不出该怎么做。
+  let msg = '';
+  try { normalizeExePath(EGO_FILE, 'browser'); } catch (err) { msg = String(err && err.message || ''); }
+  assert.ok(msg.includes('浏览器后端') && msg.includes('ego lite'), '要提示切浏览器后端：' + msg);
+  assert.ok(!msg.includes('不在可用的浏览器名单里'), '不该再只说文件名不对');
+});
+
 console.log('\n2. 接线：路由与界面');
 await test('B1 路由里有只读扫描接口', () => {
   assert.match(indexSrc, /if \(method === 'GET' && p === '\/browser-scan'\)/, '路由缺 GET /browser-scan');
@@ -183,11 +193,20 @@ await test('B3 浏览器行有图标、版本芯片与展开', () => {
   assert.match(clientSrc, /'M' \+ verMajor/, '版本芯片显示 M<主版本号>');
 });
 
+await test('B4 点「使用这个」按行类型走不同配置（ego lite 切后端，Chrome 写路径）', () => {
+  // v0.20.10：ego lite 那行的「使用这个」以前也去写 browserPath，被宿主拒成
+  // 「这个文件名不在可用的浏览器名单里：ego.exe」。
+  const seg = clientSrc.slice(clientSrc.indexOf('function useBrowser(b) {'), clientSrc.indexOf('function useBrowser(b) {') + 900);
+  assert.ok(seg.includes("b.id === 'egolite'"), '要按行类型分流');
+  assert.ok(seg.includes("{ browser: 'egolite' }"), 'ego lite 走 browser 后端字段');
+  assert.ok(seg.includes("browserPath: b.path, browser: 'chrome'"), 'Chrome 走 browserPath 并切到 chrome 后端');
+});
+
 console.log('\n3. 版本与文档');
 
-await test('C1 版本号已到 0.20.9', () => {
+await test('C1 版本号已到 0.20.10', () => {
   const parts = String(pkg.version).split('.').map((x) => Number(x));
-  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 9))), '版本应 ≥ 0.20.9：' + pkg.version);
+  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 10))), '版本应 ≥ 0.20.10：' + pkg.version);
 });
 
 await test('C2 CHANGELOG 与 README 同步', () => {
