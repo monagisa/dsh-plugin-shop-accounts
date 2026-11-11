@@ -20,9 +20,11 @@ import path from 'node:path';
 import { dataDir } from '../lib/store.mjs';
 import { readableJobId, runStamp } from '../lib/collect-runner.mjs';
 import { flattenRows, writeXlsx } from '../lib/xlsx.mjs';
-import { dslItemFileSafe, dslItemName, sheetNameSafe } from '../lib/dsl-names.mjs';
+import { dslItemFileSafe, dslItemName, jobItemsLabel, sheetNameSafe } from '../lib/dsl-names.mjs';
 
-const READABLE = /^job_\d{8}-\d{4}_[a-z0-9]{3,12}$/;
+const READABLE = /^job_\d{8}-\d{4}_[a-z0-9]{3,12}(?:_[^\\/:*?"<>|]+)?$/;
+/** v0.20.23：目录名要带采集项，所以老的「没带采集项」的可读 id 也要再改一次。 */
+const READABLE_WITH_LABEL = /^job_\d{8}-\d{4}_[a-z0-9]{3,12}_[^\\/:*?"<>|]+$/;
 const KEEP_OK = 20;
 const KEEP_FAILED = 3;
 const KEEP_PER_DAY = 2;
@@ -63,29 +65,39 @@ function listFiles(dir) {
 
 const report = { collectionDir, dry, renamed: [], artifacts: [], tables: [], jobPaths: [], manifests: [], pruned: [], skipped: [] };
 
-/** 作业目录改名（旧随机 id → 可读 id），返回新目录与 job 对象。 */
+/** 作业目录改名（旧随机 id / 没带采集项的可读 id → job_<时间>_<随机>_<采集项>），返回新目录与 job 对象。 */
 function renameJobDir(jobDir, jobFile) {
   const job = readJson(jobFile);
   if (!job) {
     report.skipped.push({ dir: path.basename(jobDir), reason: 'job.json 读不出来' });
     return null;
   }
-  const current = String(job.jobId || path.basename(jobDir));
-  if (READABLE.test(current)) {
+  const base = String(path.basename(jobDir));
+  const current = String(job.jobId || base);
+  const created = new Date(job.createdAt || Date.now());
+  const parsed = /^job_(\d{8}-\d{4})_([a-z0-9]{3,12})(?:_([^\\/:*?"<>|]+))?$/.exec(base);
+  const stamp = parsed ? parsed[1] : '';
+  const tail = parsed ? parsed[2] : (base.split('_').pop() || '');
+  const label = jobItemsLabel((job.tasks || []).map((t) => t.dslId));
+  const nextId = parsed
+    ? 'job_' + stamp + '_' + tail + (label ? '_' + label : '')
+    : readableJobId(created, tail, label);
+  if (current === nextId && base === nextId) {
     job.jobId = current;
     return { jobDir, job };
   }
-  const created = new Date(job.createdAt || Date.now());
-  const tail = String(path.basename(jobDir)).split('_').pop() || '';
-  const nextId = readableJobId(created, tail);
+  if (READABLE_WITH_LABEL.test(current) && current === base) {
+    job.jobId = current;
+    return { jobDir, job };
+  }
   const nextDir = path.join(path.dirname(jobDir), nextId);
-  if (fs.existsSync(nextDir)) {
-    report.skipped.push({ dir: path.basename(jobDir), reason: '目标目录已存在：' + nextId });
+  if (nextDir !== jobDir && fs.existsSync(nextDir)) {
+    report.skipped.push({ dir: base, reason: '目标目录已存在：' + nextId });
     return null;
   }
-  report.renamed.push({ from: path.basename(jobDir), to: nextId });
+  report.renamed.push({ from: base, to: nextId });
   if (dry) return { jobDir, job, nextId };
-  fs.renameSync(jobDir, nextDir);
+  if (nextDir !== jobDir) fs.renameSync(jobDir, nextDir);
   job.jobId = nextId;
   writeJson(path.join(nextDir, 'job.json'), job);
   return { jobDir: nextDir, job };
@@ -301,7 +313,7 @@ for (const accountId of listDirs(collectionDir)) {
     if (!moved) continue;
     if (dry) continue;
     renameArtifactFiles(moved.jobDir, moved.job);
-  syncJobPaths(moved.jobDir, moved.job);
+    syncJobPaths(moved.jobDir, moved.job);
     writeManifest(moved.jobDir, moved.job);
   }
   {
@@ -310,7 +322,7 @@ for (const accountId of listDirs(collectionDir)) {
       const jobDir = path.join(jobsDir, name);
       const job = readJson(path.join(jobDir, 'job.json'));
       if (job) syncJobPaths(jobDir, job);
-  if (job) writeTables(jobDir, job);
+      if (job) writeTables(jobDir, job);
     }
   }
   pruneJobs(accountDir);

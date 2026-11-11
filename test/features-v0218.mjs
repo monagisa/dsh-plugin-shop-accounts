@@ -70,13 +70,16 @@ await test('runStamp / readableJobId 按本地时间拼出可读 id', () => {
   assert.equal(typeof J.readableJobId, 'function', 'readableJobId 没导出');
   assert.equal(J.runStamp(new Date('2026-11-11T12:30:00')), '20261111-1230');
   assert.equal(J.readableJobId(new Date('2026-11-11T12:30:00'), 'abc123'), 'job_20261111-1230_abc123');
+  assert.equal(J.readableJobId(new Date('2026-11-11T12:30:00'), 'abc123', '抖店-成交分析'), 'job_20261111-1230_abc123_抖店-成交分析');
 });
 
-await test('prepare：jobId 可读，且目录名就是 jobId', () => {
-  const out = J.prepareJob({ account: fakeAccount(), dsls: [fakeDsl('tb_demo_218')], skipCovered: false }, MATCH);
+await test('prepare：目录名带时间与采集项，目录名就是 jobId', () => {
+  const out = J.prepareJob({ account: fakeAccount(), dsls: [fakeDsl('tb_shop_overview')], skipCovered: false }, MATCH);
   assert.equal(out.success, true);
-  assert.match(out.data.job_id, /^job_(\d{8}-\d{4})_[a-z0-9]{3,12}$/, 'jobId 不是可读格式：' + out.data.job_id);
+  assert.match(out.data.job_id, /^job_(\d{8}-\d{4})_[a-z0-9]{3,12}_[^\s]+$/, 'jobId 不是「时间 + 采集项」格式：' + out.data.job_id);
+  assert.ok(out.data.job_id.endsWith('_淘宝-店铺概览'), '目录名没标出采集项：' + out.data.job_id);
   assert.equal(path.basename(out.data.job_dir), out.data.job_id, '目录名应与 jobId 一致');
+  assert.ok(fs.existsSync(out.data.job_dir), '作业目录应真实存在');
 });
 
 // ── B. 产物命名 + manifest ─────────────────────────────────────────────────
@@ -194,10 +197,12 @@ await test('jobDirFor 仍接受旧的随机 id，listJobs 能读到它', () => {
   assert.ok(list.data.jobs.some((j) => j.jobId === oldId), '旧 id 的作业没被列出来');
 });
 
-await test('仓库里不再生成旧的 base36 作业 id', () => {
+await test('仓库里不再生成旧的 base36 作业 id，目录名带上采集项', () => {
   const src = read('lib/collect-runner.mjs');
   assert.ok(!src.includes('Date.now().toString(36)'), '还在用 base36 时间戳拼 job id');
   assert.ok(src.includes('readableJobId(new Date())'), '新建作业没用可读 id');
+  assert.ok(src.includes('jobItemsLabel(tasks.map((t) => t.dslId))'), '目录名没按任务里的采集项拼标签');
+  assert.ok(src.includes('fs.renameSync(dir, nextDir)'), '任务确定后没有把采集项补进目录名');
 });
 
 // ── E. 迁移工具 ─────────────────────────────────────────────────────────────
@@ -210,7 +215,17 @@ await test('tools/migrate-collect-naming.mjs 能换算目录名、补 manifest�
   assert.ok(tool.includes('writeManifest('), '迁移工具没有补 manifest');
   assert.ok(tool.includes('pruneJobs('), '迁移工具没有按保留上限清理');
   assert.ok(tool.includes("'--dry'") || tool.includes('--dry'), '迁移工具缺 --dry 预览');
+  assert.ok(tool.includes('jobItemsLabel('), '迁移工具没有把采集项补进老作业的目录名');
+  assert.ok(tool.includes('READABLE_WITH_LABEL'), '迁移工具分不清「带采集项」与「不带采集项」的可读 id');
   assert.ok(fs.existsSync(path.join(ROOT, 'tools', 'migrate-collect-naming.mjs')));
+});
+
+await test('jobItemsLabel：多个采集项用 + 连接，重复的只留一次', async () => {
+  const DN = await import(url('lib/dsl-names.mjs'));
+  assert.equal(typeof DN.jobItemsLabel, 'function', 'jobItemsLabel 没导出');
+  assert.equal(DN.jobItemsLabel(['douyin_shop_transaction', 'douyin_shop_income_expense']), '抖店-成交分析+抖店-收支分析');
+  assert.equal(DN.jobItemsLabel(['douyin_shop_transaction', 'douyin_shop_transaction']), '抖店-成交分析');
+  assert.equal(DN.jobItemsLabel([]), '');
 });
 
 // ── F. 版本与文档 ────────��────────────────────────────────────────────────────
@@ -341,16 +356,17 @@ await test('迁移工具把 job.json 里的产物路径改回实际文件（旧�
 
 section('F. 版本与文档');
 
-await test('版本号已到 0.20.21', () => {
-  assert.ok(versionAtLeast(pkg.version, '0.20.21'), '版本应 ≥ 0.20.21：' + pkg.version);
+await test('版本号已到 0.20.23', () => {
+  assert.ok(versionAtLeast(pkg.version, '0.20.23'), '版本应 ≥ 0.20.23：' + pkg.version);
 });
 
 await test('CHANGELOG 与 README 写清了采集数据命名', () => {
   const changelog = read('CHANGELOG.md');
   const readme = read('README.md');
-  assert.ok(changelog.includes('v0.20.21'), 'CHANGELOG 缺 v0.20.21');
+  assert.ok(changelog.includes('v0.20.23'), 'CHANGELOG 缺 v0.20.23');
   assert.ok(changelog.includes('采集项'), 'CHANGELOG 没讲采集项名');
   assert.ok(readme.includes(pkg.version), 'README 版本没跟上 ' + pkg.version);
+  assert.ok(readme.includes('_抖店-成交分析'), 'README 没写清作业目录名带采集项');
 });
 
 try {
