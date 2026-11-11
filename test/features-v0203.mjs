@@ -173,8 +173,10 @@ await test('B3 浏览器行有图标、版本芯片与展开', () => {
   assert.match(clientSrc, /function browserLogoSvg\(id\)/, '要有内联 SVG 图标');
   assert.ok(clientSrc.includes("id === 'chrome'") && clientSrc.includes('#ea4335'), 'Chrome 图标要按产品配色');
   assert.ok(clientSrc.includes("id === 'egolite'"), 'ego lite 也要有图标');
-  // v0.20.6：ego lite 图标按它自己的标志（深色底板 + 三个浅蓝形状），不再是绿色圈。
-  assert.ok(clientSrc.includes('#1b2b45') && clientSrc.includes('#cfe4fb'), 'ego lite 图标要用它自己的深底板与浅蓝形状');
+  // v0.20.7：ego lite 的图标直接用官方标志裁出来的图（data:image/png;base64），不再是手画 SVG。
+  assert.ok(clientSrc.includes('var EGO_LOGO_URI = "data:image/png;base64,'), 'ego lite 图标要用官方标志裁出来的图');
+  assert.ok(clientSrc.length > 0 && clientSrc.includes("alt: 'ego lite'"), '图标要标上 alt');
+  assert.ok(!clientSrc.includes('#1f9d7a'), '不再用手画的绿色圈');
   assert.ok(clientSrc.includes('var verMajor = String(b.version || '), '版本主号要先算出来');
   assert.ok(clientSrc.includes('var verChip = Boolean(verMajor) && Number(verMajor) >= 1'), '0.x 的 ego lite 不给 M0 芯片');
   assert.ok(clientSrc.includes('setScanOpen'), '行要能展开/收起');
@@ -183,9 +185,9 @@ await test('B3 浏览器行有图标、版本芯片与展开', () => {
 
 console.log('\n3. 版本与文档');
 
-await test('C1 版本号已到 0.20.6', () => {
+await test('C1 版本号已到 0.20.7', () => {
   const parts = String(pkg.version).split('.').map((x) => Number(x));
-  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 6))), '版本应 ≥ 0.20.6：' + pkg.version);
+  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 7))), '版本应 ≥ 0.20.7：' + pkg.version);
 });
 
 await test('C2 CHANGELOG 与 README 同步', () => {
