@@ -185,9 +185,9 @@ await test('B3 浏览器行有图标、版本芯片与展开', () => {
 
 console.log('\n3. 版本与文档');
 
-await test('C1 版本号已到 0.20.7', () => {
+await test('C1 版本号已到 0.20.8', () => {
   const parts = String(pkg.version).split('.').map((x) => Number(x));
-  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 7))), '版本应 ≥ 0.20.7：' + pkg.version);
+  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 8))), '版本应 ≥ 0.20.8：' + pkg.version);
 });
 
 await test('C2 CHANGELOG 与 README 同步', () => {
