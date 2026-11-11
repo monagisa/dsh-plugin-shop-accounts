@@ -53,6 +53,9 @@ const fakeRoot = path.join(TMP, 'roots');
 const CHROME_DIR = plant(fakeRoot, 'Google/Chrome/Application/157.0.8103.38/chrome.exe');
 const CHROME_STUB = plant(fakeRoot, 'Google/Chrome/Application/chrome.exe'); // 启动器那份，没版本目录名
 const EDGE_DIR = plant(fakeRoot, 'Microsoft/Edge/Application/157.0.4341.42/msedge.exe');
+// v0.20.6：ego lite 的主程序在安装根目录，版本号在同一个目录下的版本子目录里（真实结构：Application/ego.exe + Application/0.6.2.8/）。
+const EGO_FILE = plant(fakeRoot, 'Citro Labs/ego lite/Application/ego.exe');
+plant(fakeRoot, 'Citro Labs/ego lite/Application/0.6.2.8/ego.ver');
 
 console.log('\n1. 扫描与版本推断');
 
@@ -87,7 +90,7 @@ await test('A4 路径比较不区分大小写与斜杠', () => {
 await test('A5 扫临时目录：每家只留一条、带版本、能标出使用中', () => {
   const targets = [
     { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
-    { id: 'egolite', name: 'ego lite', exe: 'ego.exe', product: 'ego 浏览器', files: [plant(fakeRoot, 'Citro Labs/ego lite/Application/ego.exe')] },
+    { id: 'egolite', name: 'ego lite', exe: 'ego.exe', product: 'ego 浏览器', files: [EGO_FILE] },
   ];
   const s = mod.scanBrowsers({ browserPath: '' }, { targets, resolved: CHROME_STUB });
   const ids = s.browsers.map((b) => b.id);
@@ -98,6 +101,7 @@ await test('A5 扫临时目录：每家只留一条、带版本、能标出使�
   const ego = s.browsers.find((b) => b.id === 'egolite');
   assert.equal(ego.chosen, false, 'Chrome 后端下 ego lite 不该标使用中');
   assert.equal(ego.product, 'ego 浏览器');
+  assert.equal(ego.version, '0.6.2.8', 'ego lite 的版本要取同目录下的版本子目录：' + ego.version);
   assert.ok(s.os.label === 'Windows' || s.os.label === 'macOS' || s.os.label === 'Linux', '系统名不对：' + s.os.label);
   assert.ok(s.scannedAt, '扫描结果要带时间');
 });
@@ -105,7 +109,7 @@ await test('A5 扫临时目录：每家只留一条、带版本、能标出使�
 await test('A5b 后端切到 ego 时 ego lite 才是使用中', () => {
   const targets = [
     { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
-    { id: 'egolite', name: 'ego lite', exe: 'ego.exe', product: 'ego 浏览器', files: [plant(fakeRoot, 'Citro Labs/ego lite/Application/ego.exe')] },
+    { id: 'egolite', name: 'ego lite', exe: 'ego.exe', product: 'ego 浏览器', files: [EGO_FILE] },
   ];
   const s = mod.scanBrowsers({ browser: 'egolite' }, { targets, resolved: CHROME_STUB });
   assert.equal(s.browsers.find((b) => b.id === 'egolite').chosen, true);
@@ -137,8 +141,13 @@ await test('A7 entries 注入模式：同 id 多份只留版本最高的', () =>
   assert.equal(s.browsers.find((b) => b.id === 'egolite').chosen, false);
 });
 
-console.log('\n2. 接线：路由与界面');
+await test('A8 主程序在安装根目录时，版本取同目录下的版本子目录', () => {
+  assert.equal(mod.dirVersionOf(path.join(fakeRoot, 'Citro Labs', 'ego lite', 'Application', 'ego.exe')), '0.6.2.8');
+  // 版本目录不存在时返回空串，不抛错。
+  assert.equal(mod.dirVersionOf(path.join(TMP, 'no-such-dir', 'ego.exe')), '');
+});
 
+console.log('\n2. 接线：路由与界面');
 await test('B1 路由里有只读扫描接口', () => {
   assert.match(indexSrc, /if \(method === 'GET' && p === '\/browser-scan'\)/, '路由缺 GET /browser-scan');
   assert.match(indexSrc, /scanBrowsers\(cfg\)/, '路由应调用 scanBrowsers');
@@ -164,15 +173,19 @@ await test('B3 浏览器行有图标、版本芯片与展开', () => {
   assert.match(clientSrc, /function browserLogoSvg\(id\)/, '要有内联 SVG 图标');
   assert.ok(clientSrc.includes("id === 'chrome'") && clientSrc.includes('#ea4335'), 'Chrome 图标要按产品配色');
   assert.ok(clientSrc.includes("id === 'egolite'"), 'ego lite 也要有图标');
+  // v0.20.6：ego lite 图标按它自己的标志（深色底板 + 三个浅蓝形状），不再是绿色圈。
+  assert.ok(clientSrc.includes('#1b2b45') && clientSrc.includes('#cfe4fb'), 'ego lite 图标要用它自己的深底板与浅蓝形状');
+  assert.ok(clientSrc.includes('var verMajor = String(b.version || '), '版本主号要先算出来');
+  assert.ok(clientSrc.includes('var verChip = Boolean(verMajor) && Number(verMajor) >= 1'), '0.x 的 ego lite 不给 M0 芯片');
   assert.ok(clientSrc.includes('setScanOpen'), '行要能展开/收起');
-  assert.match(clientSrc, /'M' \+ String\(b\.version \|\| ''\)\.split\('\.'\)\[0\]/, '版本芯片显示 M<主版本号>');
+  assert.match(clientSrc, /'M' \+ verMajor/, '版本芯片显示 M<主版本号>');
 });
 
 console.log('\n3. 版本与文档');
 
-await test('C1 版本号已到 0.20.5', () => {
+await test('C1 版本号已到 0.20.6', () => {
   const parts = String(pkg.version).split('.').map((x) => Number(x));
-  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 5))), '版本应 ≥ 0.20.5：' + pkg.version);
+  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 6))), '版本应 ≥ 0.20.6：' + pkg.version);
 });
 
 await test('C2 CHANGELOG 与 README 同步', () => {
