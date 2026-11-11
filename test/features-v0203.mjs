@@ -153,7 +153,8 @@ await test('A9 把 ego 的 exe 填进「浏览器路径」时，报错要说清�
   // 「这个文件名不在可用的浏览器名单里：ego.exe」，看不出该怎么做。
   let msg = '';
   try { normalizeExePath(EGO_FILE, 'browser'); } catch (err) { msg = String(err && err.message || ''); }
-  assert.ok(msg.includes('浏览器后端') && msg.includes('ego lite'), '要提示切浏览器后端：' + msg);
+  // v0.20.13：设置页没有「浏览器后端」下拉了，做法改成「点用户浏览器里 ego lite 那一行」。
+  assert.ok(msg.includes('用户浏览器') && msg.includes('ego lite'), '要提示点用户浏览器里那一行：' + msg);
   assert.ok(!msg.includes('不在可用的浏览器名单里'), '不该再只说文件名不对');
 });
 
@@ -198,15 +199,27 @@ await test('B4 点「使用这个」按行类型走不同配置（ego lite 切�
   // 「这个文件名不在可用的浏览器名单里：ego.exe」。
   const seg = clientSrc.slice(clientSrc.indexOf('function useBrowser(b) {'), clientSrc.indexOf('function useBrowser(b) {') + 900);
   assert.ok(seg.includes("b.id === 'egolite'"), '要按行类型分流');
-  assert.ok(seg.includes("{ browser: 'egolite' }"), 'ego lite 走 browser 后端字段');
+  assert.ok(seg.includes("{ browser: 'auto' }"), 'ego lite 那行把后端交回自动（v0.20.13）');
   assert.ok(seg.includes("browserPath: b.path, browser: 'chrome'"), 'Chrome 走 browserPath 并切到 chrome 后端');
+});
+
+
+await test('B5 没有「浏览器后端」下拉：后端默认自动，优先用选中的那份，用不了自动换另一个', () => {
+  // v0.20.13：用户要求「浏览器后端那栏删了，默认成自动，先优先使用已选择的浏览器，用不了就自动使用其他浏览器」。
+  assert.ok(!clientSrc.includes("label: '浏览器后端'"), '设置页不该再有「浏览器后端」下拉');
+  assert.ok(!clientSrc.includes("value: 'egolite'"), '不该再有后端选项');
+  const egoMod = read('lib/ego.mjs');
+  assert.ok(egoMod.includes('resolveBrowserPath'), 'backendFor 要按已选浏览器判断能不能用');
+  assert.ok(egoMod.includes("return 'chrome';"), '选中的 Chrome 可用时用 Chrome');
+  assert.ok(egoMod.includes("return cli ? 'egolite' : 'chrome';"), 'Chrome 用不了就自动换 ego lite（都没有再回退 Chrome）');
+  assert.ok(egoMod.includes('function backendFor(cfg)'), 'backendFor 还在');
 });
 
 console.log('\n3. 版本与文档');
 
-await test('C1 版本号已到 0.20.10', () => {
+await test('C1 版本号已到 0.20.13', () => {
   const parts = String(pkg.version).split('.').map((x) => Number(x));
-  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 10))), '版本应 ≥ 0.20.10：' + pkg.version);
+  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 13))), '版本应 ≥ 0.20.13：' + pkg.version);
 });
 
 await test('C2 CHANGELOG 与 README 同步', () => {

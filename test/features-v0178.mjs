@@ -86,14 +86,15 @@ check('A7 该区域没有超过 40 个中文字符的说明字符串', () => {
   assert.equal(bad.length, 0, `还有长段说明：${bad.join(' / ')}`);
 });
 
-check('B1 可改的控件都还在', () => {
+check('B1 可改的控件都还在（v0.20.13 起后端由「用户浏览器」里选中的那一行决定，不再有下拉）', () => {
   const must = [
-    "'浏览器后端'", "value: 'auto'", "value: 'egolite'", "value: 'chrome'",
+    "'用户浏览器'", "'重新扫描'", "'使用这个'",
     "'路径与高级选项'", "'ego-browser'", "'Chrome / Edge'", "'档案根目录'",
     "'起始端口'", "'打开时'", "'关闭时'", "'信息'", "'数据目录'",
     "'店铺配置迁移'", "'导出店铺配置'", "'导入店铺配置'", "'保存设置'",
   ];
   for (const m of must) assert.ok(card.includes(m), `设置卡少了控件：${m}`);
+  assert.ok(!card.includes("label: '浏览器后端'"), '不该再有「浏览器后端」下拉');
 });
 
 check('B2 胶囊仍然显示当前生效后端（Chrome / ego lite）', () => {

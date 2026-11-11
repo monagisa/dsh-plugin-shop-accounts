@@ -806,9 +806,21 @@ await test('ego 探测只看文件在不在（不启动进程）；配了不存�
   // 真机没装 ego 时 cli 就是 null —— 下面的断言都按「装了没有」分支走，两种机器都能过
 });
 
-await test('backendFor：auto 装了 ego 就优先 ego；chrome / egolite 是硬选择，没装时明确回退', () => {
+await test('backendFor：auto 装了 ego 就优先 ego；明确选了哪个就用哪个，用不了自动换另一个', async () => {
   const cli = EG.resolveEgoCli('');
-  assert.equal(EG.backendFor({ browser: 'chrome' }), 'chrome', 'chrome 是硬选择，ego 在也只用 Chrome');
+  const CH = await import(url('lib/chrome.mjs'));
+  const chromePath = String(CH.resolveBrowserPath('') || '');
+  // v0.20.13：设置页去掉了「浏览器后端」下拉，后端由「用户浏览器」里选中的那一行决定：
+  //   · 选 Chrome → 写 browser=chrome + browserPath；
+  //   · 选 ego lite → 写回 browser=auto（装了 ego lite 就用它）。
+  assert.equal(EG.backendFor({ browser: 'chrome', browserPath: chromePath || 'C:/__no_such__/chrome.exe' }), chromePath ? 'chrome' : (cli ? 'egolite' : 'chrome'), 'Chrome 可用时就用 Chrome，不可用自动换另一个');
+  // 注意：resolveBrowserPath 会忽略不存在的 browserPath 并自动探测本机 Chrome，所以期望值取决于本机有没有 Chrome。
+  const noChrome = CH.resolveBrowserPath('') ? 'chrome' : (cli ? 'egolite' : 'chrome');
+  assert.equal(
+    EG.backendFor({ browser: 'chrome', browserPath: 'C:/__no_such__/chrome.exe', egoliteCli: cli || '' }),
+    noChrome,
+    '选了 Chrome 但那份不可用 → 本机有 Chrome 就用另一份 Chrome，没有就换 ego lite'
+  );
   assert.equal(EG.backendFor({ browser: 'egolite', egoliteCli: cli || '' }), cli ? 'egolite' : 'chrome', 'egolite 没装要回退，而不是假装能用');
   assert.equal(EG.backendFor({ browser: 'auto', egoliteCli: cli || '' }), cli ? 'egolite' : 'chrome', 'auto = 装了 ego 优先 ego');
   assert.equal(EG.egoStatus({}).backend, EG.backendFor({}), '状态里的 backend 必须和 backendFor 一致');
@@ -1484,7 +1496,7 @@ await test('Chrome 模式下设置页不出现 ego 专属 UI，ego 模式下才�
 
   // ① Chrome + 装了 ego：只用 Chrome，ego 的字段/按钮/profile 列表都不该出现
   const chrome = renderSettings({ backend: 'chrome', egoAvailable: true });
-  assert.ok(chrome.includes('浏览器后端'), '设置页没渲出来：' + chrome.slice(0, 300));
+  assert.ok(chrome.includes('用户浏览器'), '设置页没渲出来：' + chrome.slice(0, 300));
   assert.ok(chrome.includes('Chrome'), '胶囊要显示 Chrome');
   assert.ok(!chrome.includes('ego-browser'), 'Chrome 模式不该出现 ego-browser 路径字段');
   assert.ok(!chrome.includes('ego profile'), 'Chrome 模式不该列 ego profile（那是 ego 模式的隐私信息）');
@@ -1492,9 +1504,9 @@ await test('Chrome 模式下设置页不出现 ego 专属 UI，ego 模式下才�
   // v0.17.8 精简：不再写「当前用 Chrome」这类说明句，只靠胶囊 + 选项本身表达
   assert.ok(!chrome.includes('当前用 Chrome'), '不该再出现「当前用 Chrome」这类说明句');
 
-  // ② Chrome + 没装 ego：选项标「未安装」
+  // ② Chrome + 没装 ego：下拉已删（v0.20.13），ego lite 那一行走扫描结果
   const noEgo = renderSettings({ backend: 'chrome', egoAvailable: false });
-  assert.ok(noEgo.includes('ego lite（未安装）'), '没装 ego 时后端选项要标「未安装」');
+  assert.ok(!noEgo.includes('浏览器后端'), '不该再有「浏览器后端」下拉');
   assert.ok(!noEgo.includes('没检测到 ego lite'), '不该再出现「没检测到 ego lite」这类说明句');
   assert.ok(!noEgo.includes('ego profile'), '没装 ego 时不该有 profile 列表');
 
@@ -1535,22 +1547,17 @@ await test('客户端打出的每个动作，宿主都真的接了（两边写�
   await call('DELETE', '/shop-accounts/accounts/' + id, {});
 });
 
-await test('设置页能选浏览器后端（auto/egolite/chrome），选了真的发给宿主；店铺行显示 ego 空间', () => {
-  assert.ok(clientSrc.includes('浏览器后端'), '设置页要有「浏览器后端」这一项');
-  for (const want of ["value: 'auto'", "value: 'egolite'", "value: 'chrome'"]) {
-    assert.ok(clientSrc.includes(want), '缺少后端选项：' + want);
-  }
-  assert.ok(/browser: form\.browser/.test(clientSrc), '保存设置必须把 browser 一起发上去，否则选了不生效');
+await test('设置页不再有「浏览器后端」下拉：用「用户浏览器」里那一行切换，保存时兜底带 browser；店铺行显示 ego 空间', () => {
+  // v0.20.13：后端不再手选 —— 点 Chrome 那行写 browser=chrome + 路径，点 ego lite 那行写回 auto。
+  assert.ok(!clientSrc.includes("label: '浏览器后端'"), '不该再有「浏览器后端」下拉');
+  assert.ok(!clientSrc.includes("value: 'egolite'"), '不该再有后端选项');
+  assert.ok(clientSrc.includes("b.id === 'egolite'"), '行内要按类型分流（ego lite / Chrome）');
+  assert.ok(clientSrc.includes("{ browser: 'auto' }"), '点 ego lite 那行要把后端交回自动');
+  assert.ok(/browser: form\.browser/.test(clientSrc), '保存设置仍然要兜底把 browser 一起发上去');
   assert.ok(/api\('\/ego'/.test(clientSrc), '「刷新 ego」按钮要走 GET /ego（否则读不到新 profile）');
   assert.ok(/egoSpace/.test(clientSrc), '店铺行/详情要显示 ego 空间名，用户才知道开的是哪个窗口');
   assert.ok(/egoliteCli/.test(clientSrc), '设置页要能填 ego-browser CLI 路径（自动探测不到时兜底）');
-  // 用户反馈：后端选项文案太长，不简洁 → 选项只留短词，解释挪到 title 和下面的提示行
-  for (const [val, label] of [['auto', '自动'], ['chrome', 'Chrome']]) {
-    assert.ok(clientSrc.includes(`h('option', { value: '${val}' }, '${label}')`), '后端选项应使用短文案：' + label);
-  }
-  assert.ok(clientSrc.includes("h('option', { value: 'egolite', disabled: !egoAvail }"), 'ego 没装时该选项要禁用，别让用户选了再报错');
-  assert.ok(clientSrc.includes("egoAvail ? 'ego lite' : 'ego lite（未安装）'"), '没装 ego 时选项要标「未安装」');
-  // v0.17.8：用户要求「简化选项、去掉那些介绍」→ 下拉框与胶囊都不再挂长解释
+  // v0.17.8：用户要求「简化选项、去掉那些介绍」→ 胶囊不再挂长解释
   assert.ok(!/title: '自动 = 有 ego 就用 ego/.test(clientSrc), '后端选择的解释不该再挂在悬停提示里');
   assert.ok(!clientSrc.includes("sa-chip', title: egoText"), '胶囊不该再挂长悬停说明');
   // 用户反馈：Chrome 模式下也不该到处是 ego 字样 → ego 专属 UI 必须挂在 egoOn 上
@@ -1575,7 +1582,7 @@ await test('设置页能选浏览器后端（auto/egolite/chrome），选了真�
   for (const field of ['档案根目录', '起始端口', 'Chrome / Edge', 'ego-browser']) {
     assert.ok(clientSrc.indexOf(field) > advAt, field + ' 应该收在折叠块里，不要摊在设置页外面');
   }
-  assert.ok(clientSrc.indexOf('浏览器后端') < advAt, '「浏览器后端」要留在折叠块外面（最常用的那项）');
+  assert.ok(clientSrc.indexOf('用户浏览器') < advAt, '「用户浏览器」要留在折叠块外面（最常用的那项）');
 });
 
 // ── 3.10 v0.8.3 安全加固（2026-10-31 审查） ─────────────────────────────────

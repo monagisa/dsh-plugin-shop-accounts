@@ -1,3 +1,15 @@
+## v0.20.13（2026-11-11）
+
+**需求**：设置页去掉「浏览器后端」下拉，后端默认自动 —— 优先用「用户浏览器」里选中的那份，用不了自动换另一个。
+
+**改动**：
+
+1. 设置页不再有「浏览器后端」下拉；点「用户浏览器」里 Google Chrome 那一行 = 固定用这份 Chrome（保存时写 `browserPath` 与 `browser: chrome`），点 ego lite 那一行 = 后端交回自动（写 `browser: auto`）。
+2. `lib/ego.mjs` 的 `backendFor(cfg)` 按选中的浏览器判断可用性：选了 Chrome 但那份不存在时自动回退 ego lite（ego lite 也没装则仍是 Chrome 后端；启动时会给出明确的找不到浏览器提示）；`auto` 仍是装了 ego lite 就优先 ego lite。
+3. 「浏览器路径」填成 ego 的 `ego.exe` 时，提示改成「在「用户浏览器」里点 ego lite 那一行」；展开区不再提示「点保存设置之前改这里不会生效」—— 选择即时写配置。
+
+**验证**：`test/features-v0203.mjs` 17 项（新增「不再有后端下拉」与「用不了自动换另一个」断言）、`test/smoke.mjs` 后端语义用例改写、`test/features-v0178.mjs` 控件清单同步；全套 708 项两处通过，`node tools/check-syntax.mjs` 0 失败，README 锚点/围栏/表格一致，口语与脱敏扫描 0 命中。
+
 ## v0.20.12（2026-11-11）
 
 **需求**：回退到上一版的行为。
