@@ -1,3 +1,17 @@
+## v0.20.20（2026-11-11）
+
+**需求**：采集到的产物里，有些配方只有 JSON、有些有表格 —— 需要统一成每份作业都有一份表格。
+
+**改动**
+- 新增 `lib/xlsx.mjs`：零依赖的 xlsx 写入器（单工作表、inline 字符串、数字保留原类型），含 `writeXlsx()` 与把对象拍平的 `flattenRows()`。
+- `lib/collect-runner.mjs`：作业收尾时给指标型配方（`text_metrics`）生成 `<配方 id>_<YYYYMMDD-HHmm>_表格.xlsx`，表头取配方的指标标签，列为「指标 / 今日值 / 昨日值」；下载型配方（`download_ref`）平台已经导出表格，不再重复生成。
+- 没解析出指标的那一轮也写一份表，第一列写清「状态 / 页面 / 错误」与现场字段，便于判断是登录态过期还是页面没数据。
+- 生成的表格一起写进 `artifacts/manifest.json`（`kind: 'xlsx'`）。
+- `tools/migrate-collect-naming.mjs` 同步支持给老作业补表格，本机历史作业已回填。
+
+**验证**
+- 新增 `test/features-v0218.mjs` 4 项（xlsx 结构与 inline 字符串、`flattenRows` 拍平、指标型作业生成表格并写进 manifest、下载型作业不重复生成表格），全套 737 项两处通过。
+
 ## v0.20.19（2026-11-11）
 
 **需求**：同一家店同一天出现三四份作业，看不出哪份有效。

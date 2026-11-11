@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { dataDir } from '../lib/store.mjs';
 import { readableJobId, runStamp } from '../lib/collect-runner.mjs';
+import { flattenRows, writeXlsx } from '../lib/xlsx.mjs';
 
 const READABLE = /^job_\d{8}-\d{4}_[a-z0-9]{3,12}$/;
 const KEEP_OK = 20;
@@ -59,7 +60,7 @@ function listFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isFile()).map((d) => d.name);
 }
 
-const report = { collectionDir, dry, renamed: [], artifacts: [], manifests: [], pruned: [], skipped: [] };
+const report = { collectionDir, dry, renamed: [], artifacts: [], tables: [], manifests: [], pruned: [], skipped: [] };
 
 /** 作业目录改名（旧随机 id → 可读 id），返回新目录与 job 对象。 */
 function renameJobDir(jobDir, jobFile) {
@@ -164,6 +165,56 @@ function writeManifest(jobDir, job) {
 }
 
 /** 每个账号按保留上限清理（同一窗口同一配方只留最新一次，每天最多 KEEP_PER_DAY 次）。 */
+/** v0.20.20：给老作业补一份指标表格（指标型配方以前只落 JSON，没有表格）。 */
+function writeTables(jobDir, job) {
+  const stamp = (/^job_(\d{8}-\d{4})_/.exec(String(job.jobId || '')) || [])[1] || '';
+  for (const t of job.tasks || []) {
+    if (!t || t.state !== 'ok') continue;
+    if ((t.artifacts || []).some((a) => a && a.present && a.filePath)) continue; // 下载型配方平台已经给了表格，不再重复生成
+    const dir = path.join(jobDir, 'artifacts', String(t.taskId || 'task'));
+    const out = path.join(dir, String(t.dslId || 'dsl') + '_' + stamp + '_表格.xlsx');
+    if (fs.existsSync(out)) continue;
+    const rows = [];
+    let labels = ['指标', '今日值', '昨日值'];
+    for (const a of t.artifacts || []) {
+      if (!a || !a.records || !a.records.values) continue;
+      const spec = (t.declaredArtifacts || []).find((d) => String((d && (d.output_key || d.outputKey)) || '') === String(a.outputKey || ''));
+      const metrics = (spec && spec.metrics) || [];
+      for (const id of Object.keys(a.records.values)) {
+        const label = String((metrics.find((m) => String(m && m.id) === id) || {}).label || id);
+        rows.push([label, a.records.values[id], a.records.yesterday && a.records.yesterday[id] !== undefined ? a.records.yesterday[id] : '']);
+      }
+    }
+    if (!rows.length) {
+      // 这一轮没解析出指标（页面没有数据、或登录态过期）—— 仍然给一份表，写清楚状态与现场。
+      labels = ['字段', '值'];
+      rows.push(['状态', '没有解析出指标']);
+      if (t.code) rows.push(['错误码', String(t.code)]);
+      if (t.error) rows.push(['错误', String(t.error).slice(0, 400)]);
+      if (t.finalUrl) rows.push(['页面', String(t.finalUrl)]);
+      for (const key of Object.keys(t.outputs || {})) {
+        let parsed = null;
+        try { parsed = JSON.parse(String(t.outputs[key])); } catch { parsed = null; }
+        if (parsed && typeof parsed === 'object') {
+          for (const row of flattenRows(parsed, { maxRows: 200 })) rows.push([row[0], String(row[1] === undefined ? '' : row[1]).slice(0, 400)]);
+        } else {
+          const text = String(t.outputs[key] || '').trim();
+          if (text) rows.push([String(key), text.slice(0, 400)]);
+        }
+      }
+    }
+if (!rows.length) continue;
+    report.tables.push({ job: String(job.jobId || ''), file: path.basename(out) });
+    if (dry) continue;
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      writeXlsx(out, [labels].concat(rows), { sheetName: String(t.dslId || 'Sheet1') });
+    } catch (err) {
+      report.skipped.push({ dir: path.basename(dir), reason: String((err && err.message) || err) });
+    }
+  }
+}
+
 function pruneJobs(accountDir) {
   const root = path.join(accountDir, 'jobs');
   const names = listDirs(root);
@@ -219,6 +270,14 @@ for (const accountId of listDirs(collectionDir)) {
     if (dry) continue;
     renameArtifactFiles(moved.jobDir, moved.job);
     writeManifest(moved.jobDir, moved.job);
+  }
+  {
+    const jobsDir = path.join(accountDir, 'jobs');
+    for (const name of listDirs(jobsDir)) {
+      const jobDir = path.join(jobsDir, name);
+      const job = readJson(path.join(jobDir, 'job.json'));
+      if (job) writeTables(jobDir, job);
+    }
   }
   pruneJobs(accountDir);
 }

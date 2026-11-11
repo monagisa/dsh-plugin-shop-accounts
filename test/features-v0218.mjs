@@ -50,6 +50,7 @@ const versionAtLeast = (version, want) => {
 };
 
 const J = await import(url('lib/collect-runner.mjs'));
+const XLSX = await import(url('lib/xlsx.mjs'));
 const R = await import(url('lib/rpa.mjs'));
 const pkg = JSON.parse(read('package.json'));
 
@@ -103,8 +104,9 @@ await test('organizeArtifacts：文件改成 <dslId>_<时间>_<原名>，manifes
   const name = path.basename(job.tasks[0].artifacts[0].filePath);
   assert.match(name, /^douyin_shop_transaction_\d{4}-\d{4}_|^douyin_shop_transaction_\d{8}-\d{4}_/, '产物名没带配方与时间：' + name);
   assert.ok(name.endsWith(origName), '原始文件名要留在后缀里');
-  assert.equal(manifest.files.length, 1);
-  assert.equal(manifest.files[0].fileName, name);
+  const downloads = manifest.files.filter((x) => x.kind !== 'xlsx');
+  assert.equal(downloads.length, 1);
+  assert.equal(downloads[0].fileName, name);
   assert.equal(manifest.naming, '<dslId>_<YYYYMMDD-HHmm>_<原始文件名>');
   const manifestFile = path.join(jobDir, 'artifacts', 'manifest.json');
   assert.ok(fs.existsSync(manifestFile), 'manifest.json 没落盘');
@@ -210,6 +212,81 @@ await test('tools/migrate-collect-naming.mjs 能换算目录名、补 manifest�
 });
 
 // ── F. 版本与文档 ────────��────────────────────────────────────────────────────
+section('G. 指标型配方也落一份表格（v0.20.20）');
+
+await test('writeXlsx：写出来的是能打开的 xlsx（zip 头 + 工作表 + inline 字符串）', () => {
+  const file = path.join(TMP, 'sheet-test.xlsx');
+  XLSX.writeXlsx(file, [['指标', '今日值', '昨日值'], ['gmv', 12345, 11000], ['uv', '88', '']], { sheetName: 'pdd_shop_overview' });
+  const st = fs.statSync(file);
+  assert.ok(st.size > 1000, 'xlsx 太小：' + st.size);
+  const raw = fs.readFileSync(file).toString('latin1');
+  assert.ok(raw.startsWith('PK'), '不是 zip 头');
+  assert.ok(raw.includes('xl/worksheets/sheet1.xml'), '没有工作表');
+  assert.ok(raw.includes('xl/workbook.xml'), '没有 workbook');
+  assert.ok(raw.includes('inlineStr'), '字符串不是 inlineStr');
+});
+
+await test('flattenRows：对象拍平成「字段 / 值」两列', () => {
+  const rows = XLSX.flattenRows({ a: 1, b: { c: 2 }, d: [3, 4] });
+  const text = rows.map((r) => r.join('=')).join('|');
+  assert.ok(text.includes('a=1'), text);
+  assert.ok(text.includes('b.c=2'), text);
+  assert.ok(text.includes('d[0]=3'), text);
+});
+
+await test('organizeArtifacts：指标型作业也生成表格并写进 manifest', () => {
+  const accountId = 'acc_taobao_v218d';
+  const jobId = 'job_20261101-0900_gggggg';
+  const dir = path.join(process.env.DSH_SHOP_ACCOUNTS_DIR, 'collection', accountId, 'jobs', jobId);
+  fs.mkdirSync(dir, { recursive: true });
+  const job = {
+    version: 1,
+    jobId,
+    accountId,
+    accountName: '测试铺',
+    platform: 'pdd',
+    createdAt: '2026-11-01T01:00:00.000Z',
+    finished: true,
+    finishedAt: '2026-11-01T01:05:00.000Z',
+    plan: { window: { start: '2026-10-02', end: '2026-10-31' } },
+    tasks: [
+      {
+        taskId: 't_001',
+        dslId: 'pdd_shop_overview',
+        state: 'ok',
+        outputs: { home_text: '成交金额 12345 昨日 11000' },
+        declaredArtifacts: [{ kind: 'text_metrics', output_key: 'home_text', metrics: [{ id: 'gmv', label: '成交金额' }] }],
+        artifacts: [{ kind: 'text_metrics', outputKey: 'home_text', present: true, records: { values: { gmv: 12345 }, yesterday: { gmv: 11000 }, missing: [] } }],
+      },
+    ],
+  };
+  fs.writeFileSync(path.join(dir, 'job.json'), JSON.stringify(job, null, 2), 'utf8');
+  const manifest = J.organizeArtifacts(dir, job);
+  const files = manifest.files.map((f) => f.fileName);
+  assert.ok(files.includes('pdd_shop_overview_20261101-0900_表格.xlsx'), '没生成表格：' + files.join(','));
+  assert.ok(fs.existsSync(path.join(dir, 'artifacts', 't_001', 'pdd_shop_overview_20261101-0900_表格.xlsx')), '表格文件不在产物目录');
+  assert.ok(manifest.files.some((f) => f.kind === 'xlsx'), 'manifest 没记表格');
+});
+
+await test('下载型作业不再重复生成表格（平台已经给了 xlsx）', () => {
+  const dir = path.join(TMP, 'download-job', 'artifacts', 't_001');
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, 'douyin_shop_transaction_20261101-0900_抖音电商罗盘-成交分析.xlsx');
+  fs.writeFileSync(file, 'xlsx-bytes', 'utf8');
+  const jobDir = path.join(TMP, 'download-job');
+  const job = {
+    jobId: 'job_20261101-0900_hhhhhh',
+    accountId: 'acc_x',
+    accountName: 'x',
+    platform: 'douyin',
+    createdAt: '2026-11-01T01:00:00.000Z',
+    tasks: [{ taskId: 't_001', dslId: 'douyin_shop_transaction', state: 'ok', outputs: {}, artifacts: [{ present: true, kind: 'download_ref', outputKey: 'xlsx', bytes: 10, filePath: file }] }],
+  };
+  const manifest = J.organizeArtifacts(jobDir, job);
+  assert.ok(!manifest.files.some((f) => f.kind === 'xlsx'), '下载型不该再生成表格：' + JSON.stringify(manifest.files));
+  assert.ok(!fs.existsSync(path.join(jobDir, 'artifacts', 't_001', 'douyin_shop_transaction_20261101-0900_表格.xlsx')), '不该有表格文件');
+});
+
 section('F. 版本与文档');
 
 await test('版本号已到 0.20.18', () => {

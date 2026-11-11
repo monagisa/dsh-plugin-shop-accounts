@@ -277,13 +277,14 @@ cookie 罐本地备份：`--restore-last-session` 无法覆盖使用者直接点
 | 密码库 | `<数据目录>/account-secrets.enc`：同一把主密钥 + AES-256-GCM；密钥后端不可用时整库禁用，不保存明文 |
 | 采集数据（记录） | `<数据目录>/collection/<账号 id>/`：`dsl-coverage.json` 配方覆盖台账、`records.jsonl` 记录、`imports.json` 导入记录 |
 | 采集数据（产物） | `<数据目录>/collection/<账号 id>/jobs/job_<YYYYMMDD-HHmm>_<随机 6 位>/`：`job.json` 作业、`artifacts/<配方 id>_<YYYYMMDD-HHmm>_<原始文件名>` 产物、`artifacts/manifest.json` 本次交付清单 |
+| 采集数据（表格） | 每份作业的 `artifacts/<任务 id>/` 下都有表格：下载型配方是平台自己导出的 xlsx（保留原始文件名），指标型配方由插件生成 `<配方 id>_<YYYYMMDD-HHmm>_表格.xlsx`（列为「指标 / 今日值 / 昨日值」） |
 | 调试端口 | Chrome 模式从 `portBase`（默认 9222）起自动寻找空闲端口，一店一端口；ego 模式无端口 |
 
 数据目录的优先级是：环境变量 `DSH_SHOP_ACCOUNTS_DIR` > 指针文件 `%DSH_HOME%\shop-accounts.dir` > 默认目录 `%DSH_HOME%\shop-accounts`。
 
 设置页「数据目录」那一块会显示当前目录与默认目录：可以一键打开、复制路径，也可以「更改」——填一个绝对路径，勾上「把现有配置与采集数据复制过去」会把账号表、设置、密码库与采集记录搬过去（浏览器档案留在旧位置，账号表里的路径仍然有效；新目录里已有同名项会跳过、不覆盖）。改完重启 DSH Desktop 生效。
 
-采集数据的命名是固定规则：作业目录名带本地时间（`job_20261111-1230_ab12cd`），产物文件名是「配方 id + 时间 + 平台原始文件名」，每个作业另有一份 `artifacts/manifest.json` 记清交付了什么。作业不会无限堆积：同一窗口、同一组配方的重复作业只留最新一次；同一天最多保留 2 次有数据的作业；只有失败或空数据的留最近 3 次。老数据可以用 `node tools/migrate-collect-naming.mjs` 一次性整理（`--dry` 先预览）。
+采集数据的命名是固定规则：作业目录名带本地时间（`job_20261111-1230_ab12cd`），产物文件名是「配方 id + 时间 + 平台原始文件名」，每个作业另有一份 `artifacts/manifest.json` 记清交付了什么；每份作业都有表格（平台导出的原文表格，或插件按指标生成的表格），没采到指标的那一轮也会写明状态与页面，方便判断是不是登录态过期。作业不会无限堆积：同一窗口、同一组配方的重复作业只留最新一次；同一天最多保留 2 次有数据的作业；只有失败或空数据的留最近 3 次。老数据可以用 `node tools/migrate-collect-naming.mjs` 一次性整理（`--dry` 先预览）。
 
 ---
 
@@ -360,7 +361,7 @@ node test/features-v0202.mjs   # 10 项：定时采集到点自己启动 ego（�
 node test/features-v0203.mjs   # 17 项：本机浏览器扫描（只列插件能用的 Google Chrome 与 ego lite）
 node test/features-v0216.mjs   # 6 项：设置页显示采集数据保存在哪，并能一键打开目录
 node test/features-v0217.mjs   # 9 项：数据目录可以看、可以打开、也可以换一个（可选把数据搬过去）
-node test/features-v0218.mjs   # 10 项：采集数据命名规范（作业目录带时间、产物带配方前缀、manifest 与保留上限、每天最多两次）
+node test/features-v0218.mjs   # 14 项：采集数据命名规范（作业目录带时间、产物带配方前缀、manifest 与保留上限、每天最多两次）
 node test/features-v0197.mjs   # 7 项：浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
@@ -373,7 +374,7 @@ node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行�
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**733 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**737 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -420,7 +421,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.19**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.20**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
