@@ -20,6 +20,7 @@ import path from 'node:path';
 import { dataDir } from '../lib/store.mjs';
 import { readableJobId, runStamp } from '../lib/collect-runner.mjs';
 import { flattenRows, writeXlsx } from '../lib/xlsx.mjs';
+import { dslItemFileSafe, dslItemName, sheetNameSafe } from '../lib/dsl-names.mjs';
 
 const READABLE = /^job_\d{8}-\d{4}_[a-z0-9]{3,12}$/;
 const KEEP_OK = 20;
@@ -100,13 +101,15 @@ function renameArtifactFiles(jobDir, job) {
     const taskJsonFile = path.join(artRoot, name + '.json');
     const taskJson = readJson(taskJsonFile);
     const dslId = String((taskJson && taskJson.dslId) || '');
-    const prefix = dslId ? dslId + '_' + stamp + '_' : '';
+    const oldPrefix = dslId ? dslId + '_' + stamp + '_' : '';
+    const prefix = dslId ? dslItemFileSafe(dslId) + '_' + stamp + '_' : '';
     for (const fileName of listFiles(path.join(artRoot, name))) {
       if (!prefix || fileName.startsWith(prefix)) continue;
+      const rest = oldPrefix && fileName.startsWith(oldPrefix) ? fileName.slice(oldPrefix.length) : fileName;
       const from = path.join(artRoot, name, fileName);
-      const to = path.join(artRoot, name, prefix + fileName);
+      const to = path.join(artRoot, name, prefix + rest);
       if (fs.existsSync(to)) continue;
-      report.artifacts.push({ job: path.basename(jobDir), task: name, from: fileName, to: prefix + fileName });
+      report.artifacts.push({ job: path.basename(jobDir), task: name, from: fileName, to: prefix + rest });
       renamed += 1;
       if (dry) continue;
       try {
@@ -120,7 +123,7 @@ function renameArtifactFiles(jobDir, job) {
           if (!a || !a.filePath) continue;
           if (path.basename(String(a.filePath)) === fileName) {
             a.filePath = to;
-            a.fileName = prefix + fileName;
+            a.fileName = prefix + rest;
           }
         }
         writeJson(taskJsonFile, taskJson);
@@ -142,7 +145,7 @@ function writeManifest(jobDir, job) {
       try {
         bytes = fs.statSync(path.join(artRoot, name, fileName)).size;
       } catch { /* ignore */ }
-      files.push({ taskId: name, dslId, fileName, bytes });
+      files.push({ taskId: name, dslId, item: dslItemName(dslId), fileName, bytes });
     }
   }
   const manifest = {
@@ -154,8 +157,9 @@ function writeManifest(jobDir, job) {
     createdAt: job.createdAt,
     finishedAt: job.finishedAt || '',
     window: (job.plan && job.plan.window) || null,
-    naming: '<dslId>_<YYYYMMDD-HHmm>_<原始文件名>',
+    naming: '<采集项>_<YYYYMMDD-HHmm>_<原始文件名>',
     files,
+    items: (job.tasks || []).map((t) => ({ taskId: t.taskId, dslId: t.dslId, name: dslItemName(t.dslId), state: t.state })),
     tasks: (job.tasks || []).map((t) => ({ taskId: t.taskId, dslId: t.dslId, state: t.state })),
   };
   report.manifests.push({ job: path.basename(jobDir), files: files.length });
@@ -172,7 +176,7 @@ function writeTables(jobDir, job) {
     if (!t || t.state !== 'ok') continue;
     if ((t.artifacts || []).some((a) => a && a.present && a.filePath)) continue; // 下载型配方平台已经给了表格，不再重复生成
     const dir = path.join(jobDir, 'artifacts', String(t.taskId || 'task'));
-    const out = path.join(dir, String(t.dslId || 'dsl') + '_' + stamp + '_表格.xlsx');
+    const out = path.join(dir, dslItemFileSafe(t.dslId) + '_' + stamp + '_表格.xlsx');
     if (fs.existsSync(out)) continue;
     const rows = [];
     let labels = ['指标', '今日值', '昨日值'];
@@ -208,7 +212,7 @@ if (!rows.length) continue;
     if (dry) continue;
     try {
       fs.mkdirSync(dir, { recursive: true });
-      writeXlsx(out, [labels].concat(rows), { sheetName: String(t.dslId || 'Sheet1') });
+      writeXlsx(out, [labels].concat(rows), { sheetName: sheetNameSafe(t.dslId) });
     } catch (err) {
       report.skipped.push({ dir: path.basename(dir), reason: String((err && err.message) || err) });
     }

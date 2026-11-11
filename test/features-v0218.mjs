@@ -3,7 +3,7 @@
  * features-v0218.mjs —— v0.20.18：采集数据的命名规范
  *
  *   A. 作业目录用可读 id（job_<YYYYMMDD-HHmm>_<随机 6 位>），目录名 = jobId
- *   B. 下载产物改名成 <dslId>_<YYYYMMDD-HHmm>_<原始文件名>，并写 artifacts/manifest.json
+ *   B. 下载产物改名成 <采集项>_<YYYYMMDD-HHmm>_<原始文件名>，并写 artifacts/manifest.json
  *   C. 保留上限：有数据的留最近 20 次、只有失败/空数据的留最近 3 次
  *   D. 旧目录（旧随机 id）仍然读得出来；仓库里不再生成旧的 base36 id
  *   E. 迁移工具在 tools/ 里，能按 job.json 的 createdAt 换算目录名
@@ -82,7 +82,7 @@ await test('prepare：jobId 可读，且目录名就是 jobId', () => {
 // ── B. 产物命名 + manifest ─────────────────────────────────────────────────
 section('B. 下载产物按配方与时间命名，并写 manifest');
 
-await test('organizeArtifacts：文件改成 <dslId>_<时间>_<原名>，manifest 记清文件名与字节', () => {
+await test('organizeArtifacts：文件改成 <采集项>_<时间>_<原名>，manifest 记清文件名与字节', () => {
   const jobDir = path.join(TMP, 'artifacts-job');
   fs.mkdirSync(jobDir, { recursive: true });
   const artSub = path.join(jobDir, 'artifacts', 't_001');
@@ -102,12 +102,14 @@ await test('organizeArtifacts：文件改成 <dslId>_<时间>_<原名>，manifes
   };
   const manifest = J.organizeArtifacts(jobDir, job);
   const name = path.basename(job.tasks[0].artifacts[0].filePath);
-  assert.match(name, /^douyin_shop_transaction_\d{4}-\d{4}_|^douyin_shop_transaction_\d{8}-\d{4}_/, '产物名没带配方与时间：' + name);
+  assert.ok(name.startsWith('抖店-成交分析_20261111-1230_'), '产物名没带采集项与时间：' + name);
   assert.ok(name.endsWith(origName), '原始文件名要留在后缀里');
   const downloads = manifest.files.filter((x) => x.kind !== 'xlsx');
   assert.equal(downloads.length, 1);
   assert.equal(downloads[0].fileName, name);
-  assert.equal(manifest.naming, '<dslId>_<YYYYMMDD-HHmm>_<原始文件名>');
+  assert.equal(downloads[0].item, '抖店-成交分析');
+  assert.equal(manifest.naming, '<采集项>_<YYYYMMDD-HHmm>_<原始文件名>');
+  assert.ok((manifest.items || []).some((i) => i.name === '抖店-成交分析'), 'manifest 没标采集项名');
   const manifestFile = path.join(jobDir, 'artifacts', 'manifest.json');
   assert.ok(fs.existsSync(manifestFile), 'manifest.json 没落盘');
   assert.equal(JSON.parse(fs.readFileSync(manifestFile, 'utf8')).jobId, 'job_20261111-1230_abc123');
@@ -263,8 +265,9 @@ await test('organizeArtifacts：指标型作业也生成表格并写进 manifest
   fs.writeFileSync(path.join(dir, 'job.json'), JSON.stringify(job, null, 2), 'utf8');
   const manifest = J.organizeArtifacts(dir, job);
   const files = manifest.files.map((f) => f.fileName);
-  assert.ok(files.includes('pdd_shop_overview_20261101-0900_表格.xlsx'), '没生成表格：' + files.join(','));
-  assert.ok(fs.existsSync(path.join(dir, 'artifacts', 't_001', 'pdd_shop_overview_20261101-0900_表格.xlsx')), '表格文件不在产物目录');
+  assert.ok(files.includes('拼多多-店铺概览_20261101-0900_表格.xlsx'), '没生成表格：' + files.join(','));
+  assert.ok(fs.existsSync(path.join(dir, 'artifacts', 't_001', '拼多多-店铺概览_20261101-0900_表格.xlsx')), '表格文件不在产物目录');
+  assert.ok((manifest.items || []).some((i) => i.name === '拼多多-店铺概览'), 'manifest 没标采集项名');
   assert.ok(manifest.files.some((f) => f.kind === 'xlsx'), 'manifest 没记表格');
 });
 
@@ -284,20 +287,61 @@ await test('下载型作业不再重复生成表格（平台已经给了 xlsx）
   };
   const manifest = J.organizeArtifacts(jobDir, job);
   assert.ok(!manifest.files.some((f) => f.kind === 'xlsx'), '下载型不该再生成表格：' + JSON.stringify(manifest.files));
-  assert.ok(!fs.existsSync(path.join(jobDir, 'artifacts', 't_001', 'douyin_shop_transaction_20261101-0900_表格.xlsx')), '不该有表格文件');
+  assert.ok(!fs.existsSync(path.join(jobDir, 'artifacts', 't_001', '抖店-成交分析_20261101-0900_表格.xlsx')), '不该有表格文件');
+});
+
+// ── H. 采集项的中文名（v0.20.21）────────────────────────────────────────────
+section('H. 采集项的中文名（文件名 / manifest / 界面都标出来）');
+
+await test('dslItemName：已知配方给采集项中文名，未知配方退回 id，空 id 给「采集项」', async () => {
+  const NAMES = await import(url('lib/dsl-names.mjs'));
+  assert.equal(NAMES.dslItemName('douyin_shop_transaction'), '抖店-成交分析');
+  assert.equal(NAMES.dslItemName('tb_shop_overview'), '淘宝-店铺概览');
+  assert.equal(NAMES.dslItemName('tmall_shop_overview'), '天猫-店铺概览');
+  assert.equal(NAMES.dslItemName('some_vendor_dsl'), 'some_vendor_dsl');
+  assert.equal(NAMES.dslItemName(''), '采集项');
+  assert.equal(NAMES.dslItemName(null), '采集项');
+});
+
+await test('dslItemFileSafe 去掉 Windows 非法字符；sheetNameSafe 不超过 31 字', async () => {
+  const NAMES = await import(url('lib/dsl-names.mjs'));
+  assert.equal(NAMES.dslItemFileSafe('pdd_shop_overview'), '拼多多-店铺概览');
+  assert.equal(NAMES.sheetNameSafe('pdd_shop_overview'), '拼多多-店铺概览');
+  assert.ok(!/[\\/:*?"<>|]/.test(NAMES.dslItemFileSafe('a/b:c*d?e"f<g>h|i')), '文件名还有非法字符');
+  for (const id of ['douyin_shop_transaction', 'jd_traffic_overview']) {
+    const s = NAMES.sheetNameSafe(id);
+    assert.ok(s.length <= 31, '工作表名太长：' + s);
+    assert.ok(!/[\[\]:*?/\\]/.test(s), '工作表名有 Excel 禁用字符：' + s);
+  }
+});
+
+await test('prepare 结果与作业状态里带采集项名，界面「上次采集」列出采集项', () => {
+  const runner = read('lib/collect-runner.mjs');
+  const state = read('lib/server/state.mjs');
+  const client = read('lib/client.js');
+  assert.ok(runner.includes('name: dslItemName(id)'), 'prepare 没给任务加采集项名');
+  assert.ok(runner.includes('export function lastJobItems'), '没有 lastJobItems');
+  assert.ok(state.includes('lastJobItems(a.id)'), '状态没带上次采集项');
+  assert.ok(client.includes("' · 采集项：'"), '界面没列出采集项名');
+});
+
+await test('迁移工具按采集项名改名并补 items', () => {
+  const tool = read('tools/migrate-collect-naming.mjs');
+  assert.ok(tool.includes('dslItemFileSafe(dslId)'), '迁移工具没按采集项名改名');
+  assert.ok(tool.includes('item: dslItemName(dslId)'), '迁移工具的 manifest 没标采集项');
 });
 
 section('F. 版本与文档');
 
-await test('版本号已到 0.20.18', () => {
-  assert.ok(versionAtLeast(pkg.version, '0.20.18'), '版本应 ≥ 0.20.18：' + pkg.version);
+await test('版本号已到 0.20.21', () => {
+  assert.ok(versionAtLeast(pkg.version, '0.20.21'), '版本应 ≥ 0.20.21：' + pkg.version);
 });
 
 await test('CHANGELOG 与 README 写清了采集数据命名', () => {
   const changelog = read('CHANGELOG.md');
   const readme = read('README.md');
-  assert.ok(changelog.includes('v0.20.18'), 'CHANGELOG 缺 v0.20.18');
-  assert.ok(changelog.includes('命名'), 'CHANGELOG 没讲命名规范');
+  assert.ok(changelog.includes('v0.20.21'), 'CHANGELOG 缺 v0.20.21');
+  assert.ok(changelog.includes('采集项'), 'CHANGELOG 没讲采集项名');
   assert.ok(readme.includes(pkg.version), 'README 版本没跟上 ' + pkg.version);
 });
 
