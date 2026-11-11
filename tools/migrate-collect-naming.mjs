@@ -23,6 +23,7 @@ import { readableJobId, runStamp } from '../lib/collect-runner.mjs';
 const READABLE = /^job_\d{8}-\d{4}_[a-z0-9]{3,12}$/;
 const KEEP_OK = 20;
 const KEEP_FAILED = 3;
+const KEEP_PER_DAY = 2;
 
 const dry = process.argv.includes('--dry');
 const explicit = process.argv.slice(2).find((a) => a && !a.startsWith('--'));
@@ -162,20 +163,43 @@ function writeManifest(jobDir, job) {
   return manifest;
 }
 
-/** 每个账号按保留上限清理。 */
+/** 每个账号按保留上限清理（同一窗口同一配方只留最新一次，每天最多 KEEP_PER_DAY 次）。 */
 function pruneJobs(accountDir) {
   const root = path.join(accountDir, 'jobs');
   const names = listDirs(root);
   const metas = names.map((name) => ({ name, job: readJson(path.join(root, name, 'job.json')) }));
   metas.sort((a, b) => String((b.job && b.job.createdAt) || '').localeCompare(String((a.job && a.job.createdAt) || '')));
+  const signatureOf = (job) => {
+    const dsls = (job.tasks || []).map((x) => String(x.dslId || '')).filter(Boolean).sort().join('+') || String(job.jobId || '');
+    const win = (job.plan && job.plan.window) || {};
+    return dsls + '|' + String(win.start || '') + '..' + String(win.end || '');
+  };
+  const dayOf = (job) => {
+    const when = new Date(String(job.createdAt || ''));
+    if (Number.isNaN(when.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return String(when.getFullYear()) + '-' + pad(when.getMonth() + 1) + '-' + pad(when.getDate());
+  };
+  const seen = new Set();
+  const perDay = new Map();
   let ok = 0;
   let failed = 0;
   for (const m of metas) {
     if (!m.job || !m.job.finished) continue;
-    const hasOk = (m.job.tasks || []).some((t) => t.state === 'ok');
-    if (hasOk) ok += 1;
-    else failed += 1;
-    const over = hasOk ? ok > KEEP_OK : failed > KEEP_FAILED;
+    const hasOk = (m.job.tasks || []).some((x) => x.state === 'ok');
+    let over = false;
+    if (hasOk) {
+      ok += 1;
+      const sig = signatureOf(m.job);
+      const day = dayOf(m.job);
+      const dayCount = (perDay.get(day) || 0) + 1;
+      perDay.set(day, dayCount);
+      over = seen.has(sig) || dayCount > KEEP_PER_DAY || ok > KEEP_OK;
+      seen.add(sig);
+    } else {
+      failed += 1;
+      over = failed > KEEP_FAILED;
+    }
     if (!over) continue;
     report.pruned.push({ account: path.basename(accountDir), dir: m.name });
     if (dry) continue;
@@ -186,7 +210,6 @@ function pruneJobs(accountDir) {
     }
   }
 }
-
 for (const accountId of listDirs(collectionDir)) {
   const accountDir = path.join(collectionDir, accountId);
   for (const name of listDirs(path.join(accountDir, 'jobs'))) {

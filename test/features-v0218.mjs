@@ -135,7 +135,7 @@ await test('pruneJobs：只留有数据的最新 keepOk 次，只有失败的最
   const okC = make('ccc3', 3, true);
   const badA = make('ddd4', 4, false);
   const badB = make('eee5', 5, false);
-  const out = J.pruneJobs(accountId, { keepOk: 2, keepFailed: 1 });
+  const out = J.pruneJobs(accountId, { keepOk: 2, keepFailed: 1, keepPerDay: 9, dedupe: false });
   const left = fs.readdirSync(root);
   assert.equal(out.removed, 2, '应删掉 2 个（1 个旧的成功 + 1 个旧的失败）');
   assert.equal(left.length, 3, '留 2 个成功 + 1 个失败：' + left.join(','));
@@ -144,6 +144,33 @@ await test('pruneJobs：只留有数据的最新 keepOk 次，只有失败的最
   assert.ok(!fs.existsSync(okA), '最旧的成功作业应被删');
   assert.ok(fs.existsSync(badB), '最新的失败作业不该被删');
   assert.ok(!fs.existsSync(badA), '最旧的失败作业应被删');
+});
+
+
+await test('pruneJobs：同一窗口同一配方只留最新一次，且每天最多保留 keepPerDay 次', () => {
+  const accountId = 'acc_taobao_v218c';
+  const root = path.join(process.env.DSH_SHOP_ACCOUNTS_DIR, 'collection', accountId, 'jobs');
+  fs.mkdirSync(root, { recursive: true });
+  const make = (name, createdAt, dslId, start) => {
+    const dir = path.join(root, name);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'job.json'),
+      JSON.stringify({ version: 1, jobId: name, accountId, createdAt, finished: true, plan: { window: { start, end: '2026-11-10' } }, tasks: [{ taskId: 't_001', dslId, state: 'ok' }] }, null, 2),
+      'utf8'
+    );
+    return dir;
+  };
+  const d1a = make('job_20261101-0100_aaaaaa', '2026-11-01T01:00:00.000Z', 'tb_shop_overview', '2026-10-03');
+  const d1b = make('job_20261101-0200_bbbbbb', '2026-11-01T02:00:00.000Z', 'tb_shop_overview', '2026-10-03');
+  const d1c = make('job_20261101-0300_cccccc', '2026-11-01T03:00:00.000Z', 'tb_shop_overview', '2026-10-04');
+  const d2a = make('job_20261102-0200_dddddd', '2026-11-02T02:00:00.000Z', 'tb_shop_overview', '2026-10-03');
+  const out = J.pruneJobs(accountId, { keepOk: 9, keepFailed: 9 });
+  assert.equal(out.removed, 2, '应删掉同一天重复的那两份：' + JSON.stringify(out));
+  const left = fs.readdirSync(root).sort();
+  assert.deepEqual(left, ['job_20261101-0300_cccccc', 'job_20261102-0200_dddddd'], '每天保留最新，同窗口同配方只留最新：' + left.join(','));
+  assert.ok(!fs.existsSync(d1a) && !fs.existsSync(d1b), '旧的重复作业应被删');
+  assert.ok(fs.existsSync(d1c) && fs.existsSync(d2a), '当天唯一与后一天的那份应留下');
 });
 
 // ── D. 兼容旧目录 ───────────────────────────────────────────────────────────
