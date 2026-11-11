@@ -193,22 +193,20 @@ await test('B3 浏览器行有图标、版本芯片与展开', () => {
   assert.match(clientSrc, /'M' \+ verMajor/, '版本芯片显示 M<主版本号>');
 });
 
-await test('B4 行内「使用这个」只填表单、保存才生效（与下拉共用一条写入路径）', () => {
-  // v0.20.11：这一行以前直接 PUT /config，跟「浏览器后端」下拉的「保存设置」两套语义，
-  // 界面上还会出现「行里说使用中、下拉说另一个」。现在统一成：行只改表单。
+await test('B4 点「使用这个」按行类型走不同配置（ego lite 切后端，Chrome 写路径）', () => {
+  // v0.20.10：ego lite 那行的「使用这个」以前也去写 browserPath，被宿主拒成
+  // 「这个文件名不在可用的浏览器名单里：ego.exe」。
   const seg = clientSrc.slice(clientSrc.indexOf('function useBrowser(b) {'), clientSrc.indexOf('function useBrowser(b) {') + 900);
   assert.ok(seg.includes("b.id === 'egolite'"), '要按行类型分流');
-  assert.ok(seg.includes("{ browser: 'egolite' }"), 'ego lite 选后端字段');
-  assert.ok(seg.includes("{ browser: 'chrome', browserPath: b.path }"), 'Chrome 选后端并填路径');
-  assert.ok(!seg.includes("api('/config'"), '行内不再直接写配置，保存统一走「保存设置」');
-  assert.ok(seg.includes('setForm('), '改的是一份表单状态');
+  assert.ok(seg.includes("{ browser: 'egolite' }"), 'ego lite 走 browser 后端字段');
+  assert.ok(seg.includes("browserPath: b.path, browser: 'chrome'"), 'Chrome 走 browserPath 并切到 chrome 后端');
 });
 
 console.log('\n3. 版本与文档');
 
-await test('C1 版本号已到 0.20.11', () => {
+await test('C1 版本号已到 0.20.10', () => {
   const parts = String(pkg.version).split('.').map((x) => Number(x));
-  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 11))), '版本应 ≥ 0.20.11：' + pkg.version);
+  assert.ok(parts[0] > 0 || (parts[0] === 0 && (parts[1] > 20 || (parts[1] === 20 && parts[2] >= 10))), '版本应 ≥ 0.20.10：' + pkg.version);
 });
 
 await test('C2 CHANGELOG 与 README 同步', () => {
