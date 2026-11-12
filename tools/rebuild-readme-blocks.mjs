@@ -50,6 +50,7 @@ const SUITES = [
   ['features-v0203.mjs', 17, '本机浏览器扫描（Google Chrome、Microsoft Edge 与 ego lite）'],
   ['features-v02027.mjs', 10, '「用户浏览器」的使用中标记按实际后端，点 ego lite 那一行能切回去'],
   ['features-v02024.mjs', 10, 'Microsoft Edge 支持（扫描列表、启动参数、界面图标）'],
+  ['features-v02028.mjs', 9, '工具参数采集域枚举（修掉启动时 COLLECTION_DOMAINS 未定义与对象型参数校验）'],
   ['features-v0216.mjs', 6, '设置页显示采集数据保存在哪，并能一键打开目录'],
   ['features-v0217.mjs', 9, '数据目录可以看、可以打开、也可以换一个（可选把数据搬过去）'],
   ['features-v0218.mjs', 20, '采集数据命名规范（作业目录带时间与采集项、产物带采集项名、manifest、保留上限、job.json 路径同步）'],

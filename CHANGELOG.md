@@ -1,3 +1,20 @@
+## v0.20.28（2026-11-12）
+
+需求：宿主日志每次启动都有「注册工具 shop_accounts 失败：COLLECTION_DOMAINS is not defined」——
+插件界面不受影响，但 agent 侧少一个 shop_accounts 工具，且一直没人发现。
+
+改动：
+- 工具参数里的「采集域」枚举改为 `collectionDomainEnums()`：`lib/server/tools.mjs` 之前直接展开
+  `COLLECTION_DOMAINS` 却没 import，scheme 在注册时才求值，于是每次注册都抛 ReferenceError。
+- 三个对象型参数（`items` / `params` / `results`）补 `additionalProperties: true`：修掉未定义之后，
+  宿主新版 `defineTool` 的 JSON Schema 校验又要求显式声明，否则仍注册不上。
+- 顺带的收益：`shop_accounts` 工具重新可用（采集作业、配方、目录查询这些 action 都在这个工具里）。
+
+验证：
+- 新增 `test/features-v02028.mjs` 9 项：采集域枚举、import 是否补齐、schema 使用方式、
+  三个对象型参数声明、用桩 ctx 真跑 `registerTool()`（defineTool 不可用时给出明确原因）、版本与文档。
+- 全套 770 项 → 779 项，源码目录与安装副本两处通过；README 锚点、代码围栏、表格列数检查与脱敏扫描无异常。
+
 ## v0.20.27（2026-11-12）
 
 需求：在「用户浏览器」里点 ego lite 那一行，界面一直把 Edge / Chrome 标成使用中，看起来像选不到 ego lite。
