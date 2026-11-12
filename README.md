@@ -54,9 +54,9 @@
 | **Chrome** | 未安装 ego lite 时的回退方案，或店铺数量超过 ego 用户配置数量时使用 | 一店一份 `user-data-dir` 与一个 CDP 调试端口，档案可自动创建、数量不限 |
 | 自动（默认） | 安装 ego lite 时走 ego，否则回退 Chrome | — |
 
-后端可在设置页指定为「自动 / ego lite / Chrome」，切换后立即生效。
+后端不需要单独选：选中 Google Chrome 或 Microsoft Edge 就用 Chromium 浏览器（走 CDP），选中 ego lite 就用 ego lite；选中的浏览器用不了时会自动换另一个。
 
-Chrome 后端用哪个浏览器可以在设置页「用户浏览器」里选：点「重新扫描」会列出这台机器上装着的 Chromium 内核浏览器（Google Chrome、Microsoft Edge 与 ego lite，带版本与路径），并标出当前使用的那个；点「使用这个」即写入 `browserPath` 并立即生效。留空时按 Chrome → Edge 的顺序自动探测。
+Chrome 后端用哪个浏览器可以在设置页「用户浏览器」里选：点「重新扫描」会列出这台机器上装着的 Chromium 内核浏览器（Google Chrome、Microsoft Edge 与 ego lite，带版本与路径），并标出当前使用的那个；点浏览器那一行即切换（写入 `browserPath` 并立即生效），行尾箭头展开可看路径与版本。留空时按 Chrome → Edge 的顺序自动探测。
 
 ### 定时任务
 
@@ -189,12 +189,12 @@ ego 模式下插件自动为店铺分配未被占用的「用户配置」（默�
 
 ### 浏览器设置
 
-- **浏览器后端**：自动 / ego lite / Chrome，保存后立即生效；下方显示当前实际生效的后端、探测到的 CLI 路径与 ego 用户配置列表。
+- **浏览器后端**：不需要单独选，由「用户浏览器」里选中的那一项决定；下方显示当前实际生效的后端、探测到的 CLI 路径与 ego 用户配置列表。
 - **ego-browser CLI**：留空表示自动探测，探测不到时手动填写。
-- **Chrome 可执行文件**：留空自动查找 Chrome，未找到时使用 Edge；也可以在「用户浏览器」里把 Edge 设为默认（与 Chrome 同内核，走同一套 CDP 后端）。
+- **Chrome 可执行文件**：留空自动查找 Chrome，未找到时使用 Edge；也可以在「用户浏览器」里点 Edge 那一行切过去（与 Chrome 同内核，走同一套 CDP 后端）。
 - **启动 ego**（仅在 ego 未运行时出现）：仅启动 ego 主程序，不操作任何 TaskSpace。
 - **刷新 ego**：重新读取 ego 的用户配置与 TaskSpace 列表。
-- **路径与高级选项**（默认收起）：路径、Chrome 回退（起始端口、打开时同时打开商品列表页、关闭时先让浏览器自行退出）、ego 与数据目录信息。
+- **路径与高级选项**（默认收起）：路径、Chrome 选项（起始端口、打开时同时打开商品列表页、关闭时先让浏览器自行退出）、ego 与数据目录信息。
 - **版本与更新**：检测源码仓库与 GitHub 上游的新提交，执行快进合并并将 `lib/`、`package.json`、`README.md`、`test/` 覆盖至安装副本；仅在检测到新版本时可用，覆盖后需重启 DSH Desktop。
 
 插件不会为读取状态而启动 ego：所有 CLI 调用前先检测 ego 主进程状态，未运行时如实返回 `running:false`，仅在点击「打开店铺」或「启动 ego」时才启动。
@@ -363,19 +363,20 @@ node test/features-v02024.mjs  # 10 项：Microsoft Edge 支持（扫描列表�
 node test/features-v0216.mjs   # 6 项：设置页显示采集数据保存在哪，并能一键打开目录
 node test/features-v0217.mjs   # 9 项：数据目录可以看、可以打开、也可以换一个（可选把数据搬过去）
 node test/features-v0218.mjs   # 20 项：采集数据命名规范（作业目录带时间与采集项、产物带采集项名、manifest、保留上限、job.json 路径同步）
+node test/features-v02025.mjs  # 7 项：用户浏览器点行即切换 / Edge 图标用官方标志
 node test/features-v0197.mjs   # 7 项：浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前 44 套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 45 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**753 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**760 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -422,7 +423,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.24**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.25**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
