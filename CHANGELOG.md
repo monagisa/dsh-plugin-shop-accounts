@@ -1,3 +1,18 @@
+## v0.20.24（2026-11-12）
+
+需求：Microsoft Edge 与 Chrome 同为 Chromium 内核，「用户浏览器」里却只列了 Google Chrome 与 ego lite，装了 Edge 的机器只能手填路径；Edge 首次启动还会弹推荐设置与微软账号提示。
+
+改动：
+- 平台层扫描目标新增 Microsoft Edge（Windows 扫 `Microsoft\\Edge\\Application`，macOS 扫 app bundle），扫描结果顺序固定 Google Chrome → Microsoft Edge → ego lite。
+- 启动参数拆成可单测的 `browserArgs()`；Edge 额外带 `--disable-sync`、`--no-service-autorun`、`--disable-background-networking`，并在特性名单里关闭侧边栏、集锦、购物助手、网页捕获、工作区与隐式登录弹窗。
+- 界面给 Edge 图标；选中 Edge 行与 Chrome 行行为一致（写 `browserPath`，走同一个 CDP 后端）。
+- README 的浏览器说明与自检清单补上 Edge。
+
+验证：
+- 新增 `test/features-v02024.mjs` 10 项（Edge/Chrome 参数分流、macOS 二进制名识别、扫描顺序与版本、选中标记、界面接线、文档）。
+- 真机（本机 Edge 157.0.4341.46）实测：CDP 端口、`Browser.getVersion`（返回 `Edg/157…`）、页面加载（拼多多登录页 2 个输入框）、淘宝卖家壳页跨站 iframe（`Page.getFrameTree` 读到 2 帧 + `Page.createIsolatedWorld` 拿到 contextId）、`Network` 写读 cookie（16 条）、`Page.setDownloadBehavior`，关闭后端口释放。
+- 全套 753 项两处（源码目录与安装副本）通过；README 锚点/围栏/表格检查与脱敏扫描 0 命中。
+
 ## v0.20.23（2026-11-11）
 
 需求：采集项名只标在文件名与详情页，作业目录这一层（`jobs/job_20261111-1230_abc123/`）还是看不出这次采了什么，在文件管理器里翻目录不好找。

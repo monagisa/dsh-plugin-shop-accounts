@@ -60,12 +60,13 @@ plant(fakeRoot, 'Citro Labs/ego lite/Application/0.6.2.8/ego.ver');
 
 console.log('\n1. 扫描与版本推断');
 
-await test('A1 平台层只给插件能用的两个扫描目标：Chrome 与 ego lite', () => {
+await test('A1 平台层给插件能用的扫描目标：Chrome、Microsoft Edge 与 ego lite', () => {
   const osPlatform = modTargets;
   const ids = osPlatform.map((t) => t.id);
-  assert.deepEqual(ids, ['chrome', 'egolite']);
+  assert.deepEqual(ids, ['chrome', 'edge', 'egolite']);
   const exes = osPlatform.map((t) => t.exe);
   assert.ok(exes.includes('chrome.exe') || exes.includes('Google Chrome'), '主程序名不对：' + exes.join(','));
+  assert.ok(exes.includes('msedge.exe') || exes.includes('Microsoft Edge'), 'Edge 主程序名不对：' + exes.join(','));
   assert.ok(osPlatform.every((t) => typeof t.product === 'string' && t.product), '每个目标要带产品行文字');
 });
 
