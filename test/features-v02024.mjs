@@ -92,7 +92,7 @@ await test('B2 扫描结果顺序是 Chrome → Edge → ego lite，Edge 版本�
     { id: 'edge', name: 'Microsoft Edge', exe: 'msedge.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Microsoft', 'Edge', 'Application')] },
     { id: 'egolite', name: 'ego lite', exe: 'ego.exe', product: 'ego 浏览器', files: [EGO_FILE] },
   ];
-  const s = scan.scanBrowsers({ browserPath: '' }, { targets, resolved: CHROME_DIR });
+  const s = scan.scanBrowsers({ browserPath: '' }, { targets, resolved: CHROME_DIR, backend: 'chrome' });
   assert.deepEqual(s.browsers.map((b) => b.id), ['chrome', 'edge', 'egolite'], '顺序应按 Chrome → Edge → ego lite');
   const edge = s.browsers.find((b) => b.id === 'edge');
   assert.equal(edge.version, '157.0.4341.46', 'Edge 版本应取同级最大版本目录：' + edge.version);
@@ -104,7 +104,7 @@ await test('B3 配置指向 Edge 时 Edge 标为使用中', () => {
     { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
     { id: 'edge', name: 'Microsoft Edge', exe: 'msedge.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Microsoft', 'Edge', 'Application')] },
   ];
-  const s = scan.scanBrowsers({ browserPath: EDGE_DIR }, { targets });
+  const s = scan.scanBrowsers({ browserPath: EDGE_DIR }, { targets, backend: 'chrome' });
   assert.equal(s.browsers.find((b) => b.id === 'edge').chosen, true, '用 Edge 时该标使用中');
   assert.equal(s.browsers.find((b) => b.id === 'chrome').chosen, false);
   assert.equal(s.selectedFound, true);

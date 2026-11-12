@@ -94,7 +94,7 @@ await test('A5 扫临时目录：每家只留一条、带版本、能标出使�
     { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
     { id: 'egolite', name: 'ego lite', exe: 'ego.exe', product: 'ego 浏览器', files: [EGO_FILE] },
   ];
-  const s = mod.scanBrowsers({ browserPath: '' }, { targets, resolved: CHROME_STUB });
+  const s = mod.scanBrowsers({ browserPath: '' }, { targets, resolved: CHROME_STUB, backend: 'chrome' });
   const ids = s.browsers.map((b) => b.id);
   assert.deepEqual(ids, ['chrome', 'egolite'], '只该有 chrome 与 egolite：' + ids.join(','));
   const chrome = s.browsers.find((b) => b.id === 'chrome');
@@ -113,7 +113,7 @@ await test('A5b 后端切到 ego 时 ego lite 才是使用中', () => {
     { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
     { id: 'egolite', name: 'ego lite', exe: 'ego.exe', product: 'ego 浏览器', files: [EGO_FILE] },
   ];
-  const s = mod.scanBrowsers({ browser: 'egolite' }, { targets, resolved: CHROME_STUB });
+  const s = mod.scanBrowsers({ browser: 'egolite' }, { targets, resolved: CHROME_STUB, backend: 'egolite' });
   assert.equal(s.browsers.find((b) => b.id === 'egolite').chosen, true);
   assert.equal(s.browsers.find((b) => b.id === 'chrome').chosen, false);
 });
@@ -122,7 +122,7 @@ await test('A6 指定了 browserPath 时用它标使用中', () => {
   const targets = [
     { id: 'chrome', name: 'Google Chrome', exe: 'chrome.exe', product: 'Chromium', bases: [path.join(fakeRoot, 'Google', 'Chrome', 'Application')] },
   ];
-  const s = mod.scanBrowsers({ browserPath: CHROME_DIR }, { targets });
+  const s = mod.scanBrowsers({ browserPath: CHROME_DIR }, { targets, backend: 'chrome' });
   assert.equal(s.selectedFound, true);
   assert.equal(s.browsers.find((b) => b.id === 'chrome').chosen, true);
   assert.equal(s.selected, CHROME_DIR);
@@ -130,6 +130,7 @@ await test('A6 指定了 browserPath 时用它标使用中', () => {
 
 await test('A7 entries 注入模式：同 id 多份只留版本最高的', () => {
   const s = mod.scanBrowsers({ browserPath: 'C:/PF/Google/Chrome/Application/100.0/chrome.exe' }, {
+    backend: 'chrome',
     entries: [
       { id: 'chrome', name: 'Google Chrome', path: 'C:/PF/Google/Chrome/Application/chrome.exe', version: '157.0.8103.38' },
       { id: 'chrome', name: 'Google Chrome', path: 'C:/PF/Google/Chrome/Application/100.0/chrome.exe', version: '100.0.1.1' },
@@ -200,7 +201,9 @@ await test('B4 点「使用这个」按行类型走不同配置（ego lite 切�
   // 「这个文件名不在可用的浏览器名单里：ego.exe」。
   const seg = clientSrc.slice(clientSrc.indexOf('function useBrowser(b) {'), clientSrc.indexOf('function useBrowser(b) {') + 900);
   assert.ok(seg.includes("b.id === 'egolite'"), '要按行类型分流');
-  assert.ok(seg.includes("{ browser: 'auto' }"), 'ego lite 那行把后端交回自动（v0.20.13）');
+  // v0.20.27：以前写 'auto' 会留着 browserPath，界面继续把 Chrome/Edge 标成在用；改成明确的 'egolite'。
+  assert.ok(seg.includes("{ browser: 'egolite' }"), 'ego lite 那行明确切到 ego lite 后端');
+  assert.ok(!seg.includes("{ browser: 'auto' }"), '不该再写回 auto（会留着 browserPath 导致标记错位）');
   assert.ok(seg.includes("browserPath: b.path, browser: 'chrome'"), 'Chrome 走 browserPath 并切到 chrome 后端');
 });
 

@@ -1548,11 +1548,12 @@ await test('客户端打出的每个动作，宿主都真的接了（两边写�
 });
 
 await test('设置页不再有「浏览器后端」下拉：用「用户浏览器」里那一行切换，保存时兜底带 browser；店铺行显示 ego 空间', () => {
-  // v0.20.13：后端不再手选 —— 点 Chrome 那行写 browser=chrome + 路径，点 ego lite 那行写回 auto。
+  // v0.20.13：后端不再手选 —— 点 Chrome 那行写 browser=chrome + 路径。
+  // v0.20.27：点 ego lite 那行改成明确写 browser=egolite（写 auto 会留着上一次的 browserPath，标记会继续显示 Chrome/Edge）。
   assert.ok(!clientSrc.includes("label: '浏览器后端'"), '不该再有「浏览器后端」下拉');
   assert.ok(!clientSrc.includes("value: 'egolite'"), '不该再有后端选项');
   assert.ok(clientSrc.includes("b.id === 'egolite'"), '行内要按类型分流（ego lite / Chrome）');
-  assert.ok(clientSrc.includes("{ browser: 'auto' }"), '点 ego lite 那行要把后端交回自动');
+  assert.ok(clientSrc.includes("{ browser: 'egolite' }"), '点 ego lite 那行要明确切到 egolite 后端');
   assert.ok(/browser: form\.browser/.test(clientSrc), '保存设置仍然要兜底把 browser 一起发上去');
   assert.ok(/api\('\/ego'/.test(clientSrc), '「刷新 ego」按钮要走 GET /ego（否则读不到新 profile）');
   assert.ok(/egoSpace/.test(clientSrc), '店铺行/详情要显示 ego 空间名，用户才知道开的是哪个窗口');
