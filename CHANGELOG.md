@@ -1,3 +1,22 @@
+## v0.20.29（2026-11-13）
+
+**需求**
+
+- 设置页点 ego lite 那一行提示「已切到 ego lite」，但「默认」徽标仍停在 Chrome，ego lite 自己写着「未设为默认」。
+
+**改动**
+
+- 根因：本机 ego lite 从 0.6.2.8 升级到 0.6.2.10 后，`%USERPROFILE%\.local\share\ego\active_version_dir` 这条链接仍指向旧的 `Application\0.6.2.8`，实际主程序在 `Application\0.6.2.10\ego-browser.exe`。`resolveEgoCli()` 只看固定位置，返回空 → `backendFor()` 判定「没装 ego lite」退回 Chrome → 扫描结果按解析后的后端标记，于是 Chrome 仍是「使用中」。
+- `lib/platform/win32.mjs` 新增 `egoCliVersionDirs()`：扫安装目录（`Program Files` 与 `LOCALAPPDATA` 两处）下的版本子目录，按版本从新到旧列出 `ego-browser.exe`；`egoCliCandidates()` 把它排在最前，固定链接只作兜底。
+- macOS / 不支持平台补同名导出（返回空数组），`lib/platform/index.mjs` 一并转发，平台契约保持一致。
+- 结果：CLI 能定位到 `Application\0.6.2.10\ego-browser.exe`，`backendFor({browser:'egolite'})` 返回 `egolite`，扫描里 ego lite 被标成「使用中」。
+
+**验证**
+
+- `test/features-v02029.mjs` 8 项：版本目录按版本倒序列出、目录不存在返回空、候选顺序在固定链接之前、本机装了 ego lite 时明确选 egolite 就得到 egolite、写错的 CLI 路径不会被采用、版本与 CHANGELOG/README 一致。
+- 全套 787 项在源码目录与安装副本上均通过；README 锚点、代码围栏、表格列数检查与脱敏扫描均无异常。
+
+
 ## v0.20.28（2026-11-12）
 
 需求：宿主日志每次启动都有「注册工具 shop_accounts 失败：COLLECTION_DOMAINS is not defined」——

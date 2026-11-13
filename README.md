@@ -359,6 +359,7 @@ node test/features-v0192.mjs   # 9 项：窗口在别处关掉后状态跟上（
 node test/features-v0198.mjs   # 10 项：窗口里已经登录时不再自动代填
 node test/features-v0202.mjs   # 10 项：定时采集到点自己启动 ego（以前要手动先打开一次）
 node test/features-v0203.mjs   # 17 项：本机浏览器扫描（Google Chrome、Microsoft Edge 与 ego lite）
+node test/features-v02029.mjs  # 8 项：ego lite CLI 位置（升级到新版本目录后仍能识别）
 node test/features-v02027.mjs  # 10 项：「用户浏览器」的使用中标记按实际后端，点 ego lite 那一行能切回去
 node test/features-v02024.mjs  # 10 项：Microsoft Edge 支持（扫描列表、启动参数、界面图标）
 node test/features-v02028.mjs  # 9 项：工具参数采集域枚举（修掉启动时 COLLECTION_DOMAINS 未定义与对象型参数校验）
@@ -372,13 +373,13 @@ node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome�
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前 47 套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 48 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**779 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**787 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -425,7 +426,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.28**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.29**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
