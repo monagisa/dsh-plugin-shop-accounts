@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-shop-accounts",
-  "version": "0.20.30",
+  "version": "0.20.31",
   "type": "module",
   "description": "DSH 插件：电商店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688 商家端）——一店一份独立登录档案，登录一次长期复用；浏览器优先 ego lite，未安装时回退 Chrome CDP；支持静默/定时检测登录态、保活续期与采集作业编排。",
   "keywords": [

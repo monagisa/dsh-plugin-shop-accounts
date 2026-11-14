@@ -129,6 +129,27 @@ await test('B2 表格里写成「指标 + 数据日期」两列', () => {
   assert.ok(!raw.includes('没有解析出指标'));
 });
 
+await test('B3 表格的行号是 1 基（Excel 打开才看得到数据行）', () => {
+  const jobDir = path.join(TMP, 'job-rows');
+  fs.mkdirSync(path.join(jobDir, 'artifacts'), { recursive: true });
+  const dsl = { collection: { artifacts: [{ role: 'business', kind: 'json_string', output_key: 'overviewResponse' }] } };
+  const arts = collectArtifacts(dsl, { overviewResponse: JSON.stringify(sampleResponse()) });
+  const job = {
+    jobId: 'job_20261114-1200_def456_淘宝-店铺概览',
+    createdAt: '2026-11-14T04:00:00Z',
+    tasks: [{ taskId: 't_001', dslId: 'tb_shop_overview', state: 'ok', artifacts: arts, outputs: { overviewResponse: JSON.stringify(sampleResponse()) } }],
+  };
+  organizeArtifacts(jobDir, job);
+  const dir = path.join(jobDir, 'artifacts', 't_001');
+  const xlsx = fs.readdirSync(dir).find((f) => f.endsWith('.xlsx'));
+  const raw = fs.readFileSync(path.join(dir, xlsx), 'latin1');
+  assert.ok(raw.includes('<row r="1">'), '第一行必须是 r="1"');
+  assert.ok(!raw.includes('<row r="0">'), '不能出现 0 基行号（Excel 会丢掉整张表的数据行）');
+  const rowNums = [...raw.matchAll(/<row r="([0-9]+)"/g)].map((m) => Number(m[1]));
+  assert.equal(rowNums[0], 1, '第一行是 1');
+  assert.equal(rowNums[rowNums.length - 1], rowNums.length, '行号 1 基连续');
+});
+
 await test('C1 版本号已到 0.20.30', () => {
   const parts = pkg.version.split('.').map(Number);
   assert.ok(parts[0] > 0 || parts[1] > 20 || (parts[1] === 20 && parts[2] >= 30), '版本 ' + pkg.version);
