@@ -276,6 +276,15 @@
         "id": "tmall_store_overview_30d_rpa:read-url",
         "action": "readPageUrl",
         "outputKey": "finalUrl"
+      },
+      {
+        "id": "tmall_store_overview_30d_rpa:back-to-dashboard",
+        "action": "goto",
+        "url": "https://sycm.taobao.com/portal/home.htm",
+        "waitUntil": "domcontentloaded",
+        "optional": true,
+        "onError": "continue",
+        "description": "采集完成后退回生意参谋首页：接口 JSON 页只用于读取，读完不要把它留在窗口里。"
       }
     ]
   },
