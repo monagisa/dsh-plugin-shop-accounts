@@ -105,7 +105,7 @@ await test('B1 采集产物里 json_string 也会带 records', () => {
   assert.equal(arts[0].asOf, arts[0].records.asOf, '产物上也要带数据日期');
 });
 
-await test('B2 表格里写成「指标 + 数据日期」两列', () => {
+await test('B2 表格是「第一行指标名、第一列日期」的转置布局', () => {
   const jobDir = path.join(TMP, 'job');
   fs.mkdirSync(path.join(jobDir, 'artifacts'), { recursive: true });
   const dsl = { collection: { artifacts: [{ role: 'business', kind: 'json_string', output_key: 'overviewResponse' }] } };
@@ -122,11 +122,45 @@ await test('B2 表格里写成「指标 + 数据日期」两列', () => {
   assert.ok(xlsx, '应当生成表格');
   const raw = fs.readFileSync(path.join(dir, xlsx), 'latin1');
   assert.ok(raw.includes('xl/worksheets/sheet1.xml'), '是 xlsx 包');
-  assert.ok(raw.includes('2026-11-13'), '表头应当写数据日期');
+  assert.ok(raw.includes('2026-11-13'), '应当有日期行');
   const zh = (t) => Buffer.from(t, 'utf8').toString('latin1');
-  assert.ok(raw.includes(zh('成交金额')), '应当有中文指标名');
+  const sheet = (() => {
+    const eocd = raw.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+    return raw;
+  })();
+  const header = raw.match(/<row r="1">([\s\S]*?)<\/row>/);
+  assert.ok(header, '必须有表头行');
+  assert.ok(header[1].includes(zh('日期')), '表头第一列是「日期」');
+  assert.ok(header[1].includes(zh('成交金额')), '指标名在表头上（列）');
  // 表格里不该再出现兜底文案
   assert.ok(!raw.includes('没有解析出指标'));
+});
+
+await test('B4 页面文字型（拼多多）也按转置布局写两行日期', () => {
+  const jobDir = path.join(TMP, 'job-text');
+  fs.mkdirSync(path.join(jobDir, 'artifacts'), { recursive: true });
+  const job = {
+    jobId: 'job_20261114-1200_def456_拼多多-店铺概览',
+    accountId: 'acc_test',
+    createdAt: '2026-11-14T04:00:00Z',
+    tasks: [{
+      taskId: 't_001',
+      dslId: 'pdd_shop_overview',
+      state: 'ok',
+      artifacts: [{ role: 'business', kind: 'text_metrics', outputKey: 'home_text', present: true, records: { values: { 成交金额: 12 }, yesterday: { 成交金额: 9 } } }],
+      declaredArtifacts: [{ output_key: 'home_text', metrics: [{ id: '成交金额', label: '成交金额' }] }],
+    }],
+  };
+  organizeArtifacts(jobDir, job);
+  const dir = path.join(jobDir, 'artifacts', 't_001');
+  const xlsx = fs.readdirSync(dir).find((f) => f.endsWith('.xlsx'));
+  const zh = (t) => Buffer.from(t, 'utf8').toString('latin1');
+  const raw = fs.readFileSync(path.join(dir, xlsx), 'latin1');
+  const header = raw.match(/<row r="1">([\s\S]*?)<\/row>/);
+  assert.ok(header && header[1].includes(zh('日期')), '第一列是日期');
+  assert.ok(header && header[1].includes(zh('成交金额')), '指标在表头上');
+  assert.ok(raw.includes('2026-11-14'), '今天的日期作行头');
+  assert.ok(raw.includes('2026-11-13'), '昨天的日期作行头');
 });
 
 await test('B3 表格的行号是 1 基（Excel 打开才看得到数据行）', () => {
