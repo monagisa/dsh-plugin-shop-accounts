@@ -48,6 +48,7 @@ const SUITES = [
   ['features-v0198.mjs', 10, '窗口里已经登录时不再自动代填'],
   ['features-v0202.mjs', 10, '定时采集到点自己启动 ego（以前要手动先打开一次）'],
   ['features-v0203.mjs', 17, '本机浏览器扫描（Google Chrome、Microsoft Edge 与 ego lite）'],
+  ['features-v02030.mjs', 10, 'JSON 型采集配方的指标解析（生意参谋趋势接口 → 指标表）'],
   ['features-v02029.mjs', 8, 'ego lite CLI 位置（升级到新版本目录后仍能识别）'],
   ['features-v02027.mjs', 10, '「用户浏览器」的使用中标记按实际后端，点 ego lite 那一行能切回去'],
   ['features-v02024.mjs', 10, 'Microsoft Edge 支持（扫描列表、启动参数、界面图标）'],

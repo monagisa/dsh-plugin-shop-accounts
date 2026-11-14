@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-shop-accounts",
-  "version": "0.20.29",
+  "version": "0.20.30",
   "type": "module",
   "description": "DSH 插件：电商店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688 商家端）——一店一份独立登录档案，登录一次长期复用；浏览器优先 ego lite，未安装时回退 Chrome CDP；支持静默/定时检测登录态、保活续期与采集作业编排。",
   "keywords": [
@@ -42,7 +42,7 @@
     "features2": "node test/features-v0101.mjs",
     "features3": "node test/features-v0110.mjs",
     "platform": "node test/platform.mjs",
-    "test": "node test/smoke.mjs && node test/features-v090.mjs && node test/features-v0101.mjs && node test/features-v0110.mjs && node test/features-v0120.mjs && node test/features-v0130.mjs && node test/features-v0140.mjs && node test/features-v0150.mjs && node test/features-v0152.mjs && node test/features-v0160.mjs && node test/features-v0161.mjs && node test/features-v0165.mjs && node test/features-v0166.mjs && node test/features-v0167.mjs && node test/features-v0168.mjs && node test/features-v0169.mjs && node test/features-v0170.mjs && node test/features-v0171.mjs && node test/features-v0172.mjs && node test/features-v0173.mjs && node test/features-v0174.mjs && node test/features-v0175.mjs && node test/features-v0176.mjs && node test/features-v0177.mjs && node test/features-v0178.mjs && node test/features-v0179.mjs && node test/features-v0181.mjs && node test/features-v0182.mjs && node test/features-v0183.mjs && node test/features-v0184.mjs && node test/features-v0185.mjs && node test/features-v0186.mjs && node test/features-v0187.mjs && node test/features-v0188.mjs && node test/features-v0192.mjs && node test/features-v0197.mjs && node test/features-v0198.mjs && node test/features-v0202.mjs && node test/features-v0203.mjs && node test/features-v02024.mjs && node test/features-v02027.mjs && node test/features-v02029.mjs && node test/features-v02028.mjs && node test/features-v02025.mjs && node test/features-v0216.mjs && node test/features-v0217.mjs && node test/features-v0218.mjs && node test/platform.mjs",
+    "test": "node test/smoke.mjs && node test/features-v090.mjs && node test/features-v0101.mjs && node test/features-v0110.mjs && node test/features-v0120.mjs && node test/features-v0130.mjs && node test/features-v0140.mjs && node test/features-v0150.mjs && node test/features-v0152.mjs && node test/features-v0160.mjs && node test/features-v0161.mjs && node test/features-v0165.mjs && node test/features-v0166.mjs && node test/features-v0167.mjs && node test/features-v0168.mjs && node test/features-v0169.mjs && node test/features-v0170.mjs && node test/features-v0171.mjs && node test/features-v0172.mjs && node test/features-v0173.mjs && node test/features-v0174.mjs && node test/features-v0175.mjs && node test/features-v0176.mjs && node test/features-v0177.mjs && node test/features-v0178.mjs && node test/features-v0179.mjs && node test/features-v0181.mjs && node test/features-v0182.mjs && node test/features-v0183.mjs && node test/features-v0184.mjs && node test/features-v0185.mjs && node test/features-v0186.mjs && node test/features-v0187.mjs && node test/features-v0188.mjs && node test/features-v0192.mjs && node test/features-v0197.mjs && node test/features-v0198.mjs && node test/features-v0202.mjs && node test/features-v0203.mjs && node test/features-v02024.mjs && node test/features-v02027.mjs && node test/features-v02030.mjs && node test/features-v02029.mjs && node test/features-v02028.mjs && node test/features-v02025.mjs && node test/features-v0216.mjs && node test/features-v0217.mjs && node test/features-v0218.mjs && node test/platform.mjs",
     "features4": "node test/features-v0120.mjs",
     "features5": "node test/features-v0130.mjs",
     "features6": "node test/features-v0140.mjs",
@@ -84,7 +84,8 @@
     "features48": "node test/features-v02025.mjs",
     "features49": "node test/features-v02027.mjs",
     "features50": "node test/features-v02028.mjs",
-    "features51": "node test/features-v02029.mjs"
+    "features51": "node test/features-v02029.mjs",
+    "features52": "node test/features-v02030.mjs"
   },
   "dsh": {
     "manifestVersion": 1,
