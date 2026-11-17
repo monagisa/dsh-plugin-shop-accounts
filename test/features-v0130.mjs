@@ -126,12 +126,13 @@ await test('种子配方：淘宝/京东可编译（带登录守卫）；拼多�
   }
 });
 
-await test('淘宝配方把 dateRange 填进了站内接口 URL（%7C 编码）', () => {
+await test('淘宝配方把 dateRange 填进了页内接口请求 URL（%7C 编码）', () => {
+  // v0.20.34 起不再 goto 到接口页，改成在首页里执行 evaluate（同步 XHR 读接口）。
   const compiled = R.compileExecution(readSeed('taobao/tb_shop_overview.json'), { start: '2026-10-03', end: '2026-11-01' });
-  const api = compiled.ops.find((o) => o.op === 'goto' && /\.json/.test(String(o.url)));
-  assert.ok(api, '没找到 goto 站内接口那一步');
-  assert.match(api.url, /dateRange=2026-11-01%7C2026-11-01/, '按锚点单日查询（窗口仍记 30 天）');
-  assert.match(api.url, /dateType=day/);
+  const api = compiled.ops.find((o) => o.op === 'eval' && String(o.expr).includes('trend/v3.json'));
+  assert.ok(api, '没找到页内请求接口那一步');
+  assert.match(String(api.expr), /dateRange=2026-11-01%7C2026-11-01/, '按锚点单日查询（窗口仍记 30 天）');
+  assert.match(String(api.expr), /dateType=day/);
 });
 
 await test('下载型 DSL 编译成 download op（v0.14.0 起支持落盘）', () => {

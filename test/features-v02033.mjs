@@ -31,44 +31,52 @@ const RECIPES = [
   ['淘宝', 'lib/rpa/dsls/taobao/tb_shop_overview.json'],
   ['天猫', 'lib/rpa/dsls/tmall/tmall_shop_overview.json'],
 ];
-const DASHBOARD = 'https://sycm.taobao.com/portal/home.htm';
 
-await test('A1 淘宝配方读完接口后回到生意参谋首页', () => {
+await test('A1 淘宝配方不再跳转到接口 JSON 页面', () => {
   const steps = readJson(RECIPES[0][1]).template.steps;
-  const readUrlIdx = steps.findIndex((s) => s.action === 'readPageUrl' && String(s.outputKey) === 'finalUrl');
-  assert.ok(readUrlIdx >= 0, '必须有记录 finalUrl 的 readPageUrl 步骤');
-  const tail = steps.slice(readUrlIdx + 1);
-  assert.ok(tail.some((s) => s.action === 'goto' && s.url === DASHBOARD), '读完后要回到首页');
-  assert.ok(steps.filter((s) => s.action === 'goto' && String(s.url).includes('trend/v3.json')).length === 1, '接口只打开一次');
+  assert.equal(
+    steps.filter((s) => s.action === 'goto' && String(s.url).includes('trend/v3.json')).length,
+    0,
+    '不应该再有 goto 接口 JSON 页的步骤',
+  );
+  const read = steps.filter((s) => s.action === 'evaluate' && String(s.expression || '').includes('XMLHttpRequest'));
+  assert.equal(read.length, 1, '应当有一步 evalScript 读接口');
+  assert.equal(read[0].outputKey, 'overviewResponse');
+  assert.ok(String(read[0].expression).includes('return x.responseText'), '表达式要返回接口文本');
+  assert.ok(String(read[0].expression).includes('trend/v3.json'), '表达式里要请求趋势接口');
 });
 
-await test('A2 天猫配方同样在读完后回到首页', () => {
+await test('A2 天猫配方同样在页内请求接口，不跳转页面', () => {
   const steps = readJson(RECIPES[1][1]).template.steps;
-  const readUrlIdx = steps.findIndex((s) => s.action === 'readPageUrl' && String(s.outputKey) === 'finalUrl');
-  assert.ok(readUrlIdx >= 0);
-  const tail = steps.slice(readUrlIdx + 1);
-  assert.ok(tail.some((s) => s.action === 'goto' && s.url === DASHBOARD));
+  assert.equal(steps.filter((s) => s.action === 'goto' && String(s.url).includes('trend/v3.json')).length, 0);
+  const read = steps.filter((s) => s.action === 'evaluate' && String(s.expression || '').includes('XMLHttpRequest'));
+  assert.equal(read.length, 1);
+  assert.ok(String(read[0].expression).includes('trend/v3.json'));
 });
 
-await test('A3 回到首页这一步是可选步骤（失败不影响采集结果）', () => {
-  for (const [, rel] of RECIPES) {
-    const steps = readJson(rel).template.steps;
-    const back = steps.filter((s) => s.action === 'goto' && s.url === DASHBOARD).pop();
-    assert.ok(back, rel + ' 缺少回首页步骤');
-    assert.equal(back.optional, true, rel + ' 回首页应当可选');
-    assert.equal(back.onError, 'continue', rel + ' 回首页失败应当继续');
+await test('A3 页内请求是同步 XHR、带 cookie、并检查 HTTP 状态', () => {
+  for (const [name, rel] of RECIPES) {
+    const step = readJson(rel).template.steps.find((s) => s.action === 'evaluate' && String(s.expression || '').includes('XMLHttpRequest'));
+    const expr = String(step.expression);
+    assert.ok(/new XMLHttpRequest\(\)/.test(expr), name + ' 应当用 XMLHttpRequest');
+    assert.ok(/x\.open\('GET', url, false\)/.test(expr), name + ' 应当是同步请求（第三个参数 false）');
+    assert.ok(/x\.withCredentials = true/.test(expr), name + ' 要带上登录 cookie');
+    assert.ok(/x\.status !== 200/.test(expr), name + ' 要检查 HTTP 状态');
   }
 });
 
-await test('B1 编译后的 ops 顺序是「记录 finalUrl → 回首页」', () => {
+await test('B1 编译后没有跳转接口页的 goto，读接口是 eval op', () => {
   const compiled = compileExecution(readJson(RECIPES[0][1]), { start: '2026-11-13', end: '2026-11-13' });
   const ops = compiled.ops || compiled;
+  assert.equal(
+    ops.filter((o) => o.op === 'goto' && String(o.url).includes('trend/v3.json')).length,
+    0,
+    '编译结果里不应再有跳转接口页的 goto',
+  );
+  const evalIdx = ops.findIndex((o) => o.op === 'eval' && String(o.expr).includes('XMLHttpRequest'));
+  assert.ok(evalIdx >= 0, '应当有读接口的 eval op');
   const urlIdx = ops.findIndex((o) => o.op === 'url' && String(o.stepId).includes('read-url'));
-  assert.ok(urlIdx >= 0, '应当有记录 finalUrl 的 url op');
-  const after = ops.slice(urlIdx + 1).filter((o) => o.op === 'goto' && o.url === DASHBOARD);
-  assert.ok(after.length >= 1, '记录之后应当回到首页');
-  const jsonGotoIdx = ops.findIndex((o) => o.op === 'goto' && String(o.url).includes('trend/v3.json'));
-  assert.ok(jsonGotoIdx >= 0 && jsonGotoIdx < urlIdx, '接口页要在记录 finalUrl 之前打开');
+  assert.ok(urlIdx > evalIdx, '记录 finalUrl 在读取接口之后');
 });
 
 await test('C1 版本号已到 0.20.33', () => {
@@ -84,12 +92,18 @@ await test('C1 版本号已到 0.20.33', () => {
   assert.ok(atLeast('0.20.33'), '当前版本 ' + pkg.version);
 });
 
-await test('C2 CHANGELOG 与 README 记录了「读完后回到首页」', () => {
+await test('C2 CHANGELOG 与 README 记录了「读接口不再留在窗口里」', () => {
   const changelog = read('CHANGELOG.md');
-  assert.ok(changelog.includes('v0.20.33'), 'CHANGELOG 缺少 v0.20.33');
-  assert.ok(changelog.includes('回到生意参谋首页') || changelog.includes('回首页'), 'CHANGELOG 缺少说明');
+  assert.ok(changelog.includes('v0.20.34'), 'CHANGELOG 缺少 v0.20.34');
+  assert.ok(
+    changelog.includes('不再跳转') || changelog.includes('页内') || changelog.includes('不离开'),
+    'CHANGELOG 缺少说明',
+  );
   const readme = read('README.md');
-  assert.ok(readme.includes('回到生意参谋首页') || readme.includes('退回生意参谋首页'), 'README 缺少说明');
+  assert.ok(
+    readme.includes('不再跳转到接口页面') || readme.includes('页内请求') || readme.includes('不离开首页'),
+    'README 缺少说明',
+  );
 });
 
 console.log('');

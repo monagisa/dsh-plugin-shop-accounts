@@ -201,90 +201,15 @@
         "onError": "continue"
       },
       {
-        "id": "tmall_store_overview_30d_rpa:goto-overview-api",
-        "action": "goto",
-        "url": "https://sycm.taobao.com/portal/coreIndex/new/trend/v3.json?dateType=day&dateRange={dateRange}",
-        "waitUntil": "domcontentloaded",
-        "after": [
-          {
-            "action": "waitFor",
-            "optional": true,
-            "id": "taobao.generic.dismiss-dialog#2",
-            "target": [
-              {
-                "by": "css",
-                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
-                "nth": 0
-              }
-            ],
-            "state": "visible",
-            "timeoutMs": 10000,
-            "onError": "continue",
-            "retries": 0
-          },
-          {
-            "action": "click",
-            "optional": true,
-            "id": "taobao.generic.dismiss-dialog.click#2",
-            "target": [
-              {
-                "by": "css",
-                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
-                "nth": 0
-              }
-            ],
-            "onError": "continue",
-            "retries": 0,
-            "timeoutMs": 1000
-          }
-        ]
-      },
-      {
-        "id": "tmall_store_overview_30d_rpa:wait-overview-json",
-        "action": "waitFor",
-        "target": [
-          {
-            "by": "css",
-            "value": "pre",
-            "nth": 0
-          }
-        ],
-        "state": "visible",
-        "timeoutMs": 20000,
-        "recovery": "auto",
-        "onError": "continue",
-        "description": "",
-        "optional": true
-      },
-      {
         "id": "tmall_store_overview_30d_rpa:read-overview-response",
-        "action": "readText",
-        "target": [
-          {
-            "by": "css",
-            "value": "pre",
-            "nth": 0
-          }
-        ],
-        "readMode": "textContent",
-        "trim": true,
+        "action": "evaluate",
         "outputKey": "overviewResponse",
-        "timeoutMs": 20000,
-        "recovery": "auto"
+        "expression": "const url = 'https://sycm.taobao.com/portal/coreIndex/new/trend/v3.json?dateType=day&dateRange={dateRange}';\nconst x = new XMLHttpRequest();\nx.open('GET', url, false);\nx.withCredentials = true;\nx.send(null);\nif (x.status !== 200) throw new Error('HTTP ' + x.status);\nreturn x.responseText;"
       },
       {
         "id": "tmall_store_overview_30d_rpa:read-url",
         "action": "readPageUrl",
         "outputKey": "finalUrl"
-      },
-      {
-        "id": "tmall_store_overview_30d_rpa:back-to-dashboard",
-        "action": "goto",
-        "url": "https://sycm.taobao.com/portal/home.htm",
-        "waitUntil": "domcontentloaded",
-        "optional": true,
-        "onError": "continue",
-        "description": "采集完成后退回生意参谋首页：接口 JSON 页只用于读取，读完不要把它留在窗口里。"
       }
     ]
   },
