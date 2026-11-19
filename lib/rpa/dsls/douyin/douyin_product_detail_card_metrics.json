@@ -1,11 +1,10 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "douyin_product_detail_card_metrics",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给"
   ],
-  "needsParams": true,
   "platform": "douyin",
   "description": "罗盘-商品详情商品卡数据下载协议：进入指定商品详情页 → 切换商品卡数据 → 按参数 period 选择时间快捷档（当前要求填写近30天）→ 若下载明细按钮 disabled 则不采集 → 下载后导入阶段只保留“分来源趋势数据”和“搜索词明细趋势数据”两个 sheet。",
   "conditions": {},

@@ -1,11 +1,10 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "douyin_product_h5_link",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给"
   ],
-  "needsParams": true,
   "platform": "douyin",
   "description": "抖店罗盘商品详情页标题点击实际通过 window.open 打开 haohuo H5 新标签页；为避免 readPageUrl 读回原罗盘页，这里直接使用稳定 H5 URL 模板。当前 URL 一次只能承载一个 product_id，因此 productIds 上限为 1。",
   "conditions": {},

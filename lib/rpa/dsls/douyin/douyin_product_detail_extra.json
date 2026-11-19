@@ -1,11 +1,10 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "douyin_product_detail_extra",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给"
   ],
-  "needsParams": true,
   "platform": "douyin",
   "description": "罗盘-商品详情辅助分析页面采集协议：进入指定商品详情页 → 按参数 period 选择时间快捷档（当前要求近1天）→ 读取波动分析、体验、价格、商详、人群分析内容。",
   "conditions": {},

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "tb_product_refund_by_sku",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给",
     "服务履约"
@@ -969,6 +969,5 @@
     "import": {
       "subject_mode": "single"
     }
-  },
-  "needsParams": true
+  }
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "tb_product_lost_to_competitor",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给",
     "竞争洞察"
@@ -966,6 +966,5 @@
     "import": {
       "subject_mode": "single"
     }
-  },
-  "needsParams": true
+  }
 }

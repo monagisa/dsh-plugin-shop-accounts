@@ -1,7 +1,7 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "douyin_product_card_list",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给"
   ],
