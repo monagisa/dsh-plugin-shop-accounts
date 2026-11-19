@@ -110,14 +110,22 @@ await check('B0 建一个抖音卖家账号（扫码登录，不需要密码库�
   assert.ok(douyinId, '没拿到账号 id');
 });
 
-await check('B1 includeDownload=false：抖音的下载型配方一条都选不上（复现缺陷）', async () => {
+await check('B1 includeDownload=false：抖音的下载型配方一条都选不上', async () => {
   const r = await call('POST', BASE + '/accounts/' + douyinId + '/collect-job', {
     includeDownload: false,
     skipCovered: false,
   });
-  assert.equal(r.status, 400, `应当是无法准备（现在：${r.raw}）`);
-  const codes = (r.json.errors || []).map((e) => e.code);
-  assert.ok(codes.includes('no_dsl_selected'), `错误码应为 no_dsl_selected，实际 ${JSON.stringify(codes)}`);
+  // v0.20.39 起抖音也有已校准的非下载型配方（商品卡列表、商品详情等），所以这里不再是「一条都选不上」，
+  // 但下载型的两条（成交分析 / 收支分析）必须被排除。
+  if (r.status === 400) {
+    const codes = (r.json.errors || []).map((e) => e.code);
+    assert.ok(codes.includes('no_dsl_selected'), `错误码应为 no_dsl_selected，实际 ${JSON.stringify(codes)}`);
+    return;
+  }
+  assert.equal(r.status, 200, r.raw);
+  const ids = ((r.json && r.json.tasks) || []).map((t) => t.dslId);
+  assert.ok(!ids.includes('douyin_shop_transaction'), `下载型配方不该被选中：${ids.join(',')}`);
+  assert.ok(!ids.includes('douyin_shop_income_expense'), `下载型配方不该被选中：${ids.join(',')}`);
 });
 
 await check('B2 includeDownload=true：抖音的下载型配方被选中（定时路径现在的行为）', async () => {

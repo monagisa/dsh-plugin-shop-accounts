@@ -113,5 +113,6 @@
         "pointer": ""
       }
     ]
-  }
+  },
+  "needsParams": true
 }

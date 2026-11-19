@@ -967,5 +967,6 @@
     "import": {
       "subject_mode": "single"
     }
-  }
+  },
+  "needsParams": true
 }

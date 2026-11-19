@@ -228,8 +228,11 @@ await test('抖音账号 prepare 时挑到抖音配方（两份都在计划里�
     skipCovered: false,
   }, (raw, opts) => R.compileExecution(raw, opts));
   assert.equal(out.success, true);
-  assert.equal(out.data.tasks.length, 2);
-  assert.deepEqual(out.data.tasks.map((t) => t.dslId).sort(), ['douyin_shop_income_expense', 'douyin_shop_transaction']);
+  // v0.20.39 起抖音已校准的配方不止两条，这里只要求基线两条都在计划里。
+  const picked = out.data.tasks.map((t) => t.dslId);
+  assert.ok(picked.length >= 2, `应至少挑到 2 条，实际 ${picked.length}`);
+  assert.ok(picked.includes('douyin_shop_income_expense'), `计划里缺少 douyin_shop_income_expense：${picked.join(',')}`);
+  assert.ok(picked.includes('douyin_shop_transaction'), `计划里缺少 douyin_shop_transaction：${picked.join(',')}`);
 });
 
 await test('天猫账号拿到平台不匹配的配方会被拒（不许跨平台乱跑）', () => {

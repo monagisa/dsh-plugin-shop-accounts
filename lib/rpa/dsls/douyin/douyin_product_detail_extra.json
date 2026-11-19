@@ -361,5 +361,6 @@
         "pointer": ""
       }
     ]
-  }
+  },
+  "needsParams": true
 }

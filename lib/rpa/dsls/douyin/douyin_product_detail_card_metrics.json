@@ -389,5 +389,6 @@
         }
       }
     ]
-  }
+  },
+  "needsParams": true
 }
