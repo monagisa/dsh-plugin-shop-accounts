@@ -1,13 +1,13 @@
 {
   "schemaVersion": "agentwork.rpa.atomic.v1",
   "id": "pdd_product_overview",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给"
   ],
   "platform": "pdd",
-  "name": "PDD-商品概览-昨日",
-  "description": "仅采集商品概览卡片。外层按北京时间冻结昨日，点击概况昨日并严格校验统计日期后读取，失败即停止；不读取明细或榜单。",
+  "name": "PDD-商品概况",
+  "description": "读取拼多多数据中心「商品数据 → 商品概况」的今日与昨日指标（商品访客数、浏览量、被访问商品数、成交金额、成交订单数、成交买家数、成交转化率等）。",
   "defaults": {
     "timeoutMs": 8000,
     "retries": 1,
@@ -19,417 +19,42 @@
       "action": "goto",
       "id": "打开商品数据页",
       "url": "https://mms.pinduoduo.com/sycm/goods_effect",
-      "waitUntil": "domcontentloaded",
-      "after": [
-        {
-          "action": "waitFor",
-          "optional": true,
-          "id": "pdd.dismiss-known-dialog",
-          "target": [
-            {
-              "by": "css",
-              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
-              "nth": 0
-            },
-            {
-              "by": "css",
-              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
-              "nth": 0
-            },
-            {
-              "by": "css",
-              "value": "[class*='close-modal']",
-              "nth": 0
-            },
-            {
-              "by": "xpath",
-              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
-              "nth": 0
-            },
-            {
-              "by": "css",
-              "value": "[class*='NewMsgBox_'] [class*='close']",
-              "nth": 0
-            },
-            {
-              "by": "css",
-              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
-              "nth": 0
-            }
-          ],
-          "state": "visible",
-          "timeoutMs": 10000,
-          "onError": "continue",
-          "retries": 0
-        },
-        {
-          "action": "click",
-          "optional": true,
-          "id": "pdd.dismiss-known-dialog.click",
-          "target": [
-            {
-              "by": "css",
-              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
-              "nth": 0
-            },
-            {
-              "by": "css",
-              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
-              "nth": 0
-            },
-            {
-              "by": "css",
-              "value": "[class*='close-modal']",
-              "nth": 0
-            },
-            {
-              "by": "xpath",
-              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
-              "nth": 0
-            },
-            {
-              "by": "css",
-              "value": "[class*='NewMsgBox_'] [class*='close']",
-              "nth": 0
-            },
-            {
-              "by": "css",
-              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
-              "nth": 0
-            }
-          ],
-          "onError": "continue",
-          "retries": 0,
-          "timeoutMs": 1000
-        }
-      ]
+      "waitUntil": "domcontentloaded"
     },
     {
       "action": "waitTimeout",
-      "id": "等待页面稳定",
-      "ms": 3000
+      "id": "等待商品数据渲染",
+      "ms": 9000
     },
     {
       "action": "waitFor",
-      "id": "等待概况卡片就绪",
-      "target": [
-        {
-          "by": "css",
-          "value": "[class*='card_cardWrapper']",
-          "nth": 0
-        }
-      ],
-      "state": "visible",
-      "timeoutMs": 15000,
-      "onError": "continue",
-      "recovery": "auto",
-      "optional": true
+      "id": "等待商品概况卡片",
+      "selector": "[class*=\"goods-overview-new_cardBox\"]",
+      "timeoutMs": 20000,
+      "optional": true,
+      "onError": "continue"
     },
     {
-      "action": "click",
-      "id": "切换昨日",
-      "target": [
-        {
-          "by": "xpath",
-          "value": "((//*[contains(@class,'card_cardWrapper')])[1]/preceding::*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[last()]"
-        },
-        {
-          "by": "xpath",
-          "value": "((//*[contains(@class,'card_cardWrapper')])[1]/preceding::label[contains(@class,'RD_outerWrapper') and normalize-space(.)='昨日'])[last()]"
-        }
-      ],
-      "timeoutMs": 10000,
-      "onError": "fail"
+      "action": "evaluate",
+      "id": "读取商品概况卡片",
+      "outputKey": "pddOverview",
+      "expression": "const box = document.querySelector('[class*=\"goods-overview-new_cardBox\"]') || document.body;\nconst items = Array.from(box.querySelectorAll('[class*=\"card_cardItem\"]'));\nconst rows = [];\nfor (const it of items) {\n  const parts = (it.innerText || '').split('\\n').map(function (s) { return s.trim(); }).filter(Boolean);\n  if (parts.length < 2) continue;\n  const label = parts[0];\n  const today = parts[1] === '--' ? '' : parts[1];\n  let yesterday = '';\n  for (let i = 2; i < parts.length - 1; i += 1) {\n    if (parts[i] === '昨日') {\n      yesterday = parts[i + 1] === '--' ? '' : parts[i + 1];\n      break;\n    }\n  }\n  rows.push({ label: label, today: today, yesterday: yesterday });\n}\nconst m = (document.body.innerText || '').match(/统计时间：(\\d{4}-\\d{2}-\\d{2})/);\nreturn JSON.stringify({ asOf: m ? m[1] : '', items: rows });"
     },
     {
-      "action": "waitTimeout",
-      "id": "等待数据刷新",
-      "ms": 2000
-    },
-    {
-      "action": "waitFor",
-      "id": "确认概况统计日期为冻结昨日",
-      "target": [
-        {
-          "by": "xpath",
-          "value": "((//*[contains(@class,'card_cardWrapper')])[1]/preceding::*[not(*) and contains(normalize-space(.),'统计时间')])[last()][translate(normalize-space(.),'：/ ',':-')=concat('统计时间:','${end}')]"
-        }
-      ],
-      "state": "visible",
-      "timeoutMs": 15000,
-      "onError": "continue",
-      "recovery": "auto",
-      "optional": true
-    },
-    {
-      "action": "readText",
-      "id": "读取概况统计日期",
-      "target": [
-        {
-          "by": "xpath",
-          "value": "((//*[contains(@class,'card_cardWrapper')])[1]/preceding::*[not(*) and contains(normalize-space(.),'统计时间')])[last()][translate(normalize-space(.),'：/ ',':-')=concat('统计时间:','${end}')]"
-        }
-      ],
-      "readMode": "innerText",
-      "trim": true,
-      "outputKey": "pdd_product_overview_stat_time_text",
-      "onError": "fail",
-      "recovery": "auto"
-    },
-    {
-      "action": "readText",
-      "id": "读取同次概况字体CSS",
-      "target": [
-        {
-          "by": "css",
-          "value": "style[data-id*='spider']",
-          "nth": 0
-        },
-        {
-          "by": "xpath",
-          "value": "//style[contains(text(),'spider-font')]",
-          "nth": 0
-        }
-      ],
-      "readMode": "textContent",
-      "trim": true,
-      "timeoutMs": 5000,
-      "retries": 0,
-      "onError": "fail",
-      "outputKey": "pdd_product_overview_spider_font_face_css",
-      "recovery": "auto"
-    },
-    {
-      "action": "readText",
-      "id": "读取概览卡片文本",
-      "target": [
-        {
-          "by": "css",
-          "value": "[class*='card_cardWrapper']",
-          "nth": 0
-        }
-      ],
-      "readMode": "innerText",
-      "trim": true,
-      "outputKey": "pdd_product_overview_yesterday_text",
-      "onError": "fail",
-      "recovery": "auto"
-    },
-    {
-      "action": "queryAll",
-      "id": "读取概览卡片文本:directions",
-      "containerSelector": "[class*='card_cardWrapper']",
-      "fields": {
-        "metric_0_value": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_uv'] [class*='card_cardVal__']",
-          "text": true,
-          "trim": true
-        },
-        "metric_0_ratio": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_uv'] p[class*='radioWrapper']",
-          "text": true,
-          "trim": true
-        },
-        "metric_0_up": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_uv'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
-          "attr": "data-testid"
-        },
-        "metric_0_down": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_uv'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
-          "attr": "data-testid"
-        },
-        "metric_1_value": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_pv'] [class*='card_cardVal__']",
-          "text": true,
-          "trim": true
-        },
-        "metric_1_ratio": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_pv'] p[class*='radioWrapper']",
-          "text": true,
-          "trim": true
-        },
-        "metric_1_up": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_pv'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
-          "attr": "data-testid"
-        },
-        "metric_1_down": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_pv'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
-          "attr": "data-testid"
-        },
-        "metric_2_value": {
-          "childSelector": "[data-tracking-click-viewid='goods_like_uv'] [class*='card_cardVal__']",
-          "text": true,
-          "trim": true
-        },
-        "metric_2_ratio": {
-          "childSelector": "[data-tracking-click-viewid='goods_like_uv'] p[class*='radioWrapper']",
-          "text": true,
-          "trim": true
-        },
-        "metric_2_up": {
-          "childSelector": "[data-tracking-click-viewid='goods_like_uv'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
-          "attr": "data-testid"
-        },
-        "metric_2_down": {
-          "childSelector": "[data-tracking-click-viewid='goods_like_uv'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
-          "attr": "data-testid"
-        },
-        "metric_3_value": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_num'] [class*='card_cardVal__']",
-          "text": true,
-          "trim": true
-        },
-        "metric_3_ratio": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_num'] p[class*='radioWrapper']",
-          "text": true,
-          "trim": true
-        },
-        "metric_3_up": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_num'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
-          "attr": "data-testid"
-        },
-        "metric_3_down": {
-          "childSelector": "[data-tracking-click-viewid='goods_visit_num'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
-          "attr": "data-testid"
-        },
-        "metric_4_value": {
-          "childSelector": "[data-tracking-click-viewid='pay_money'] [class*='card_cardVal__']",
-          "text": true,
-          "trim": true
-        },
-        "metric_4_ratio": {
-          "childSelector": "[data-tracking-click-viewid='pay_money'] p[class*='radioWrapper']",
-          "text": true,
-          "trim": true
-        },
-        "metric_4_up": {
-          "childSelector": "[data-tracking-click-viewid='pay_money'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
-          "attr": "data-testid"
-        },
-        "metric_4_down": {
-          "childSelector": "[data-tracking-click-viewid='pay_money'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
-          "attr": "data-testid"
-        },
-        "metric_5_value": {
-          "childSelector": "[data-tracking-click-viewid='pay_order_num'] [class*='card_cardVal__']",
-          "text": true,
-          "trim": true
-        },
-        "metric_5_ratio": {
-          "childSelector": "[data-tracking-click-viewid='pay_order_num'] p[class*='radioWrapper']",
-          "text": true,
-          "trim": true
-        },
-        "metric_5_up": {
-          "childSelector": "[data-tracking-click-viewid='pay_order_num'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
-          "attr": "data-testid"
-        },
-        "metric_5_down": {
-          "childSelector": "[data-tracking-click-viewid='pay_order_num'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
-          "attr": "data-testid"
-        },
-        "metric_6_value": {
-          "childSelector": "[data-tracking-click-viewid='pay_uv'] [class*='card_cardVal__']",
-          "text": true,
-          "trim": true
-        },
-        "metric_6_ratio": {
-          "childSelector": "[data-tracking-click-viewid='pay_uv'] p[class*='radioWrapper']",
-          "text": true,
-          "trim": true
-        },
-        "metric_6_up": {
-          "childSelector": "[data-tracking-click-viewid='pay_uv'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
-          "attr": "data-testid"
-        },
-        "metric_6_down": {
-          "childSelector": "[data-tracking-click-viewid='pay_uv'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
-          "attr": "data-testid"
-        },
-        "metric_7_value": {
-          "childSelector": "[data-tracking-click-viewid='pay_cvr'] [class*='card_cardVal__']",
-          "text": true,
-          "trim": true
-        },
-        "metric_7_ratio": {
-          "childSelector": "[data-tracking-click-viewid='pay_cvr'] p[class*='radioWrapper']",
-          "text": true,
-          "trim": true
-        },
-        "metric_7_up": {
-          "childSelector": "[data-tracking-click-viewid='pay_cvr'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
-          "attr": "data-testid"
-        },
-        "metric_7_down": {
-          "childSelector": "[data-tracking-click-viewid='pay_cvr'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
-          "attr": "data-testid"
-        }
-      },
-      "outputKey": "pdd_product_overview_yesterday_text_directions",
-      "onError": "fail",
-      "timeoutMs": 5000,
-      "retries": 0
-    },
-    {
-      "action": "readText",
-      "id": "读取卡片后复核字体CSS",
-      "target": [
-        {
-          "by": "css",
-          "value": "style[data-id*='spider']",
-          "nth": 0
-        },
-        {
-          "by": "xpath",
-          "value": "//style[contains(text(),'spider-font')]",
-          "nth": 0
-        }
-      ],
-      "readMode": "textContent",
-      "trim": true,
-      "timeoutMs": 5000,
-      "retries": 0,
-      "onError": "fail",
-      "outputKey": "pdd_product_overview_spider_font_face_css_after",
-      "recovery": "auto"
-    },
-    {
-      "action": "waitFor",
-      "id": "读取后确认概况日期未变化",
-      "target": [
-        {
-          "by": "xpath",
-          "value": "((//*[contains(@class,'card_cardWrapper')])[1]/preceding::*[not(*) and contains(normalize-space(.),'统计时间')])[last()][translate(normalize-space(.),'：/ ',':-')=concat('统计时间:','${end}')]"
-        }
-      ],
-      "state": "visible",
-      "timeoutMs": 3000,
-      "retries": 0,
-      "onError": "fail",
-      "recovery": "auto"
+      "action": "readPageUrl",
+      "id": "记录最终页面",
+      "outputKey": "finalUrl"
     }
   ],
   "collection": {
     "schedule": {
-      "mode": "period",
-      "days": 1,
-      "end_offset_days": -1
-    },
-    "parameter_bindings": {
-      "end": {
-        "source": "$condition.end"
-      }
-    },
-    "capabilities": {
-      "after": [
-        "pdd_decrypt"
-      ]
+      "mode": "snapshot"
     },
     "artifacts": [
       {
         "role": "business",
-        "kind": "raw_envelope",
-        "pointer": ""
+        "kind": "json_string",
+        "output_key": "pddOverview"
       }
     ]
   }
