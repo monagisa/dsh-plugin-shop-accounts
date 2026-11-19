@@ -52,12 +52,16 @@ await test('A2 所有内置配方都声明了采集域（界面才能标「暂�
   assert.deepEqual(noDomains, [], '这些配方没有 domains：' + noDomains.join(', '));
 });
 
-await test('A3 移植进来的新配方一律标成未校准（verified:false）', () => {
-  const verifiedIds = inventory.filter((m) => m.verified === true).map((m) => m.id).sort();
-  assert.deepEqual(verifiedIds, [
+await test('A3 校准清单只增不减，且每份都带采集域', () => {
+  const baseline = [
     'douyin_shop_income_expense', 'douyin_shop_transaction', 'jd_shop_overview', 'jd_traffic_overview',
     'pdd_shop_overview', 'tb_shop_overview', 'tmall_shop_overview',
-  ].sort(), '已校准清单变了：' + verifiedIds.join(', '));
+  ];
+  const verifiedIds = inventory.filter((m) => m.verified === true).map((m) => m.id);
+  for (const id of baseline) assert.ok(verifiedIds.includes(id), '基线配方掉出校准清单：' + id);
+  assert.ok(verifiedIds.length >= baseline.length, '校准清单不应减少');
+  const noDomain = inventory.filter((m) => m.verified === true && !(Array.isArray(m.domains) && m.domains.length));
+  assert.deepEqual(noDomain.map((m) => m.id), [], '已校准的配方必须声明采集域');
 });
 
 await test('B1 按店铺勾选的采集域挑配方（域外的不要）', () => {

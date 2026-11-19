@@ -1,7 +1,7 @@
 {
   "schemaVersion": "agentwork.rpa.atomic.v1",
   "id": "pdd_service_overview",
-  "verified": false,
+  "verified": true,
   "domains": [
     "服务履约"
   ],

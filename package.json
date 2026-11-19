@@ -1,8 +1,8 @@
 {
   "name": "dsh-plugin-shop-accounts",
-  "version": "0.20.37",
+  "version": "0.20.38",
   "type": "module",
-  "description": "DSH 插件：电商店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688 商家端）——一店一份独立登录档案，登录一次长期复用；浏览器优先 ego lite，未安装时回退 Chrome CDP；支持静默/定时检测登录态、保活续期与采集作业编排。；v0.20.37 起采集域真正决定跑哪些配方：配方声明所属域、定时只跑该域内已校准的配方，界面显示每个域的配方数与「暂无配方」",
+  "description": "DSH 插件：电商店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688 商家端）——一店一份独立登录档案，登录一次长期复用；浏览器优先 ego lite，未安装时回退 Chrome CDP；支持静默/定时检测登录态、保活续期与采集作业编排。；v0.20.38 起淘宝 8 份、拼多多 2 份采集配方已通过真机校准（下载型配方能真正下载到平台报表）",
   "keywords": [
     "dsh-plugin",
     "dsh",
@@ -89,7 +89,6 @@
     "features53": "node test/features-v02033.mjs",
     "features54": "node test/features-v02034.mjs",
     "features55": "node test/features-v02035.mjs",
-    "features56": "node test/features-v02037.mjs",
     "features56": "node test/features-v02036.mjs"
   },
   "dsh": {

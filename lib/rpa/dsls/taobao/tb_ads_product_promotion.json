@@ -1,7 +1,7 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "tb_ads_product_promotion",
-  "verified": false,
+  "verified": true,
   "domains": [
     "运营推广"
   ],

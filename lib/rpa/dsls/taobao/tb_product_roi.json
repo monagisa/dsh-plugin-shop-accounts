@@ -1,7 +1,7 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "tb_product_roi",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给"
   ],
@@ -965,6 +965,5 @@
     "import": {
       "subject_mode": "single"
     }
-  },
-  "needsParams": true
+  }
 }

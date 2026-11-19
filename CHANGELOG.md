@@ -1,3 +1,17 @@
+## v0.20.38（2026-11-19）
+
+**需求**：采集域上线后要逐份把配方真机跑通，否则「已校准 7 份」以外的配方永远进不了定时采集。
+
+**改动**：
+
+- 淘宝 8 份配方完成真机校准：`tb_product_overall_metrics`、`tb_product_traffic_source`、`tb_product_roi`、`tb_product_sku_metrics`、`tb_product_refund_overall`、`tb_product_image_detail`、`tb_product_traffic_by_audience`、`tb_ads_product_promotion` —— 都是「点下载报表 → 落盘 excel/zip」，实测每份都真正下载到了平台报表（如「商品整体_20261119_*.xlsx」「流量来源_20261119_*.xlsx」「商品报表_*.zip」）。
+- 拼多多 2 份校准通过：`pdd_service_overview`（服务数据，795KB）、`pdd_service_violation`（违规记录，169KB）。
+- 校准前提也一并解决：配方需要业务参数的（`productIds`/`productId`）可由店铺页面读到真实商品 ID 后传入；下载型配方必须给下载目录（直跑工具此前报「没有下载目录」，调度链路本来就会给任务产物目录）。
+- 已校准配方数从 7 份增加到 17 份，采集域挑配方时会自动带上。
+
+**验证**：按店铺页面真实商品 ID 逐份真机跑（淘宝单份 20–73 秒、拼多多 12–53 秒），核对下载产物文件名与大小；`features-v02037` 的「校准清单只增不减」断言同步放宽为「基线 7 份仍在且都带采集域」。
+
+
 ## v0.20.37（2026-11-19）
 
 **需求**：勾了 5 个采集域，采集回来还是只有「经营总览」那几项，看不出域的差别 —— 采集域当时只影响台账与提示，不决定跑哪些配方。

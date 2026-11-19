@@ -1,7 +1,7 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "tb_product_traffic_by_audience",
-  "verified": false,
+  "verified": true,
   "domains": [
     "运营推广",
     "流量转化",
@@ -967,6 +967,5 @@
     "import": {
       "subject_mode": "single"
     }
-  },
-  "needsParams": true
+  }
 }

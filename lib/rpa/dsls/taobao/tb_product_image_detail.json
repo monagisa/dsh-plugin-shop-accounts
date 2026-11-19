@@ -1,7 +1,7 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "tb_product_image_detail",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给"
   ],
@@ -262,6 +262,5 @@
         "pointer": ""
       }
     ]
-  },
-  "needsParams": true
+  }
 }
