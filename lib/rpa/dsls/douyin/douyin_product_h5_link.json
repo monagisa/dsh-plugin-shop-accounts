@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "douyin_product_h5_link",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "needsParams": true,
+  "platform": "douyin",
+  "description": "抖店罗盘商品详情页标题点击实际通过 window.open 打开 haohuo H5 新标签页；为避免 readPageUrl 读回原罗盘页，这里直接使用稳定 H5 URL 模板。当前 URL 一次只能承载一个 product_id，因此 productIds 上限为 1。",
+  "conditions": {},
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "抖店商品-H5链接采集",
+    "description": "抖店罗盘商品详情页标题点击实际通过 window.open 打开 haohuo H5 新标签页；为避免 readPageUrl 读回原罗盘页，这里直接使用稳定 H5 URL 模板。当前 URL 一次只能承载一个 product_id，因此 productIds 上限为 1。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "product_detail_h5_url:打开H5商品页",
+        "url": "https://haohuo.jinritemai.com/ecommerce/trade/detail/index.html?id=${productId}&origin_type=pc_compass_manage",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 20000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_h5_url:等待H5首屏渲染",
+        "ms": 4000
+      },
+      {
+        "action": "waitForLoadState",
+        "id": "product_detail_h5_url:等待H5加载",
+        "loadState": "domcontentloaded",
+        "timeoutMs": 12000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_h5_url:等待H5页面特征",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'打开抖音APP') or contains(normalize-space(.),'加入购物车') or contains(normalize-space(.),'领券抢购') or contains(normalize-space(.),'购物车') or contains(normalize-space(.),'当前页面仅用于商品预览')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "readPageUrl",
+        "id": "product_detail_h5_url:读取H5页面URL",
+        "outputKey": "doudian_product_detail_h5_url",
+        "timeoutMs": 5000,
+        "retries": 0,
+        "onError": "fail"
+      }
+    ]
+  },
+  "collection": {
+    "parameter_bindings": {
+      "productId": {
+        "source": "$filter.productId"
+      }
+    },
+    "import": {
+      "subject_mode": "single"
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  }
+}

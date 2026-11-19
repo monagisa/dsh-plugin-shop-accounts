@@ -1,0 +1,974 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "tb_product_refund_completed",
+  "verified": false,
+  "domains": [
+    "商品供给",
+    "服务履约"
+  ],
+  "platform": "taobao",
+  "description": "按商品ID与日期范围通过灵眼自助取数下载已完结退款报表（已完结退款金额/笔数等12列）。退款数据存在 T+2 归档延迟，日期区间默认最近 30 天，且截止日期（endDate）只能到前天（T-2），不支持到昨天（T-1）。若传入窗口截止超过 T-2（如昨天，或截止昨天的最近30天），准备层会把整个窗口按天前移到可选区间（昨天回退为 T-2 单日，最近30天前移为 T-31~T-2），并记录未覆盖的请求日为缺口。",
+  "conditions": {
+    "time": {
+      "kind": "range",
+      "bindings": {
+        "{startDate}": "$condition.start",
+        "{endDate}": "$condition.end"
+      },
+      "dateConstraints": {
+        "endOffsetDays": -2
+      }
+    },
+    "filter": {
+      "kind": "required",
+      "fields": {
+        "productIds": {
+          "type": "stringArray",
+          "minItems": 1,
+          "maxItems": 10
+        }
+      },
+      "bindings": {
+        "{productIds}": "$filter.productIdsLines"
+      }
+    }
+  },
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "淘宝 生意参谋灵眼取数 - 商品已完结退款报表下载",
+    "description": "灵眼自助取数：数据粒度选『商品』→ 数据维度选『已完结退款』→ 搜索商品输入框直接输入商品ID → 点搜索按钮 → 回点输入框展开结果下拉 → 回车提交搜索 → 一键全选 → 点表单空白标题收起下拉 → 填写开始/结束日期（退款数据存在 T+2 归档延迟：截止日期只能到前天 T-2，不支持昨天 T-1；未指定时默认最近 30 天至 T-2） → 报表名称填『已完结退款』→ 生成报表 → 下载报表。该维度无终端类型选项。入参：{productIds}（换行分隔商品ID）、{startDate}、{endDate}（YYYY-MM-DD；退款数据 T+2，截止日期只能到前天 T-2，不支持昨天 T-1，默认最近 30 天至 T-2）。下载步骤为 downloadFile：runner 先注册下载监听再点击，等待落盘完成，文件路径经 outputs 返回，不依赖扫描共享下载目录。传入窗口截止超过 T-2 时由准备层整体前移（昨天→T-2 单日，最近30天→T-31~T-2），不在页面端改日期。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 1,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "id": "taobao_lingyang_refund_done_rpa:goto",
+        "action": "goto",
+        "url": "https://sycm.taobao.com/lyone/auto_analysis/datafetch/create?insertType=sycm&layoutHide=1&useDebug=false",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "taobao.lyone.dismiss-upgrade-overlay",
+            "target": [
+              {
+                "by": "css",
+                "value": "img.upgrade-page-close-btn",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".upgrade-page-close-btn",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//img[contains(@class,'upgrade-page-close-btn')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "taobao.lyone.dismiss-upgrade-overlay.click",
+            "target": [
+              {
+                "by": "css",
+                "value": "img.upgrade-page-close-btn",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".upgrade-page-close-btn",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//img[contains(@class,'upgrade-page-close-btn')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:wait-page-render",
+        "action": "waitTimeout",
+        "ms": 8000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:read-login-guard-url",
+        "action": "readPageUrl",
+        "outputKey": "login_guard_entry_url",
+        "onError": "continue",
+        "retries": 0,
+        "description": "登录诊断取证：首屏 settle 后记录实际落地 URL 到 outputs.login_guard_entry_url。goto 返回的是请求 URL 而非跳转后 URL，故必须在此显式读取；供守卫漏报时结合真实 URL 判别登录失效/无权限/页面改版。onError=continue，读取失败不阻断。"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:login-page-detected",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//input[contains(@placeholder,'账号名/邮箱/手机号')]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//iframe[@id='alibaba-login-box']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//iframe[contains(@src,'login.taobao.com/member/login.jhtml')]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//input[@id='fm-login-id']",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 8000
+        },
+        "then": [
+          {
+            "id": "taobao_lingyang_refund_done_rpa:LOGIN_REQUIRED__do-not-retry__未登录或登录态失效",
+            "action": "assertElement",
+            "state": "hidden",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//input[contains(@placeholder,'账号名/邮箱/手机号')]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//iframe[@id='alibaba-login-box']",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//iframe[contains(@src,'login.taobao.com/member/login.jhtml')]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//input[@id='fm-login-id']",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 500,
+            "onError": "fail",
+            "recovery": "none",
+            "description": "与第一层 when 同候选（三形态最小信号集）：when 命中的元素必然可见，hidden 断言必然失败 → LOGIN_REQUIRED 短路，不依赖页面营销文案。 主文档候选含 //input[@id='fm-login-id']，与第一层 when 同候选。"
+          }
+        ],
+        "onError": "continue",
+        "description": "登录守卫第一层（主文档三形态最小信号集，2026-10-14 收敛）：形态A 整页跳转登录→账号输入框占位符；形态B 生意参谋/千牛 Havana mini-login→iframe#alibaba-login-box；形态C 阿里妈妈万相台→iframe src 含 login.taobao.com/member/login.jhtml。8s 窗口吸收 magix 异步渲染延迟；命中即进 then 短路 LOGIN_REQUIRED。同形态冗余候选（密码/短信页签、家族特有文本、#alibaba-login-iframe、mini_login、havanalogin、style=mini、mx-view login-iframe、body.login-page）已删除。 追加主文档 //input[@id='fm-login-id']：兜住 passport 整页登录密码/短信两种页签且不依赖 placeholder 文案；该 id 在阿里妈妈/生意参谋/千牛位于跨域 iframe 内，主文档 XPath 不可达，故不误报。"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:login-iframe-form-detected",
+        "action": "when",
+        "description": "登录守卫第二层（穿框兜底）：按协议-21 §7.4 将 frame 置于 condition 内部，穿入跨域登录 iframe（Havana #alibaba-login-box / 阿里妈妈 login.taobao.com mini 页）探测 #fm-login-id；命中即未登录短路 LOGIN_REQUIRED。frame 不放 when 顶层：when 仅有 condition/then 专属字段、无 target 语义，顶层 frame 会被忽略，导致条件仍在主文档求值、跨域表单不可达而本层永不命中。",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//input[@id='fm-login-id']",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 3000,
+          "frame": [
+            {
+              "by": "css",
+              "value": "iframe#alibaba-login-box",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "iframe[src*='login.taobao.com/member/login.jhtml']",
+              "nth": 0
+            }
+          ]
+        },
+        "then": [
+          {
+            "id": "taobao_lingyang_refund_done_rpa:LOGIN_REQUIRED__do-not-retry__未登录或登录态失效_跨域登录框内表单",
+            "action": "assertElement",
+            "state": "hidden",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//input[@id='fm-login-id']",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 500,
+            "onError": "fail",
+            "recovery": "none",
+            "description": "与 condition 同作用域：when 命中即 #fm-login-id 在跨域 iframe 内可见，同 frame 的 hidden 断言必然失败 → onError=fail 短路 LOGIN_REQUIRED。不再断言主文档三容器 hidden：其『必然可见』假设与本层『第一层未命中』前提互斥，容器不可见/不存在时 hidden 反而通过，断言记 success、onError=fail 不生效，未登录被静默放行。",
+            "frame": [
+              {
+                "by": "css",
+                "value": "iframe#alibaba-login-box",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "iframe[src*='login.taobao.com/member/login.jhtml']",
+                "nth": 0
+              }
+            ]
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:wait-page-shell",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='数据粒度'][not(.//*[normalize-space(.)='数据粒度'])])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(.),'数据粒度')][not(.//*[contains(normalize-space(.),'数据粒度')])])[1]",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "label.dt-oui-radio-wrapper",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='dt-oui-radio-group']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "recovery": "auto",
+        "onError": "continue",
+        "description": "",
+        "optional": true
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-wait-page-shell",
+        "action": "waitTimeout",
+        "ms": 500
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:pick-granularity-product",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//label[contains(@class,'dt-oui-radio-wrapper')][.//input[@type='radio' and @value='商品']]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//label[contains(@class,'dt-oui-radio-wrapper')][.//span[normalize-space(.)='商品']])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-pick-granularity-product",
+        "action": "waitTimeout",
+        "ms": 1000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:pick-dimension-refund_done",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//label[contains(@class,'dt-oui-radio-wrapper')][.//input[@type='radio' and @value='已完结退款']]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//label[contains(@class,'dt-oui-radio-wrapper')][.//span[normalize-space(.)='已完结退款']])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-pick-dimension-refund_done",
+        "action": "waitTimeout",
+        "ms": 1500
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:pick-search-items",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//label[contains(@class,'dt-oui-radio-wrapper')][.//input[@type='radio' and @value='items']]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//label[contains(@class,'dt-oui-radio-wrapper')][.//span[normalize-space(.)='搜索商品']])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-pick-search-items",
+        "action": "waitTimeout",
+        "ms": 500
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:fill-product-id",
+        "action": "type",
+        "target": [
+          {
+            "by": "css",
+            "value": "input[placeholder=\"请输入商品关键字或商品id\"]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//input[contains(@placeholder,'商品关键字')]",
+            "nth": 0
+          }
+        ],
+        "value": "{productIds}",
+        "clear": true,
+        "delay": 30,
+        "timeoutMs": 10000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-fill-product-id",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:click-inline-search",
+        "action": "click",
+        "target": [
+          {
+            "by": "css",
+            "value": "button.dt-oui-input-search-button",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//span[contains(@class,'dt-oui-input-group-addon')]//button[contains(@class,'dt-oui-input-search-button')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[.//span[@aria-label='search']]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-click-inline-search",
+        "action": "waitTimeout",
+        "ms": 1500
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:click-input-expand-results",
+        "action": "click",
+        "target": [
+          {
+            "by": "css",
+            "value": "input[placeholder=\"请输入商品关键字或商品id\"]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//input[contains(@placeholder,'商品关键字')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-click-input-expand-results",
+        "action": "waitTimeout",
+        "ms": 1500
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:wait-search-results",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'dt-oui-dropdown-menu-item')][contains(normalize-space(.),'商品ID：')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-dropdown')][not(contains(@class,'trigger'))][contains(normalize-space(.),'商品ID：')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 6000,
+        "retries": 0,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:press-enter-search",
+        "action": "press",
+        "key": "Enter",
+        "target": [
+          {
+            "by": "css",
+            "value": "input[placeholder=\"请输入商品关键字或商品id\"]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//input[contains(@placeholder,'商品关键字')]",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:wait-search-results-confirmed",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'dt-oui-dropdown-menu-item')][contains(normalize-space(.),'商品ID：')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-dropdown')][not(contains(@class,'trigger'))][contains(normalize-space(.),'商品ID：')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "recovery": "auto",
+        "optional": true,
+        "onError": "continue"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:click-select-all-results",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'dt-oui-dropdown-menu-item')][normalize-space(.)='一键全选'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'dt-oui-dropdown-menu-title-content')][normalize-space(.)='一键全选'])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-click-select-all-results",
+        "action": "waitTimeout",
+        "ms": 1500
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:close-results-dropdown",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='选择数据来源：'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(.),'选择数据来源')][not(.//*[contains(normalize-space(.),'选择数据来源')])])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-close-results-dropdown",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:open-start-date",
+        "action": "click",
+        "target": [
+          {
+            "by": "css",
+            "value": "#datePeriod",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='开始日期']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-open-start-date",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:fill-start-date",
+        "action": "type",
+        "target": [
+          {
+            "by": "css",
+            "value": "#datePeriod",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='开始日期']",
+            "nth": 0
+          }
+        ],
+        "value": "{startDate}",
+        "clear": true,
+        "delay": 30,
+        "timeoutMs": 10000,
+        "recovery": "auto",
+        "after": [
+          {
+            "id": "date:wait-start-cell-visible",
+            "action": "waitFor",
+            "target": [
+              {
+                "by": "css",
+                "value": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{startDate}']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "retries": 0,
+            "onError": "continue",
+            "recovery": "none",
+            "optional": true
+          },
+          {
+            "id": "date:read-start-availability",
+            "action": "queryAll",
+            "containerSelector": "body",
+            "limit": 1,
+            "outputKey": "requestedStartDateAvailability",
+            "fields": {
+              "requestedDate": {
+                "childSelector": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{startDate}']",
+                "attr": "title"
+              },
+              "cellClass": {
+                "childSelector": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{startDate}']",
+                "attr": "class"
+              }
+            }
+          },
+          {
+            "id": "date:START_DATE_NOT_SELECTABLE:{startDate}",
+            "action": "assertElement",
+            "target": [
+              {
+                "by": "css",
+                "value": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view.dt-oui-picker-cell-disabled[title='{startDate}']",
+                "nth": 0
+              }
+            ],
+            "state": "detached",
+            "timeoutMs": 1000,
+            "retries": 0,
+            "onError": "fail",
+            "recovery": "none"
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-fill-start-date",
+        "action": "waitTimeout",
+        "ms": 400
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:confirm-start-date",
+        "action": "press",
+        "key": "Enter",
+        "target": [
+          {
+            "by": "css",
+            "value": "#datePeriod",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-confirm-start-date",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:open-end-date",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'dt-oui-picker-range')]//input)[2]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-open-end-date",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:fill-end-date",
+        "action": "type",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'dt-oui-picker-range')]//input)[2]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          }
+        ],
+        "value": "{endDate}",
+        "clear": true,
+        "delay": 30,
+        "timeoutMs": 20000,
+        "retries": 0,
+        "recovery": "none",
+        "after": [
+          {
+            "id": "date:wait-end-cell-visible",
+            "action": "waitFor",
+            "target": [
+              {
+                "by": "css",
+                "value": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{endDate}']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "retries": 0,
+            "onError": "continue",
+            "recovery": "none",
+            "optional": true
+          },
+          {
+            "id": "date:read-end-availability",
+            "action": "queryAll",
+            "containerSelector": "body",
+            "limit": 1,
+            "outputKey": "requestedEndDateAvailability",
+            "fields": {
+              "requestedDate": {
+                "childSelector": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{endDate}']",
+                "attr": "title"
+              },
+              "cellClass": {
+                "childSelector": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{endDate}']",
+                "attr": "class"
+              }
+            }
+          },
+          {
+            "id": "date:END_DATE_NOT_SELECTABLE:{endDate}",
+            "action": "assertElement",
+            "target": [
+              {
+                "by": "css",
+                "value": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view.dt-oui-picker-cell-disabled[title='{endDate}']",
+                "nth": 0
+              }
+            ],
+            "state": "detached",
+            "timeoutMs": 1000,
+            "retries": 0,
+            "onError": "fail",
+            "recovery": "none"
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-fill-end-date",
+        "action": "waitTimeout",
+        "ms": 400
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:confirm-end-date",
+        "action": "press",
+        "key": "Enter",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'dt-oui-picker-range')]//input)[2]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-confirm-end-date",
+        "action": "waitTimeout",
+        "ms": 1000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:assert-requested-period",
+        "action": "assertElement",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='开始日期' and @value='{startDate}']/following::input[@placeholder='结束日期' and @value='{endDate}'][1]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "onError": "fail",
+        "recovery": "none"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:scroll-report-name",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(text()),'报表名称')]/following::input)[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-scroll-report-name",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:fill-report-name",
+        "action": "type",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(text()),'报表名称')]/following::input)[1]",
+            "nth": 0
+          }
+        ],
+        "value": "已完结退款",
+        "clear": true,
+        "delay": 0,
+        "timeoutMs": 10000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-fill-report-name",
+        "action": "waitTimeout",
+        "ms": 600
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:scroll-click-generate-report",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'dt-oui-btn-primary')][.//span[normalize-space(.)='生成报表'] or normalize-space(.)='生成报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='生成报表'] or normalize-space(.)='生成报表'])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 20000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:click-generate-report",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'dt-oui-btn-primary')][.//span[normalize-space(.)='生成报表'] or normalize-space(.)='生成报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='生成报表'] or normalize-space(.)='生成报表'])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 20000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:after-click-generate-report",
+        "action": "waitTimeout",
+        "ms": 5000
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:wait-download-report-ready",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-space')]//button[contains(@class,'dt-oui-btn')][.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[self::a or self::button][contains(normalize-space(.),'下载报表')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='下载报表'][not(.//*[normalize-space(.)='下载报表'])])[1]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 60000,
+        "retries": 0,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "id": "taobao_lingyang_refund_done_rpa:scroll-click-download-report",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-space')]//button[contains(@class,'dt-oui-btn')][.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[self::a or self::button][contains(normalize-space(.),'下载报表')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='下载报表'][not(.//*[normalize-space(.)='下载报表'])])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 30000,
+        "recovery": "auto"
+      },
+      {
+        "action": "downloadFile",
+        "id": "taobao_lingyang_refund_done_rpa:click-download-report",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-space')]//button[contains(@class,'dt-oui-btn')][.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表'])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 60000,
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "lingyangRefundDoneFile"
+      }
+    ]
+  },
+  "collection": {
+    "import": {
+      "subject_mode": "single"
+    }
+  },
+  "needsParams": true
+}

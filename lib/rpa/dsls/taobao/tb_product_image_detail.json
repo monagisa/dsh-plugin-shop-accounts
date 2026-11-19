@@ -1,0 +1,267 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "tb_product_image_detail",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "platform": "taobao",
+  "description": "淘宝商品页标题、主图与详情只读拉取。对齐 ecommerce-search 的淘宝详情采集：标题先做正常商品页门禁，主图和详情图使用 queryAll 全量读取多种懒加载属性，图文详情经有界滚动后采集；仅输出 productTitle、mainImages、descriptionParagraphs、detailImages 和 finalUrl，不产出旧标量字段；下游需按这些原始字段自行处理。",
+  "conditions": {
+    "filter": {
+      "kind": "required",
+      "fields": {
+        "productIds": {
+          "type": "stringArray",
+          "minItems": 1,
+          "maxItems": 1
+        }
+      },
+      "bindings": {
+        "{productId}": "$filter.productIdsComma"
+      }
+    }
+  },
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "淘宝商品页主图与详情拉取（主图分析模板）",
+    "description": "打开 https://item.taobao.com/item.htm?ft=t&id={productId}，只读拉取商品标题、全部主图候选与全部详情图候选。采集顺序和字段对齐 ecommerce-search：标题门禁、主图 queryAll、点击图文详情、有界滚动、详情图 queryAll；仅输出 productTitle、mainImages、descriptionParagraphs、detailImages 和 finalUrl，不产出旧标量字段。不点击购买、不加购、不做任何写操作。入参：{productId}。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": true,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "id": "taobao_main_image:goto-item-page",
+        "action": "goto",
+        "url": "https://item.taobao.com/item.htm?ft=t&id={productId}",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "taobao.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "taobao.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "id": "taobao_main_image:wait-load-state",
+        "action": "waitForLoadState",
+        "loadState": "domcontentloaded"
+      },
+      {
+        "id": "taobao_main_image:wait-product-title",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'mainTitle') and not(ancestor::*[contains(@class,'ItemHeadFixed')])]",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='mainTitle']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 20000,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "id": "taobao_main_image:settle-product-page",
+        "action": "waitTimeout",
+        "ms": 2000
+      },
+      {
+        "id": "taobao_main_image:read-product-title",
+        "action": "readText",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'mainTitle') and not(ancestor::*[contains(@class,'ItemHeadFixed')])]",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='mainTitle']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "h1[class*='ItemTitle'], [class*='ItemHeader'] h1",
+            "nth": 0
+          }
+        ],
+        "readMode": "innerText",
+        "trim": true,
+        "outputKey": "productTitle",
+        "onError": "fail",
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_main_image:read-all-head-images",
+        "action": "queryAll",
+        "containerSelector": "[class*='thumbnail--'] img, [class*='thumbnail'] img",
+        "fields": {
+          "src": {
+            "attr": "src"
+          },
+          "data_src": {
+            "attr": "data-src"
+          },
+          "data_lazy_src": {
+            "attr": "data-lazy-src"
+          },
+          "srcset": {
+            "attr": "srcset"
+          }
+        },
+        "outputKey": "mainImages",
+        "onError": "continue"
+      },
+      {
+        "id": "taobao_main_image:click-detail-tab",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'tabTitleItem') and normalize-space()='图文详情']",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "图文详情",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "onError": "fail"
+      },
+      {
+        "id": "taobao_main_image:wait-detail-content",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='imageTextInfo--']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='descV8']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "#description, [class*='desc-root']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "id": "taobao_main_image:scroll-detail",
+        "action": "scrollToBottom",
+        "maxRounds": 9,
+        "stepPx": 1800,
+        "pauseMs": 300,
+        "stableRounds": 3,
+        "timeoutMs": 60000,
+        "retries": 0,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "id": "taobao_main_image:settle-detail-images",
+        "action": "waitTimeout",
+        "ms": 1500
+      },
+      {
+        "id": "taobao_main_image:read-detail-paragraphs",
+        "action": "queryAll",
+        "containerSelector": "[class*='imageTextInfo--'] p, [class*='descV8'] p, #description p, [class*='desc-root'] p",
+        "fields": {
+          "text": {
+            "text": true,
+            "trim": true
+          }
+        },
+        "outputKey": "descriptionParagraphs"
+      },
+      {
+        "id": "taobao_main_image:read-all-detail-images",
+        "action": "queryAll",
+        "containerSelector": "[class*='imageTextInfo--'] img, [class*='descV8'] img, #description img, [class*='desc-root'] img",
+        "fields": {
+          "src": {
+            "attr": "src"
+          },
+          "data_src": {
+            "attr": "data-src"
+          },
+          "data_lazy_src": {
+            "attr": "data-lazy-src"
+          },
+          "srcset": {
+            "attr": "srcset"
+          }
+        },
+        "outputKey": "detailImages",
+        "onError": "continue"
+      },
+      {
+        "id": "taobao_main_image:read-final-url",
+        "action": "readPageUrl",
+        "outputKey": "finalUrl"
+      }
+    ]
+  },
+  "collection": {
+    "import": {
+      "subject_mode": "single"
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  },
+  "needsParams": true
+}

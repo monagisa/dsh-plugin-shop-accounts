@@ -1,0 +1,366 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "douyin_product_detail_extra",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "needsParams": true,
+  "platform": "douyin",
+  "description": "罗盘-商品详情辅助分析页面采集协议：进入指定商品详情页 → 按参数 period 选择时间快捷档（当前要求近1天）→ 读取波动分析、体验、价格、商详、人群分析内容。",
+  "conditions": {},
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "抖店罗盘-商品详情-辅助分析Tab-读取文本",
+    "description": "罗盘-商品详情辅助分析页面采集协议：进入指定商品详情页 → 按参数 period 选择时间快捷档（当前要求近1天）→ 读取波动分析、体验、价格、商详、人群分析内容。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "product_detail_auxiliary:打开商品详情页",
+        "url": "https://compass.jinritemai.com/shop/product-detail?product_id=${productId}&from_page=%2Fshop%2Fcommodity%2Fproduct-list&from=%2Fshop%2Fmerchandise-traffic",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 20000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_auxiliary:等待首屏渲染",
+        "ms": 4000
+      },
+      {
+        "action": "click",
+        "optional": true,
+        "id": "product_detail_auxiliary:关闭右上角通知警告",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-notification-notice-close')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'ecom-notification-notice-close')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 3000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_auxiliary:等待商品详情页壳",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品详情') and contains(normalize-space(.),'商品ID')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品ID') and contains(normalize-space(.),'${productId}')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_auxiliary:点击时间维度-day",
+        "description": "辅助分析各 tab 共用顶部时间条。不同 tab 支持的档位不同（例如波动分析可能没有近30天），因此这里容错处理，命中即统一到 近1天。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-nav')][.//*[normalize-space(.)='实时'] and .//*[normalize-space(.)='近1天']]//*[normalize-space(.)='近1天'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[@data-node-key='one']//*[contains(@class,'aurora-tabs-tab-btn') or @role='tab' or normalize-space(.)='近1天'])[1]",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1800
+        },
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_auxiliary:切换波动分析",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='波动分析'] or normalize-space(.)='波动分析']//*[contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "波动分析",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 2000
+        },
+        "timeoutMs": 12000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "readText",
+        "id": "product_detail_auxiliary:读取波动分析",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//body",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_product_detail_fluctuation_body_text"
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_auxiliary:切换退款及体验",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='退款及体验'] or normalize-space(.)='退款及体验']//*[contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='退款及体验'] or normalize-space(.)='退款及体验'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "退款及体验",
+            "match": "exactThenContains",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'tabs-tab')][.//*[normalize-space(.)='退款及体验'] or normalize-space(.)='退款及体验'])[1]",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 2000
+        },
+        "timeoutMs": 12000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "readText",
+        "id": "product_detail_auxiliary:读取退款及体验",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//body",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_product_detail_experience_body_text"
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_auxiliary:切换价格分析",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='价格分析'] or normalize-space(.)='价格分析']//*[contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "价格分析",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 2000
+        },
+        "timeoutMs": 12000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "readText",
+        "id": "product_detail_auxiliary:读取价格分析",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//body",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_product_detail_price_body_text"
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_auxiliary:切换商详分析",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='商详分析'] or normalize-space(.)='商详分析']//*[contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "商详分析",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 2000
+        },
+        "timeoutMs": 12000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "readText",
+        "id": "product_detail_auxiliary:读取商详分析",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//body",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_product_detail_detail_analysis_body_text"
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_auxiliary:切换人群分析",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='人群分析'] or normalize-space(.)='人群分析']//*[contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "人群分析",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 2000
+        },
+        "timeoutMs": 12000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "readText",
+        "id": "product_detail_auxiliary:读取人群分析",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//body",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "doudian_product_detail_crowd_body_text",
+        "recovery": "auto"
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 1,
+      "end_offset_days": -1
+    },
+    "parameter_bindings": {
+      "period": {
+        "constant": "近1天"
+      },
+      "productId": {
+        "source": "$filter.productId"
+      }
+    },
+    "import": {
+      "subject_mode": "single"
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  }
+}

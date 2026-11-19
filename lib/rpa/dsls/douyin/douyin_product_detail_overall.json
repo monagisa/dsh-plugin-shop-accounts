@@ -1,0 +1,340 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "douyin_product_detail_overall",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "needsParams": true,
+  "platform": "douyin",
+  "description": "罗盘-商品详情整体数据下载协议：进入指定商品详情页 → 切换整体数据 → 按参数 period 选择时间快捷档（当前要求近30天）→ 点击下载明细。",
+  "conditions": {},
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "抖店罗盘-商品详情-整体数据-下载明细",
+    "description": "罗盘-商品详情整体数据下载协议：进入指定商品详情页 → 切换整体数据 → 按参数 period 选择时间快捷档（当前要求近30天）→ 点击下载明细。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "product_detail_overall:打开商品详情页",
+        "url": "https://compass.jinritemai.com/shop/product-detail?product_id=${productId}&from_page=%2Fshop%2Fcommodity%2Fproduct-list&from=%2Fshop%2Fmerchandise-traffic",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 20000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_overall:等待首屏渲染",
+        "ms": 4000
+      },
+      {
+        "action": "click",
+        "optional": true,
+        "id": "product_detail_overall:关闭右上角通知警告",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-notification-notice-close')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'ecom-notification-notice-close')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 3000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_overall:等待通知消失",
+        "ms": 800
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_overall:等待商品详情页壳",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品详情') and contains(normalize-space(.),'商品ID')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品ID') and contains(normalize-space(.),'${productId}')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_overall:先切到波动分析以重置时间条状态",
+        "description": "抖店商品详情在已选中「整体数据」时再次点击会收起右侧时间条。先切到相邻的波动分析，再切回整体数据，可以稳定恢复整体数据首次进入时的时间选择区。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='波动分析'] or normalize-space(.)='波动分析']//*[contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='波动分析'] or normalize-space(.)='波动分析'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "波动分析",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1000
+        },
+        "timeoutMs": 8000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_overall:尝试切换整体数据-仅未选中时点击",
+        "description": "商品详情默认可能已经停在整体数据。抖店页面在已选中整体数据时再次点击会收起右侧时间条，因此这里只点击未选中的整体数据 tab；已选中时找不到目标会继续往下走。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab') and not(contains(@class,'aurora-tabs-tab-active'))][.//*[normalize-space(.)='整体数据'] or normalize-space(.)='整体数据']//*[contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab') and not(contains(@class,'aurora-tabs-tab-active'))][.//*[@data-btm='d62067_i2'] or .//*[normalize-space(.)='整体数据'] or normalize-space(.)='整体数据'])[1]",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1200
+        },
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_overall:回验整体数据已选中",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][contains(@class,'aurora-tabs-tab-active')][.//*[normalize-space(.)='整体数据'] or normalize-space(.)='整体数据'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品数据') and contains(normalize-space(.),'核心数据')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 8000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_overall:等待时间选择器渲染",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//input[@placeholder='开始日期'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[contains(@class,'aurora-picker-range')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[contains(@class,'aurora-tabs-nav')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-nav')][.//*[normalize-space(.)='实时'] and .//*[normalize-space(.)='近30天']])[last()]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='thirty' and (.//*[normalize-space(.)='近30天'] or normalize-space(.)='近30天')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'实时') and contains(normalize-space(.),'近30天') and contains(normalize-space(.),'近7天') and contains(normalize-space(.),'近30天') and contains(normalize-space(.),'自定义')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_overall:点击时间维度-month",
+        "description": "抖店商品详情整体数据顶部时间条可直接点击近30天。固定为month。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[@data-node-key='thirty']//*[contains(@class,'aurora-tabs-tab-btn') or @role='tab' or normalize-space(.)='近30天'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[@data-btm='d90219' and normalize-space(.)='近30天'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs')][.//*[normalize-space(.)='实时'] and .//*[normalize-space(.)='近30天']]//*[@data-node-key='thirty'])[1]",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1800
+        },
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "fail"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_overall:等待快捷时间刷新",
+        "ms": 3000
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_overall:等待下载明细按钮出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "下载明细",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "downloadFile",
+        "id": "product_detail_overall:点击下载明细按钮",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "下载明细",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 90000,
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "doudianProductDetailOverallFile"
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 30,
+      "end_offset_days": -1
+    },
+    "parameter_bindings": {
+      "period": {
+        "constant": "近30天"
+      },
+      "productId": {
+        "source": "$filter.productId"
+      }
+    },
+    "import": {
+      "subject_mode": "single"
+    }
+  }
+}

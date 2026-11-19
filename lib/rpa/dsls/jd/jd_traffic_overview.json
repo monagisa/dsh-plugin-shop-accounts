@@ -350,5 +350,9 @@
         "output_key": "jdFlowSummaryFile"
       }
     ]
-  }
+  },
+  "domains": [
+    "流量转化"
+  ],
+  "verified": true
 }

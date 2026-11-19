@@ -233,5 +233,9 @@
         "output_key": "doudianIncomeExpenseFile"
       }
     ]
-  }
+  },
+  "domains": [
+    "经营总览"
+  ],
+  "verified": true
 }

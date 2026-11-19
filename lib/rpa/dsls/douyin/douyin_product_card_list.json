@@ -1,0 +1,450 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "douyin_product_card_list",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "platform": "douyin",
+  "description": "罗盘-商品卡列表下载协议：进入商品卡列表页 → 按参数 period 选择时间快捷档（当前要求近1天）→ 点击下载明细。",
+  "conditions": {},
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "抖店罗盘-商品卡列表-下载明细-基础模板",
+    "description": "罗盘-商品卡列表下载协议：进入商品卡列表页 → 按参数 period 选择时间快捷档（当前要求近1天）→ 点击下载明细。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "merchandise_list:打开目标页",
+        "url": "https://compass.jinritemai.com/shop/merchandise-traffic",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "dy.dismiss-known-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": "button.ecom-notification-notice-close",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[class*='notification'] [class*='close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 20000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "dy.dismiss-known-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": "button.ecom-notification-notice-close",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[class*='notification'] [class*='close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitTimeout",
+        "id": "merchandise_list:等待首屏渲染",
+        "ms": 3000
+      },
+      {
+        "action": "waitFor",
+        "id": "merchandise_list:等待时间维度按钮出现-day",
+        "target": [
+          {
+            "by": "css",
+            "value": "[data-node-key='one'] [role='tab']:has-text(\"近1天\")",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='one']//*[@role='tab'][.//*[self::span or self::div][normalize-space(.)='近1天']])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='one']//*[self::span or self::div][normalize-space(.)='近1天'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='one']//*[@role='tab'])[1]"
+          },
+          {
+            "by": "text",
+            "value": "近1天",
+            "match": "exact",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "先探测目标周期按钮；初次等待失败时仍会在关闭通知后重试，下载前必须通过最终周期选中态确认。",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "click",
+        "id": "merchandise_list:点击时间维度-day",
+        "target": [
+          {
+            "by": "css",
+            "value": "[data-node-key='one'] [role='tab']:has-text(\"近1天\")",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='one']//*[@role='tab'][.//*[self::span or self::div][normalize-space(.)='近1天']])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='one']//*[self::span or self::div][normalize-space(.)='近1天'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='one']//*[@role='tab'])[1]"
+          },
+          {
+            "by": "text",
+            "value": "近1天",
+            "match": "exact",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 8000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "尝试选择 近1天；首次点击被通知遮挡时允许进入关闭通知后的重试，下载前必须确认目标周期已选中。",
+        "optional": true
+      },
+      {
+        "action": "waitFor",
+        "id": "merchandise_list:回验时间维度已选中-day",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[@data-node-key='one']//*[@role='tab'][@aria-selected='true'][normalize-space(.)='近1天']"
+          },
+          {
+            "by": "xpath",
+            "value": "//*[@data-node-key='one']/descendant-or-self::*[contains(concat(' ',normalize-space(@class),' '),' aurora-tabs-tab-active ')][normalize-space(.)='近1天']"
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 5000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "初次探测 近1天 的选中态；未选中时允许关闭通知后重试，最终回验和断言成功后才允许下载。 只检查 data-node-key=one 内的选中态，完整文案须精确等于 近1天。",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "waitTimeout",
+        "id": "merchandise_list:等待日期切换渲染",
+        "ms": 1000
+      },
+      {
+        "action": "click",
+        "optional": true,
+        "id": "merchandise_list:关闭右上角通知警告",
+        "target": [
+          {
+            "by": "css",
+            "value": "button.aurora-notification-notice-close",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "button.ecom-notification-notice-close",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'notification')]//*[self::button or self::span or self::i][contains(@class,'close')])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'-notice')]//*[contains(@class,'close')])[1]"
+          }
+        ],
+        "timeoutMs": 5000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "通知栏非必现，容错处理。通知未关闭会遮挡下载按钮，是后续步骤失败的上游诱因，故保留多级选择器覆盖 aurora- 与 ecom- 两套类名。 超时已缩短，避免无通知时空等。"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "merchandise_list:等待通知消失",
+        "ms": 800
+      },
+      {
+        "action": "click",
+        "id": "merchandise_list:重试点击时间维度-day",
+        "target": [
+          {
+            "by": "css",
+            "value": "[data-node-key='one'] [role='tab']:has-text(\"近1天\")",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='one']//*[@role='tab'][.//*[self::span or self::div][normalize-space(.)='近1天']])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='one']//*[self::span or self::div][normalize-space(.)='近1天'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@data-node-key='one']//*[@role='tab'])[1]"
+          },
+          {
+            "by": "text",
+            "value": "近1天",
+            "match": "exact",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 5000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "关闭通知后重试选择 近1天；点击失败仍由后续必需的选中态等待和断言判断周期是否正确。",
+        "optional": true
+      },
+      {
+        "action": "waitTimeout",
+        "id": "merchandise_list:重试后等待渲染",
+        "ms": 1000
+      },
+      {
+        "action": "waitFor",
+        "id": "merchandise_list:重试后回验时间维度已选中-day",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[@data-node-key='one']//*[@role='tab'][@aria-selected='true'][normalize-space(.)='近1天']"
+          },
+          {
+            "by": "xpath",
+            "value": "//*[@data-node-key='one']/descendant-or-self::*[contains(concat(' ',normalize-space(@class),' '),' aurora-tabs-tab-active ')][normalize-space(.)='近1天']"
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 5000,
+        "retries": 0,
+        "onError": "fail",
+        "description": "等待重试后的 近1天 选中态；超时后停止下载，避免导出页面默认周期。 只检查 data-node-key=one 内的选中态，完整文案须精确等于 近1天。",
+        "recovery": "auto"
+      },
+      {
+        "action": "assertElement",
+        "id": "merchandise_list:确认下载周期已选中-day",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[@data-node-key='one']//*[@role='tab'][@aria-selected='true'][normalize-space(.)='近1天']"
+          },
+          {
+            "by": "xpath",
+            "value": "//*[@data-node-key='one']/descendant-or-self::*[contains(concat(' ',normalize-space(@class),' '),' aurora-tabs-tab-active ')][normalize-space(.)='近1天']"
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 5000,
+        "retries": 0,
+        "onError": "fail",
+        "recovery": "none",
+        "description": "下载前确定性确认 近1天 已选中；前序等待被恢复或跳过也必须通过本断言，无法确认时停止下载。 只检查 data-node-key=one 内的选中态，完整文案须精确等于 近1天。"
+      },
+      {
+        "action": "waitFor",
+        "id": "merchandise_list:等待下载按钮出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[self::button or @role='button' or contains(@class,'aurora-btn')][.//span[normalize-space(.)='下载明细']])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[self::button or @role='button' or contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "下载明细",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "时间筛选使用 aurora-tabs-tab-btn；容器为 aurora-tabs-tab，选中态为 aurora-tabs-tab-active。",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "if",
+        "id": "merchandise_list:按下载按钮状态处理",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//*[self::button or @role='button' or contains(@class,'aurora-btn')][.//span[normalize-space(.)='下载明细']])[1]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "(//*[self::button or @role='button' or contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')])[1]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//button[contains(normalize-space(.),'下载明细')]",
+              "nth": 0
+            },
+            {
+              "by": "text",
+              "value": "下载明细",
+              "match": "exactThenContains",
+              "nth": 0
+            }
+          ],
+          "state": "disabled",
+          "timeoutMs": 0
+        },
+        "onError": "fail",
+        "retries": 0,
+        "recovery": "none",
+        "description": "下载按钮禁用时记录状态并跳过下载，不点击、不重试；未禁用时执行下载。",
+        "then": [
+          {
+            "action": "waitTimeout",
+            "id": "merchandise_list:下载按钮禁用时跳过",
+            "ms": 0,
+            "retries": 0,
+            "onError": "fail",
+            "recovery": "none",
+            "description": "按钮已确认为禁用，本次直接跳过下载。"
+          }
+        ],
+        "else": [
+          {
+            "action": "downloadFile",
+            "id": "merchandise_list:点击下载按钮",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "(//*[self::button or @role='button' or contains(@class,'aurora-btn')][.//span[normalize-space(.)='下载明细']])[1]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "(//*[self::button or @role='button' or contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')])[1]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//button[contains(normalize-space(.),'下载明细')]",
+                "nth": 0
+              },
+              {
+                "by": "text",
+                "value": "下载明细",
+                "match": "exactThenContains",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 60000,
+            "retries": 0,
+            "onError": "fail",
+            "outputKey": "doudianMerchandiseListFile",
+            "description": "时间筛选使用 aurora-tabs-tab-btn；容器为 aurora-tabs-tab，选中态为 aurora-tabs-tab-active。"
+          }
+        ]
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 1,
+      "end_offset_days": -1
+    },
+    "parameter_bindings": {
+      "period": {
+        "constant": "近1天"
+      }
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "download_ref",
+        "output_key": "doudianMerchandiseListFile",
+        "skip_when": {
+          "step_id": "merchandise_list:下载按钮禁用时跳过",
+          "reason": "button_disabled"
+        }
+      }
+    ]
+  }
+}

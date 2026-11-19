@@ -1,0 +1,2754 @@
+{
+  "schemaVersion": "agentwork.rpa.atomic.v1",
+  "id": "pdd_traffic_overview",
+  "verified": false,
+  "domains": [
+    "流量转化"
+  ],
+  "platform": "pdd",
+  "name": "PDD-流量数据-页面采集",
+  "description": "昨日流量总览、直播、全部/商家/达人视频与搜索；营销活动在对应 tab 选择昨日具体日期后动态全分页。模块独立字体、选中状态和日期证据，不将滞后日期伪装昨日。",
+  "defaults": {
+    "timeoutMs": 8000,
+    "retries": 0,
+    "continueOnError": false,
+    "stepGapMs": 300
+  },
+  "steps": [
+    {
+      "action": "goto",
+      "id": "打开流量数据页",
+      "url": "https://mms.pinduoduo.com/sycm/search_data/plate?dateFlag=2",
+      "waitUntil": "domcontentloaded",
+      "after": [
+        {
+          "action": "waitFor",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 10000,
+          "onError": "continue",
+          "retries": 0
+        },
+        {
+          "action": "click",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog.click",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "onError": "continue",
+          "retries": 0,
+          "timeoutMs": 1000
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待流量数据渲染",
+      "ms": 5000
+    },
+    {
+      "action": "click",
+      "id": "关闭新消息浮窗(流量数据)",
+      "target": [
+        {
+          "by": "css",
+          "value": "i.ImportantList_close__d0eKb",
+          "nth": 0
+        },
+        {
+          "by": "css",
+          "value": "div[class*=\"ImportantList_msgbox\"] i[class*=\"close\"]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+          "nth": 0
+        }
+      ],
+      "timeoutMs": 2000,
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待浮窗关闭动画(流量数据)",
+      "ms": 500
+    },
+    {
+      "action": "waitFor",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item')]//*[normalize-space(.)='昨日'][not(.//*[normalize-space(.)='昨日'])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 15000,
+      "id": "pdd_traffic:wait-traffic-quick-range-visible",
+      "recovery": "auto",
+      "retries": 2,
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "click",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item')]//*[normalize-space(.)='昨日'][not(.//*[normalize-space(.)='昨日'])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "timeoutMs": 15000,
+      "id": "pdd_traffic:click-traffic-quick-range",
+      "retries": 2
+    },
+    {
+      "action": "waitTimeout",
+      "ms": 3000,
+      "id": "pdd_traffic:wait-traffic-range-refresh"
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:overview-assert-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_overview_selected",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_overview_selected",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "waitFor",
+      "target": [
+        {
+          "by": "text",
+          "value": "数据总览",
+          "match": "contains",
+          "nth": 0
+        },
+        {
+          "by": "text",
+          "value": "流量数据",
+          "match": "contains",
+          "nth": 0
+        },
+        {
+          "by": "text",
+          "value": "店铺访客数",
+          "match": "contains",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "//*[contains(normalize-space(.),'同行同层均值') or contains(normalize-space(.),'同行同层优秀值')]",
+          "nth": 0
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 1000,
+      "onError": "continue",
+      "id": "pdd_traffic:wait-traffic-page-anchor",
+      "optional": true
+    },
+    {
+      "action": "waitFor",
+      "id": "等待流量看板锚点",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='流量看板'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 6000,
+      "onError": "continue",
+      "optional": true
+    },
+    {
+      "action": "readText",
+      "id": "读取流量概览文本",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "outputKey": "traffic_overview_text",
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "采集spider-font字体URL",
+      "target": [
+        {
+          "by": "css",
+          "value": "style[data-id*='spider']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "//style[contains(text(),'spider-font')]",
+          "nth": 0
+        }
+      ],
+      "readMode": "textContent",
+      "trim": true,
+      "timeoutMs": 4000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_spider_font_face_css"
+    },
+    {
+      "action": "waitFor",
+      "id": "等待流量数据总览卡片区",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 10000,
+      "onError": "continue",
+      "optional": true
+    },
+    {
+      "action": "scrollIntoView",
+      "id": "滚动到流量数据总览卡片区",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])"
+        }
+      ],
+      "timeoutMs": 6000,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取流量数据总览卡片区",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='数据总览']/following::*[contains(@class,'cardlist-wrap')])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 8000,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_overview_cards_text"
+    },
+    {
+      "action": "readText",
+      "id": "读取流量实时数据卡片区",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(.)='实时数据']/ancestor::*[contains(@class,'card-box_container')][1]//*[contains(@class,'cardlist-wrap')])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(.)='实时数据']/following::*[contains(@class,'cardlist-wrap')])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 6000,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_realtime_cards_text",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-店铺访客数",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='店铺访客数'])[2]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='店铺访客数'])[2]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='店铺访客数'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_store_visitors_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-store_visitors",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='店铺访客数'])[2]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='店铺访客数'])[2]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_store_visitors_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-店铺浏览量",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='店铺浏览量'])[2]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='店铺浏览量'])[2]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='店铺浏览量'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_store_page_views_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-store_page_views",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='店铺浏览量'])[2]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='店铺浏览量'])[2]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_store_page_views_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-商品访客数",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='商品访客数'])[2]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='商品访客数'])[2]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='商品访客数'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_goods_visitors_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-goods_visitors",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='商品访客数'])[2]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='商品访客数'])[2]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_goods_visitors_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-商品浏览量",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='商品浏览量'])[2]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='商品浏览量'])[2]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='商品浏览量'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_goods_page_views_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-goods_page_views",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='商品浏览量'])[2]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='商品浏览量'])[2]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_goods_page_views_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-成交买家数",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交买家数'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='成交买家数'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='成交买家数'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_transactional_buyers_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-transactional_buyers",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交买家数'])[1]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交买家数'])[1]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_transactional_buyers_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-成交订单数",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交订单数'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='成交订单数'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='成交订单数'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_completed_orders_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-completed_orders",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交订单数'])[1]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交订单数'])[1]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_completed_orders_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-成交金额",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交金额'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='成交金额'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='成交金额'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_transaction_amount_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-transaction_amount",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交金额'])[1]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交金额'])[1]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_transaction_amount_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-成交转化率",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交转化率'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='成交转化率'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='成交转化率'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_conversion_rate_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-conversion_rate",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交转化率'])[1]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交转化率'])[1]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_conversion_rate_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-客单价",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='客单价'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='客单价'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='客单价'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_unit_price_per_customer_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-unit_price_per_customer",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='客单价'])[1]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='客单价'])[1]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_unit_price_per_customer_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量指标-成交UV价值",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交UV价值'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[normalize-space(text())='成交UV价值'])[1]/ancestor::*[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[normalize-space(text())='成交UV价值'])[last()]/ancestor::*[2]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_card_transaction_uv_value_text",
+      "optional": true
+    },
+    {
+      "id": "读取环比方向-transaction_uv_value",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交UV价值'])[1]/ancestor::*[2]//*[contains(@class,'radioWrapper')]//*[contains(@style,'color')]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@class='alias'][normalize-space(text())='成交UV价值'])[1]/ancestor::*[2]//*[contains(@style,'color')]",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_traffic_card_transaction_uv_value_trend",
+      "timeoutMs": 2500,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "readText",
+      "id": "读取流量数据总览统计时间",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "((//*[normalize-space(text())='数据总览']/ancestor::*[contains(@class,'card-box_container')][1])//*[contains(normalize-space(.),'统计时间')])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(normalize-space(.),'统计时间')])[last()]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "onError": "continue",
+      "outputKey": "pdd_traffic_stat_time_text"
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_live-click-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='直播数据']"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='直播数据'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_live-tab",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_live-wait-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='直播数据' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='直播数据' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "state": "visible",
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_live-click-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item')]//*[normalize-space(.)='昨日'][not(.//*[normalize-space(.)='昨日'])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and normalize-space(.)='昨日'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_live",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_live-assert-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 15000,
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_live_selected",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_live_selected",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_live_tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='直播数据' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='直播数据' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_live_tab",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_live_date",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[not(*) and contains(normalize-space(.),'统计时间')])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_live_date",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_live_text",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "outputKey": "pdd_traffic_live_text",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_live_font",
+      "target": [
+        {
+          "by": "css",
+          "value": "style[data-id*='spider']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//style[contains(text(),'spider-font')])[1]"
+        }
+      ],
+      "outputKey": "pdd_traffic_live_font",
+      "readMode": "textContent",
+      "trim": true,
+      "onError": "continue",
+      "timeoutMs": 2000
+    },
+    {
+      "action": "click",
+      "id": "traffic:video-open",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='视频数据']"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='视频数据'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-video-open",
+      "ms": 3000
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_video_all-click-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='全部视频']"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='全部视频'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_video_all-tab",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_video_all-wait-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='全部视频' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='全部视频' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "state": "visible",
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_video_all-click-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item')]//*[normalize-space(.)='昨日'][not(.//*[normalize-space(.)='昨日'])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and normalize-space(.)='昨日'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_video_all",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_video_all-assert-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 15000,
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_all_selected",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_all_selected",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_all_tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='全部视频' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='全部视频' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_all_tab",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_all_date",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[not(*) and contains(normalize-space(.),'统计时间')])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_all_date",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_all_text",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "outputKey": "pdd_traffic_video_all_text",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_all_font",
+      "target": [
+        {
+          "by": "css",
+          "value": "style[data-id*='spider']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//style[contains(text(),'spider-font')])[1]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_all_font",
+      "readMode": "textContent",
+      "trim": true,
+      "onError": "continue",
+      "timeoutMs": 2000
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_video_merchant-click-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='商家视频']"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='商家视频'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_video_merchant-tab",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_video_merchant-wait-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='商家视频' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='商家视频' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "state": "visible",
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_video_merchant-click-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item')]//*[normalize-space(.)='昨日'][not(.//*[normalize-space(.)='昨日'])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and normalize-space(.)='昨日'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_video_merchant",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_video_merchant-assert-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 15000,
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_merchant_selected",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_merchant_selected",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_merchant_tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='商家视频' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='商家视频' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_merchant_tab",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_merchant_date",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[not(*) and contains(normalize-space(.),'统计时间')])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_merchant_date",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_merchant_text",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "outputKey": "pdd_traffic_video_merchant_text",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_merchant_font",
+      "target": [
+        {
+          "by": "css",
+          "value": "style[data-id*='spider']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//style[contains(text(),'spider-font')])[1]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_merchant_font",
+      "readMode": "textContent",
+      "trim": true,
+      "onError": "continue",
+      "timeoutMs": 2000
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_video_creator-click-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='达人视频']"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='达人视频'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_video_creator-tab",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_video_creator-wait-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='达人视频' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='达人视频' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "state": "visible",
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_video_creator-click-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item')]//*[normalize-space(.)='昨日'][not(.//*[normalize-space(.)='昨日'])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and normalize-space(.)='昨日'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_video_creator",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_video_creator-assert-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 15000,
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_creator_selected",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_creator_selected",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_creator_tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='达人视频' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='达人视频' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_creator_tab",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_creator_date",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[not(*) and contains(normalize-space(.),'统计时间')])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_creator_date",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_creator_text",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "outputKey": "pdd_traffic_video_creator_text",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_video_creator_font",
+      "target": [
+        {
+          "by": "css",
+          "value": "style[data-id*='spider']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//style[contains(text(),'spider-font')])[1]"
+        }
+      ],
+      "outputKey": "pdd_traffic_video_creator_font",
+      "readMode": "textContent",
+      "trim": true,
+      "onError": "continue",
+      "timeoutMs": 2000
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_search-click-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='搜索流量']"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='搜索流量'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_search-tab",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_search-wait-tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='搜索流量' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='搜索流量' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "state": "visible",
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "click",
+      "id": "traffic:pdd_traffic_search-click-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item')]//*[normalize-space(.)='昨日'][not(.//*[normalize-space(.)='昨日'])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and normalize-space(.)='昨日'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-pdd_traffic_search",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:pdd_traffic_search-assert-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 15000,
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_search_selected",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div/div[4]/div[1]/div[2]//*[contains(@class,'date-picker-item') and contains(@class,'active') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected'))]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_search_selected",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_search_tab",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='搜索流量' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='搜索流量' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_search_tab",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_search_date",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[not(*) and contains(normalize-space(.),'统计时间')])[last()]"
+        }
+      ],
+      "outputKey": "pdd_traffic_search_date",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_search_text",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "outputKey": "pdd_traffic_search_text",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "traffic:pdd_traffic_search_font",
+      "target": [
+        {
+          "by": "css",
+          "value": "style[data-id*='spider']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//style[contains(text(),'spider-font')])[1]"
+        }
+      ],
+      "outputKey": "pdd_traffic_search_font",
+      "readMode": "textContent",
+      "trim": true,
+      "onError": "continue",
+      "timeoutMs": 2000
+    },
+    {
+      "action": "click",
+      "id": "traffic:activity-open",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='营销活动数据']"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='营销活动数据'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-activity-open",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:activity-tab-checked",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='营销活动数据' and contains(@class,'TAB_active_')]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='营销活动数据' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+        }
+      ],
+      "state": "visible",
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:activity-date-input-visible",
+      "target": [
+        {
+          "by": "css",
+          "value": "#mf-mms-sycm-container input[data-testid='beast-core-datePicker-htmlInput']:not([disabled])"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 8000,
+      "onError": "continue",
+      "recovery": "auto",
+      "optional": true
+    },
+    {
+      "action": "if",
+      "id": "traffic:activity-date-change",
+      "description": "当前已是目标日期时直接校验；仅在日期不一致时打开日期选择器。",
+      "condition": {
+        "kind": "element",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[@id='mf-mms-sycm-container']//input[@data-testid='beast-core-datePicker-htmlInput' and not(@disabled)][translate(@value,'/','-')!='${end}']"
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 0
+      },
+      "then": [
+        {
+          "action": "click",
+          "id": "traffic:activity-date-open",
+          "target": [
+            {
+              "by": "css",
+              "value": "#mf-mms-sycm-container input[data-testid='beast-core-datePicker-htmlInput']:not([disabled])"
+            }
+          ],
+          "timeoutMs": 8000,
+          "onError": "fail"
+        },
+        {
+          "action": "waitFor",
+          "id": "traffic:activity-date-cell-visible",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//*[contains(@class,'picker') or contains(@class,'calendar') or contains(@class,'Calendar') or contains(@class,'date')]//*[@title='${end}'])[last()]"
+            },
+            {
+              "by": "xpath",
+              "value": "(//*[@title='${end}' or @aria-label='${end}'])[last()]"
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 8000,
+          "onError": "continue",
+          "recovery": "auto",
+          "optional": true
+        },
+        {
+          "action": "click",
+          "id": "traffic:activity-date-select",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//*[contains(@class,'picker') or contains(@class,'calendar') or contains(@class,'Calendar') or contains(@class,'date')]//*[@title='${end}'])[last()]"
+            },
+            {
+              "by": "xpath",
+              "value": "(//*[@title='${end}' or @aria-label='${end}'])[last()]"
+            }
+          ],
+          "timeoutMs": 8000,
+          "onError": "continue",
+          "optional": true
+        },
+        {
+          "action": "waitTimeout",
+          "id": "traffic:wait-activity-date-select",
+          "ms": 800
+        }
+      ]
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:activity-date-assert",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']//input[@data-testid='beast-core-datePicker-htmlInput' and not(@disabled)][translate(@value,'/','-')='${end}']"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 5000,
+      "onError": "fail",
+      "recovery": "auto"
+    },
+    {
+      "action": "readValue",
+      "id": "traffic:pdd_traffic_activity_selected_date",
+      "target": [
+        {
+          "by": "css",
+          "value": "#mf-mms-sycm-container input[data-testid='beast-core-datePicker-htmlInput']:not([disabled])"
+        }
+      ],
+      "outputKey": "pdd_traffic_activity_selected_date",
+      "recovery": "auto",
+      "onError": "fail"
+    },
+    {
+      "action": "click",
+      "id": "traffic:activity-query",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[normalize-space(.)='查询' and (self::button or @role='button' or contains(@class,'button') or contains(@class,'Button'))])[last()]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[normalize-space(.)='查询'])[last()]"
+        }
+      ],
+      "timeoutMs": 8000,
+      "onError": "fail"
+    },
+    {
+      "action": "waitTimeout",
+      "id": "traffic:wait-activity-query",
+      "ms": 3000
+    },
+    {
+      "action": "readText",
+      "id": "traffic:traffic_activity_text",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "outputKey": "traffic_activity_text",
+      "readMode": "innerText",
+      "trim": true,
+      "recovery": "auto"
+    },
+    {
+      "action": "waitFor",
+      "id": "traffic:activity:result-ready",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//*[@data-testid='beast-core-table-middle-thead']//*[normalize-space(.)='活动类型']]//*[@data-testid='beast-core-table-middle-tbody']/tr[td] | //*[@id='mf-mms-sycm-container']//table[.//thead//*[normalize-space(.)='活动类型']]//tbody/tr[td] | //*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//*[@data-testid='beast-core-table-middle-thead']//*[normalize-space(.)='活动类型']][count(.//*[@data-testid='beast-core-table-middle-tbody'])=1][not(.//tbody/tr)][.//*[contains(@class,'TB_emptyData_') and normalize-space(.)='暂无数据']][.//ul[@data-testid='beast-core-pagination']/li[normalize-space(.)='共有 0 条']])[1]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 15000,
+      "onError": "fail",
+      "recovery": "auto"
+    },
+    {
+      "action": "if",
+      "id": "traffic:activity:collect-data-or-empty",
+      "description": "明细行存在时完整采集；仅在表头、空表体、暂无数据和总数 0 同时确认后输出空态证据，空态不读取未渲染的分页控件。",
+      "condition": {
+        "kind": "element",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//*[@data-testid='beast-core-table-middle-thead']//*[normalize-space(.)='活动类型']]//*[@data-testid='beast-core-table-middle-tbody']/tr[td] | //*[@id='mf-mms-sycm-container']//table[.//thead//*[normalize-space(.)='活动类型']]//tbody/tr[td])[1]"
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 0
+      },
+      "then": [
+        {
+          "action": "if",
+          "id": "traffic:activity-pagination:when-pagination",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 0
+          },
+          "then": [
+            {
+              "action": "waitFor",
+              "id": "traffic:activity-pagination",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination']",
+                  "nth": 0
+                }
+              ],
+              "state": "visible",
+              "recovery": "auto",
+              "optional": true,
+              "onError": "continue"
+            }
+          ],
+          "onError": "continue"
+        },
+        {
+          "action": "if",
+          "id": "traffic:activity-reset",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "(//ul[@data-testid='beast-core-pagination'])[1]/li[contains(@class,'PGT_pagerItem_') and normalize-space(.)='1' and not(contains(@class,'PGT_pagerItemActive_'))]"
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 500
+          },
+          "then": [
+            {
+              "action": "click",
+              "id": "traffic:activity-first",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "(//ul[@data-testid='beast-core-pagination'])[1]/li[contains(@class,'PGT_pagerItem_') and normalize-space(.)='1']"
+                }
+              ]
+            },
+            {
+              "action": "waitTimeout",
+              "id": "traffic:wait-activity-first",
+              "ms": 3000
+            }
+          ],
+          "onError": "continue"
+        },
+        {
+          "action": "readText",
+          "id": "traffic:pdd_traffic_activity_page_first_table",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//*[@id='mf-mms-sycm-container']//thead[.//*[normalize-space(.)='活动类型']]/ancestor::*[ancestor::*[@id='mf-mms-sycm-container'] and count(.//thead)=1 and count(.//tbody)=1][1]//tbody/parent::table)[1]"
+            }
+          ],
+          "outputKey": "pdd_traffic_activity_page_first_table",
+          "readMode": "innerText",
+          "trim": true,
+          "recovery": "auto"
+        },
+        {
+          "action": "readText",
+          "id": "traffic:pdd_traffic_activity_page_first_header",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//table//thead[.//*[contains(normalize-space(.),'活动类型')]])[1]"
+            }
+          ],
+          "outputKey": "pdd_traffic_activity_page_first_header",
+          "readMode": "innerText",
+          "trim": true,
+          "recovery": "auto"
+        },
+        {
+          "action": "readText",
+          "id": "traffic:pdd_traffic_activity_page_first_font",
+          "target": [
+            {
+              "by": "css",
+              "value": "style[data-id*='spider']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "(//style[contains(text(),'spider-font')])[1]"
+            }
+          ],
+          "outputKey": "pdd_traffic_activity_page_first_font",
+          "readMode": "textContent",
+          "trim": true,
+          "onError": "continue",
+          "timeoutMs": 2000
+        },
+        {
+          "action": "readText",
+          "id": "traffic:pdd_traffic_activity_page_first_tab",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='营销活动数据' and contains(@class,'TAB_active_')]"
+            },
+            {
+              "by": "xpath",
+              "value": "(//*[not(*) and normalize-space(.)='营销活动数据' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+            }
+          ],
+          "outputKey": "pdd_traffic_activity_page_first_tab",
+          "readMode": "innerText",
+          "trim": true,
+          "recovery": "auto"
+        },
+        {
+          "action": "if",
+          "id": "traffic:pdd_traffic_activity_page_first_pagination:when-pagination",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 0
+          },
+          "then": [
+            {
+              "action": "readText",
+              "id": "traffic:pdd_traffic_activity_page_first_pagination",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination']",
+                  "nth": 0
+                }
+              ],
+              "outputKey": "pdd_traffic_activity_page_first_pagination",
+              "readMode": "innerText",
+              "trim": true,
+              "recovery": "auto"
+            },
+            {
+              "action": "readAttribute",
+              "id": "traffic:pdd_traffic_activity_page_first_total_class",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination'] li[class*='PGT_totalText_']",
+                  "nth": 0
+                }
+              ],
+              "outputKey": "pdd_traffic_activity_page_first_total_class",
+              "attribute": "class",
+              "recovery": "auto"
+            },
+            {
+              "action": "if",
+              "id": "traffic:activity-pagination:when-multiple-pages",
+              "description": "PGT_alone_ 只展示总条数且不渲染页容量、页码和下一页；其余状态继续执行严格全分页采集。",
+              "condition": {
+                "kind": "element",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": "ul[data-testid='beast-core-pagination'] li[class*='PGT_totalText_']:not([class*='PGT_alone_'])",
+                    "nth": 0
+                  }
+                ],
+                "state": "visible",
+                "timeoutMs": 0
+              },
+              "then": [
+                {
+                  "action": "readValue",
+                  "id": "traffic:pdd_traffic_activity_page_first_page_size",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination'] input[data-testid='beast-core-select-htmlInput']",
+                      "nth": 0
+                    }
+                  ],
+                  "outputKey": "pdd_traffic_activity_page_first_page_size",
+                  "recovery": "auto"
+                },
+                {
+                  "action": "readText",
+                  "id": "traffic:pdd_traffic_activity_page_first_active",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination'] [class*='PGT_pagerItemActive_']",
+                      "nth": 0
+                    }
+                  ],
+                  "outputKey": "pdd_traffic_activity_page_first_active",
+                  "readMode": "innerText",
+                  "trim": true,
+                  "recovery": "auto"
+                },
+                {
+                  "action": "readAttribute",
+                  "id": "traffic:pdd_traffic_activity_page_first_next_class",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                      "nth": 0
+                    }
+                  ],
+                  "outputKey": "pdd_traffic_activity_page_first_next_class",
+                  "attribute": "class",
+                  "recovery": "auto"
+                },
+                {
+                  "action": "while",
+                  "id": "traffic:activity-all-pages",
+                  "condition": {
+                    "kind": "element",
+                    "target": [
+                      {
+                        "by": "css",
+                        "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']:not([class*='PGT_disabled_'])",
+                        "nth": 0
+                      }
+                    ],
+                    "state": "visible",
+                    "timeoutMs": 1000
+                  },
+                  "maxIterations": 1000,
+                  "requireProgress": true,
+                  "body": [
+                    {
+                      "action": "scrollIntoView",
+                      "id": "traffic:activity-next-scroll",
+                      "target": [
+                        {
+                          "by": "css",
+                          "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                          "nth": 0
+                        }
+                      ],
+                      "block": "center"
+                    },
+                    {
+                      "action": "click",
+                      "id": "traffic:activity-next-click",
+                      "target": [
+                        {
+                          "by": "css",
+                          "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']:not([class*='PGT_disabled_'])",
+                          "nth": 0
+                        }
+                      ]
+                    },
+                    {
+                      "action": "waitTimeout",
+                      "id": "traffic:wait-activity-next",
+                      "ms": 3000
+                    },
+                    {
+                      "action": "readText",
+                      "id": "traffic:pdd_traffic_activity_page_next_table",
+                      "target": [
+                        {
+                          "by": "xpath",
+                          "value": "(//*[@id='mf-mms-sycm-container']//thead[.//*[normalize-space(.)='活动类型']]/ancestor::*[ancestor::*[@id='mf-mms-sycm-container'] and count(.//thead)=1 and count(.//tbody)=1][1]//tbody/parent::table)[1]"
+                        }
+                      ],
+                      "outputKey": "pdd_traffic_activity_page_next_table",
+                      "readMode": "innerText",
+                      "trim": true
+                    },
+                    {
+                      "action": "readText",
+                      "id": "traffic:pdd_traffic_activity_page_next_header",
+                      "target": [
+                        {
+                          "by": "xpath",
+                          "value": "(//table//thead[.//*[contains(normalize-space(.),'活动类型')]])[1]"
+                        }
+                      ],
+                      "outputKey": "pdd_traffic_activity_page_next_header",
+                      "readMode": "innerText",
+                      "trim": true
+                    },
+                    {
+                      "action": "readText",
+                      "id": "traffic:pdd_traffic_activity_page_next_font",
+                      "target": [
+                        {
+                          "by": "css",
+                          "value": "style[data-id*='spider']",
+                          "nth": 0
+                        },
+                        {
+                          "by": "xpath",
+                          "value": "(//style[contains(text(),'spider-font')])[1]"
+                        }
+                      ],
+                      "outputKey": "pdd_traffic_activity_page_next_font",
+                      "readMode": "textContent",
+                      "trim": true,
+                      "onError": "continue",
+                      "timeoutMs": 2000
+                    },
+                    {
+                      "action": "readText",
+                      "id": "traffic:pdd_traffic_activity_page_next_pagination",
+                      "target": [
+                        {
+                          "by": "css",
+                          "value": "ul[data-testid='beast-core-pagination']",
+                          "nth": 0
+                        }
+                      ],
+                      "outputKey": "pdd_traffic_activity_page_next_pagination",
+                      "readMode": "innerText",
+                      "trim": true
+                    },
+                    {
+                      "action": "readValue",
+                      "id": "traffic:pdd_traffic_activity_page_next_page_size",
+                      "target": [
+                        {
+                          "by": "css",
+                          "value": "ul[data-testid='beast-core-pagination'] input[data-testid='beast-core-select-htmlInput']",
+                          "nth": 0
+                        }
+                      ],
+                      "outputKey": "pdd_traffic_activity_page_next_page_size"
+                    },
+                    {
+                      "action": "readText",
+                      "id": "traffic:pdd_traffic_activity_page_next_active",
+                      "target": [
+                        {
+                          "by": "css",
+                          "value": "ul[data-testid='beast-core-pagination'] [class*='PGT_pagerItemActive_']",
+                          "nth": 0
+                        }
+                      ],
+                      "outputKey": "pdd_traffic_activity_page_next_active",
+                      "readMode": "innerText",
+                      "trim": true
+                    },
+                    {
+                      "action": "readText",
+                      "id": "traffic:pdd_traffic_activity_page_next_tab",
+                      "target": [
+                        {
+                          "by": "xpath",
+                          "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='营销活动数据' and contains(@class,'TAB_active_')]"
+                        },
+                        {
+                          "by": "xpath",
+                          "value": "(//*[not(*) and normalize-space(.)='营销活动数据' and (contains(@class,'active') or contains(@class,'selected'))])[last()]"
+                        }
+                      ],
+                      "outputKey": "pdd_traffic_activity_page_next_tab",
+                      "readMode": "innerText",
+                      "trim": true
+                    },
+                    {
+                      "action": "readAttribute",
+                      "id": "traffic:pdd_traffic_activity_page_next_next_class",
+                      "target": [
+                        {
+                          "by": "css",
+                          "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                          "nth": 0
+                        }
+                      ],
+                      "outputKey": "pdd_traffic_activity_page_next_next_class",
+                      "attribute": "class"
+                    }
+                  ]
+                },
+                {
+                  "action": "assertElement",
+                  "id": "traffic:activity-must-reach-end",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next'][class*='PGT_disabled_']",
+                      "nth": 0
+                    }
+                  ],
+                  "state": "visible"
+                },
+                {
+                  "action": "readAttribute",
+                  "id": "traffic:pdd_traffic_activity_end_class",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                      "nth": 0
+                    }
+                  ],
+                  "outputKey": "pdd_traffic_activity_end_class",
+                  "attribute": "class",
+                  "recovery": "auto"
+                },
+                {
+                  "action": "readText",
+                  "id": "traffic:pdd_traffic_activity_end_text",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination']",
+                      "nth": 0
+                    }
+                  ],
+                  "outputKey": "pdd_traffic_activity_end_text",
+                  "readMode": "innerText",
+                  "trim": true,
+                  "recovery": "auto"
+                }
+              ],
+              "else": [
+                {
+                  "action": "assertElement",
+                  "id": "traffic:activity-pagination:require-single-page",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination'] li[class*='PGT_totalText_'][class*='PGT_alone_']",
+                      "nth": 0
+                    }
+                  ],
+                  "state": "visible",
+                  "onError": "fail"
+                }
+              ]
+            }
+          ],
+          "onError": "continue"
+        }
+      ],
+      "else": [
+        {
+          "action": "assertElement",
+          "id": "traffic:activity:assert-empty",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//*[@data-testid='beast-core-table-middle-thead']//*[normalize-space(.)='活动类型']][count(.//*[@data-testid='beast-core-table-middle-tbody'])=1][not(.//tbody/tr)][.//*[contains(@class,'TB_emptyData_') and normalize-space(.)='暂无数据']][.//ul[@data-testid='beast-core-pagination']/li[normalize-space(.)='共有 0 条']]"
+            }
+          ],
+          "state": "visible",
+          "onError": "fail"
+        },
+        {
+          "action": "readText",
+          "id": "traffic:activity:read-empty-header",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//*[@data-testid='beast-core-table-middle-thead']//*[normalize-space(.)='活动类型']]//*[@data-testid='beast-core-table-middle-thead']"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_traffic_activity_empty_header",
+          "onError": "fail",
+          "recovery": "auto"
+        },
+        {
+          "action": "readText",
+          "id": "traffic:activity:read-empty-state",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//*[@data-testid='beast-core-table-middle-thead']//*[normalize-space(.)='活动类型']]//*[@data-testid='beast-core-table-middle-body']//*[contains(@class,'TB_emptyData_') and normalize-space(.)='暂无数据']"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_traffic_activity_empty_state",
+          "onError": "fail",
+          "recovery": "auto"
+        },
+        {
+          "action": "readText",
+          "id": "traffic:activity:read-empty-pagination",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//*[@data-testid='beast-core-table-middle-thead']//*[normalize-space(.)='活动类型']]//ul[@data-testid='beast-core-pagination']"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_traffic_activity_empty_pagination",
+          "onError": "fail",
+          "recovery": "auto"
+        },
+        {
+          "action": "readText",
+          "id": "traffic:activity:read-empty-tab",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@data-testid='beast-core-tab-itemLabel' and normalize-space(.)='营销活动数据' and contains(@class,'TAB_active_')]"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_traffic_activity_empty_tab",
+          "onError": "fail",
+          "recovery": "auto"
+        },
+        {
+          "action": "queryAll",
+          "id": "traffic:activity:read-empty-rows",
+          "containerSelector": "#mf-mms-sycm-container [data-testid='beast-core-table-middle-tbody'] > tr",
+          "fields": {
+            "text": {
+              "text": true,
+              "trim": true
+            }
+          },
+          "outputKey": "pdd_traffic_activity_empty_rows",
+          "onError": "fail"
+        }
+      ],
+      "onError": "continue"
+    }
+  ],
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 1,
+      "end_offset_days": -1
+    },
+    "parameter_bindings": {
+      "end": {
+        "source": "$condition.end"
+      }
+    },
+    "capabilities": {
+      "after": [
+        "pdd_decrypt"
+      ]
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  },
+  "unsupported": true
+}

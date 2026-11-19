@@ -1,0 +1,1548 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "tb_inventory_product",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "platform": "taobao",
+  "description": "支持传入单个商品 ID（scope=single、productId）查询该商品的可售和预扣库存，也支持前 N 品和全店商品库存；通过库存管理页面搜索、读取及翻页采集，单品必须唯一命中指定 ID。",
+  "conditions": {
+    "filter": {
+      "kind": "required",
+      "bindings": {
+        "{scope}": "$filter.scope",
+        "{productId}": "$filter.productId",
+        "{requestedLimit}": "$filter.requestedLimit"
+      },
+      "parameterSchema": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "single",
+              "top",
+              "all"
+            ]
+          },
+          "productId": {
+            "type": "string",
+            "default": ""
+          },
+          "requestedLimit": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "scope": {
+                  "const": "single"
+                }
+              },
+              "required": [
+                "scope"
+              ]
+            },
+            "then": {
+              "required": [
+                "productId"
+              ],
+              "properties": {
+                "productId": {
+                  "pattern": "^[0-9]{5,20}(?![\\s\\S])"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "productId": {
+                  "const": ""
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "scope": {
+                  "const": "top"
+                }
+              },
+              "required": [
+                "scope"
+              ]
+            },
+            "then": {
+              "required": [
+                "requestedLimit"
+              ],
+              "properties": {
+                "requestedLimit": {
+                  "minimum": 1,
+                  "maximum": 100100
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "requestedLimit": {
+                  "const": 0
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "淘宝 商品库存",
+    "description": "支持传入单个商品 ID（scope=single、productId）查询该商品的可售和预扣库存，也支持前 N 品和全店商品库存；通过库存管理页面搜索、读取及翻页采集，单品必须唯一命中指定 ID。",
+    "defaults": {
+      "timeoutMs": 20000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 300
+    },
+    "steps": [
+      {
+        "id": "catalog:open",
+        "action": "goto",
+        "url": "https://inventorymanage.taobao.com/qn/inventory/inventoryManagement?current=1&itemType=itemInventory&pageSize=100&itemIds={productId}",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "taobao.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "taobao.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ],
+        "hookUrl": "https://inventorymanage.taobao.com/qn/inventory/inventoryManagement"
+      },
+      {
+        "id": "catalog:initial-settle",
+        "action": "waitTimeout",
+        "ms": 5000
+      },
+      {
+        "id": "catalog:read-entry-url",
+        "action": "readPageUrl",
+        "outputKey": "inventory_entry_url"
+      },
+      {
+        "id": "catalog:entry-risk",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 500
+        },
+        "then": [
+          {
+            "id": "catalog:entry-read-risk",
+            "action": "readText",
+            "target": [
+              {
+                "by": "css",
+                "value": "body",
+                "nth": 0
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_entry_risk_text",
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:entry-stop-risk",
+            "action": "assertElement",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+                "nth": 0
+              }
+            ],
+            "state": "hidden",
+            "timeoutMs": 500,
+            "recovery": "none"
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:entry-permission",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 500
+        },
+        "then": [
+          {
+            "id": "catalog:entry-read-permission",
+            "action": "readText",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                "nth": 0
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_entry_permission_text",
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:entry-stop-permission",
+            "action": "assertElement",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                "nth": 0
+              }
+            ],
+            "state": "hidden",
+            "timeoutMs": 500,
+            "recovery": "none"
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:read-login-guard-url",
+        "action": "readPageUrl",
+        "outputKey": "login_guard_entry_url",
+        "onError": "continue",
+        "retries": 0,
+        "description": "登录诊断取证：首屏 settle 后记录实际落地 URL 到 outputs.login_guard_entry_url。goto 返回的是请求 URL 而非跳转后 URL，故必须在此显式读取；供守卫漏报时结合真实 URL 判别登录失效/无权限/页面改版。onError=continue，读取失败不阻断。"
+      },
+      {
+        "id": "catalog:login-page-detected",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//input[contains(@placeholder,'账号名/邮箱/手机号')]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//iframe[@id='alibaba-login-box']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//iframe[contains(@src,'login.taobao.com/member/login.jhtml')]",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//input[@id='fm-login-id']",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 8000
+        },
+        "then": [
+          {
+            "id": "catalog:LOGIN_REQUIRED__do-not-retry__未登录或登录态失效",
+            "action": "assertElement",
+            "state": "hidden",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//input[contains(@placeholder,'账号名/邮箱/手机号')]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//iframe[@id='alibaba-login-box']",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//iframe[contains(@src,'login.taobao.com/member/login.jhtml')]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//input[@id='fm-login-id']",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 500,
+            "onError": "fail",
+            "recovery": "none",
+            "description": "与第一层 when 同候选（三形态最小信号集）：when 命中的元素必然可见，hidden 断言必然失败 → LOGIN_REQUIRED 短路，不依赖页面营销文案。 主文档候选含 //input[@id='fm-login-id']，与第一层 when 同候选。"
+          }
+        ],
+        "onError": "continue",
+        "description": "登录守卫第一层（主文档三形态最小信号集，2026-10-14 收敛）：形态A 整页跳转登录→账号输入框占位符；形态B 生意参谋/千牛 Havana mini-login→iframe#alibaba-login-box；形态C 阿里妈妈万相台→iframe src 含 login.taobao.com/member/login.jhtml。8s 窗口吸收 magix 异步渲染延迟；命中即进 then 短路 LOGIN_REQUIRED。同形态冗余候选（密码/短信页签、家族特有文本、#alibaba-login-iframe、mini_login、havanalogin、style=mini、mx-view login-iframe、body.login-page）已删除。 追加主文档 //input[@id='fm-login-id']：兜住 passport 整页登录密码/短信两种页签且不依赖 placeholder 文案；该 id 在阿里妈妈/生意参谋/千牛位于跨域 iframe 内，主文档 XPath 不可达，故不误报。"
+      },
+      {
+        "id": "catalog:login-iframe-form-detected",
+        "action": "when",
+        "description": "登录守卫第二层（穿框兜底）：按协议-21 §7.4 将 frame 置于 condition 内部，穿入跨域登录 iframe（Havana #alibaba-login-box / 阿里妈妈 login.taobao.com mini 页）探测 #fm-login-id；命中即未登录短路 LOGIN_REQUIRED。frame 不放 when 顶层：when 仅有 condition/then 专属字段、无 target 语义，顶层 frame 会被忽略，导致条件仍在主文档求值、跨域表单不可达而本层永不命中。",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//input[@id='fm-login-id']",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 3000,
+          "frame": [
+            {
+              "by": "css",
+              "value": "iframe#alibaba-login-box",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "iframe[src*='login.taobao.com/member/login.jhtml']",
+              "nth": 0
+            }
+          ]
+        },
+        "then": [
+          {
+            "id": "catalog:LOGIN_REQUIRED__do-not-retry__未登录或登录态失效_跨域登录框内表单",
+            "action": "assertElement",
+            "state": "hidden",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//input[@id='fm-login-id']",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 500,
+            "onError": "fail",
+            "recovery": "none",
+            "description": "与 condition 同作用域：when 命中即 #fm-login-id 在跨域 iframe 内可见，同 frame 的 hidden 断言必然失败 → onError=fail 短路 LOGIN_REQUIRED。不再断言主文档三容器 hidden：其『必然可见』假设与本层『第一层未命中』前提互斥，容器不可见/不存在时 hidden 反而通过，断言记 success、onError=fail 不生效，未登录被静默放行。",
+            "frame": [
+              {
+                "by": "css",
+                "value": "iframe#alibaba-login-box",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "iframe[src*='login.taobao.com/member/login.jhtml']",
+                "nth": 0
+              }
+            ]
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:search-ready",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[.//span[normalize-space()='搜索'] or normalize-space()='搜索']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "recovery": "none",
+        "onError": "continue",
+        "description": "",
+        "optional": true
+      },
+      {
+        "id": "catalog:search",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[.//span[normalize-space()='搜索'] or normalize-space()='搜索']",
+            "nth": 0
+          }
+        ],
+        "recovery": "none"
+      },
+      {
+        "id": "catalog:query-mount",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "catalog:loading",
+        "action": "if",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "css",
+              "value": ".next-loading.next-open, .next-loading-tip",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 3000
+        },
+        "then": [
+          {
+            "id": "catalog:loading-hidden",
+            "action": "waitFor",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-loading.next-open, .next-loading-tip",
+                "nth": 0
+              }
+            ],
+            "state": "hidden",
+            "timeoutMs": 30000,
+            "recovery": "none",
+            "optional": true,
+            "onError": "continue"
+          }
+        ],
+        "else": [
+          {
+            "id": "catalog:query-settle",
+            "action": "waitTimeout",
+            "ms": 5000
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:query-settled-loading-hidden",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "css",
+            "value": ".next-loading.next-open, .next-loading-tip",
+            "nth": 0
+          }
+        ],
+        "state": "hidden",
+        "timeoutMs": 30000,
+        "recovery": "none",
+        "optional": true,
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:read-url",
+        "action": "readPageUrl",
+        "outputKey": "inventory_page_url"
+      },
+      {
+        "id": "catalog:risk",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 500
+        },
+        "then": [
+          {
+            "id": "catalog:read-risk",
+            "action": "readText",
+            "target": [
+              {
+                "by": "css",
+                "value": "body",
+                "nth": 0
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_risk_text",
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:stop-risk",
+            "action": "assertElement",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+                "nth": 0
+              }
+            ],
+            "state": "hidden",
+            "timeoutMs": 500,
+            "recovery": "none"
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:permission",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 500
+        },
+        "then": [
+          {
+            "id": "catalog:read-permission",
+            "action": "readText",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                "nth": 0
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_permission_text",
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:stop-permission",
+            "action": "assertElement",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                "nth": 0
+              }
+            ],
+            "state": "hidden",
+            "timeoutMs": 500,
+            "recovery": "none"
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:wait-result",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "css",
+            "value": "tbody tr.next-table-row",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": ".next-table-empty",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "recovery": "none",
+        "optional": true,
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:identity",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//*[not(self::script) and not(self::style) and not(ancestor::table) and not(descendant::table) and not(@hidden) and not(@aria-hidden='true') and not(contains(translate(@style,' ',''),'display:none')) and not(contains(translate(@style,' ',''),'visibility:hidden')) and not(ancestor::*[@hidden or @aria-hidden='true' or contains(translate(@style,' ',''),'display:none')]) and ((starts-with(normalize-space(.),'当前店铺：') or starts-with(normalize-space(.),'当前店铺:')) and string-length(normalize-space(.)) > 5 or (starts-with(normalize-space(.),'当前商家：') or starts-with(normalize-space(.),'当前商家:')) and string-length(normalize-space(.)) > 5 or (starts-with(normalize-space(.),'当前卖家：') or starts-with(normalize-space(.),'当前卖家:')) and string-length(normalize-space(.)) > 5)])[last()]",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 800
+        },
+        "then": [
+          {
+            "id": "catalog:read-identity",
+            "action": "readText",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "(//*[not(self::script) and not(self::style) and not(ancestor::table) and not(descendant::table) and not(@hidden) and not(@aria-hidden='true') and not(contains(translate(@style,' ',''),'display:none')) and not(contains(translate(@style,' ',''),'visibility:hidden')) and not(ancestor::*[@hidden or @aria-hidden='true' or contains(translate(@style,' ',''),'display:none')]) and ((starts-with(normalize-space(.),'当前店铺：') or starts-with(normalize-space(.),'当前店铺:')) and string-length(normalize-space(.)) > 5 or (starts-with(normalize-space(.),'当前商家：') or starts-with(normalize-space(.),'当前商家:')) and string-length(normalize-space(.)) > 5 or (starts-with(normalize-space(.),'当前卖家：') or starts-with(normalize-space(.),'当前卖家:')) and string-length(normalize-space(.)) > 5)])[last()]",
+                "nth": 0
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_store_identity",
+            "recovery": "none"
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:empty",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "css",
+              "value": ".next-table-empty",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 500
+        },
+        "then": [
+          {
+            "id": "catalog:read-empty",
+            "action": "readText",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-table-empty",
+                "nth": 0
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_empty_text",
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:read-empty-total",
+            "action": "readText",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-pagination[role='bottom-pagination']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".next-pagination",
+                "nth": 1
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_empty_total",
+            "recovery": "none"
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:first-page",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "css",
+              "value": "tbody tr.next-table-row",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 500
+        },
+        "then": [
+          {
+            "id": "catalog:read-pagination",
+            "action": "readText",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-pagination",
+                "nth": 0
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_pagination",
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:check-scope-page",
+            "action": "assertElement",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//body['{scope}' != 'top' or (number(normalize-space(substring-before(string((//*[contains(concat(' ',normalize-space(@class),' '),' next-pagination ')]//text()[contains(.,'/')]/parent::*)[1]),'/'))) >= 1 and floor(number(normalize-space(substring-before(string((//*[contains(concat(' ',normalize-space(@class),' '),' next-pagination ')]//text()[contains(.,'/')]/parent::*)[1]),'/')))) = number(normalize-space(substring-before(string((//*[contains(concat(' ',normalize-space(@class),' '),' next-pagination ')]//text()[contains(.,'/')]/parent::*)[1]),'/'))))]",
+                "nth": 0
+              }
+            ],
+            "state": "attached",
+            "timeoutMs": 1200,
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:read-total",
+            "action": "readText",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-pagination[role='bottom-pagination']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".next-pagination",
+                "nth": 1
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_total",
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:read-rows",
+            "action": "queryAll",
+            "containerSelector": "tbody tr.next-table-row",
+            "limit": 101,
+            "outputKey": "inventory_rows",
+            "fields": {
+              "productIdText": {
+                "childSelector": "td:nth-child(2)",
+                "text": true,
+                "trim": true
+              },
+              "productName": {
+                "childSelector": "a.item-title",
+                "text": true,
+                "trim": true
+              },
+              "productDetailUrl": {
+                "childSelector": "a.item-title",
+                "attr": "href"
+              },
+              "mainImageUrl": {
+                "childSelector": "img.item-img",
+                "attr": "src"
+              },
+              "productStatus": {
+                "childSelector": "td:nth-child(3)",
+                "text": true,
+                "trim": true
+              },
+              "inventoryMode": {
+                "childSelector": "td:nth-child(4)",
+                "text": true,
+                "trim": true
+              },
+              "availableStock": {
+                "childSelector": "td:nth-child(5)",
+                "text": true,
+                "trim": true
+              },
+              "preDeductedStock": {
+                "childSelector": "td:nth-child(6)",
+                "text": true,
+                "trim": true
+              }
+            }
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "id": "catalog:next-pages",
+        "action": "while",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//button[contains(@class,'next-pagination-item') and contains(@class,'next-next') and not(@disabled)])[last()][('{scope}'='all') or ('{scope}'='top' and number(normalize-space(substring-before(string((//*[contains(concat(' ',normalize-space(@class),' '),' next-pagination ')]//text()[contains(.,'/')]/parent::*)[1]),'/'))) * 100 < {requestedLimit})]",
+              "nth": 0
+            }
+          ],
+          "state": "attached",
+          "timeoutMs": 1200
+        },
+        "maxIterations": 1000,
+        "requireProgress": true,
+        "body": [
+          {
+            "id": "catalog:next-scroll",
+            "action": "scrollIntoView",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "(//button[contains(@class,'next-pagination-item') and contains(@class,'next-next') and not(@disabled)])[last()]",
+                "nth": 0
+              }
+            ],
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:next-advance",
+            "action": "if",
+            "condition": {
+              "kind": "text",
+              "target": [
+                {
+                  "by": "css",
+                  "value": ".next-pagination",
+                  "nth": 0
+                }
+              ],
+              "value": "(?:^|\\D)\\d*[13579]\\s*/",
+              "match": "regex",
+              "readMode": "innerText",
+              "timeoutMs": 1000
+            },
+            "then": [
+              {
+                "id": "catalog:next-click-from-odd",
+                "action": "click",
+                "target": [
+                  {
+                    "by": "xpath",
+                    "value": "(//button[contains(@class,'next-pagination-item') and contains(@class,'next-next') and not(@disabled)])[last()]",
+                    "nth": 0
+                  }
+                ],
+                "recovery": "none"
+              },
+              {
+                "id": "catalog:next-mount-from-odd",
+                "action": "waitTimeout",
+                "ms": 800
+              },
+              {
+                "id": "catalog:next-loading-from-odd",
+                "action": "if",
+                "condition": {
+                  "kind": "element",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": ".next-loading.next-open, .next-loading-tip",
+                      "nth": 0
+                    }
+                  ],
+                  "state": "visible",
+                  "timeoutMs": 3000
+                },
+                "then": [
+                  {
+                    "id": "catalog:next-loading-hidden-from-odd",
+                    "action": "waitFor",
+                    "target": [
+                      {
+                        "by": "css",
+                        "value": ".next-loading.next-open, .next-loading-tip",
+                        "nth": 0
+                      }
+                    ],
+                    "state": "hidden",
+                    "timeoutMs": 30000,
+                    "recovery": "none",
+                    "optional": true,
+                    "onError": "continue"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "catalog:next-settle-from-odd",
+                    "action": "waitTimeout",
+                    "ms": 5000
+                  }
+                ],
+                "onError": "continue"
+              },
+              {
+                "id": "catalog:from-odd-settled-loading-hidden",
+                "action": "waitFor",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".next-loading.next-open, .next-loading-tip",
+                    "nth": 0
+                  }
+                ],
+                "state": "hidden",
+                "timeoutMs": 30000,
+                "recovery": "none",
+                "optional": true,
+                "onError": "continue"
+              },
+              {
+                "id": "catalog:next-diagnostic-url-odd",
+                "action": "readPageUrl",
+                "outputKey": "inventory_diagnostic_url_odd"
+              },
+              {
+                "id": "catalog:next-risk-diagnostic-from-odd",
+                "action": "when",
+                "condition": {
+                  "kind": "element",
+                  "target": [
+                    {
+                      "by": "xpath",
+                      "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+                      "nth": 0
+                    }
+                  ],
+                  "state": "visible",
+                  "timeoutMs": 500
+                },
+                "then": [
+                  {
+                    "id": "catalog:next-read-risk-diagnostic-from-odd",
+                    "action": "readText",
+                    "target": [
+                      {
+                        "by": "css",
+                        "value": "body",
+                        "nth": 0
+                      }
+                    ],
+                    "readMode": "innerText",
+                    "trim": true,
+                    "outputKey": "inventory_diagnostic_risk_odd",
+                    "recovery": "none"
+                  },
+                  {
+                    "id": "catalog:next-stop-risk-diagnostic-from-odd",
+                    "action": "assertElement",
+                    "target": [
+                      {
+                        "by": "xpath",
+                        "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+                        "nth": 0
+                      }
+                    ],
+                    "state": "hidden",
+                    "timeoutMs": 500,
+                    "recovery": "none"
+                  }
+                ],
+                "onError": "continue"
+              },
+              {
+                "id": "catalog:next-permission-diagnostic-from-odd",
+                "action": "when",
+                "condition": {
+                  "kind": "element",
+                  "target": [
+                    {
+                      "by": "xpath",
+                      "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                      "nth": 0
+                    }
+                  ],
+                  "state": "visible",
+                  "timeoutMs": 500
+                },
+                "then": [
+                  {
+                    "id": "catalog:next-read-permission-diagnostic-from-odd",
+                    "action": "readText",
+                    "target": [
+                      {
+                        "by": "xpath",
+                        "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                        "nth": 0
+                      }
+                    ],
+                    "readMode": "innerText",
+                    "trim": true,
+                    "outputKey": "inventory_diagnostic_permission_odd",
+                    "recovery": "none"
+                  },
+                  {
+                    "id": "catalog:next-stop-permission-diagnostic-from-odd",
+                    "action": "assertElement",
+                    "target": [
+                      {
+                        "by": "xpath",
+                        "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                        "nth": 0
+                      }
+                    ],
+                    "state": "hidden",
+                    "timeoutMs": 500,
+                    "recovery": "none"
+                  }
+                ],
+                "onError": "continue"
+              },
+              {
+                "id": "catalog:next-assert-even",
+                "action": "assertText",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".next-pagination",
+                    "nth": 0
+                  }
+                ],
+                "value": "(?:^|\\D)\\d*[02468]\\s*/",
+                "match": "regex",
+                "readMode": "innerText",
+                "trim": true,
+                "timeoutMs": 10000,
+                "recovery": "none"
+              }
+            ],
+            "else": [
+              {
+                "id": "catalog:next-before-even",
+                "action": "assertText",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".next-pagination",
+                    "nth": 0
+                  }
+                ],
+                "value": "(?:^|\\D)\\d*[02468]\\s*/",
+                "match": "regex",
+                "readMode": "innerText",
+                "trim": true,
+                "timeoutMs": 10000,
+                "recovery": "none"
+              },
+              {
+                "id": "catalog:next-click-from-even",
+                "action": "click",
+                "target": [
+                  {
+                    "by": "xpath",
+                    "value": "(//button[contains(@class,'next-pagination-item') and contains(@class,'next-next') and not(@disabled)])[last()]",
+                    "nth": 0
+                  }
+                ],
+                "recovery": "none"
+              },
+              {
+                "id": "catalog:next-mount-from-even",
+                "action": "waitTimeout",
+                "ms": 800
+              },
+              {
+                "id": "catalog:next-loading-from-even",
+                "action": "if",
+                "condition": {
+                  "kind": "element",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": ".next-loading.next-open, .next-loading-tip",
+                      "nth": 0
+                    }
+                  ],
+                  "state": "visible",
+                  "timeoutMs": 3000
+                },
+                "then": [
+                  {
+                    "id": "catalog:next-loading-hidden-from-even",
+                    "action": "waitFor",
+                    "target": [
+                      {
+                        "by": "css",
+                        "value": ".next-loading.next-open, .next-loading-tip",
+                        "nth": 0
+                      }
+                    ],
+                    "state": "hidden",
+                    "timeoutMs": 30000,
+                    "recovery": "none",
+                    "optional": true,
+                    "onError": "continue"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "catalog:next-settle-from-even",
+                    "action": "waitTimeout",
+                    "ms": 5000
+                  }
+                ],
+                "onError": "continue"
+              },
+              {
+                "id": "catalog:from-even-settled-loading-hidden",
+                "action": "waitFor",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".next-loading.next-open, .next-loading-tip",
+                    "nth": 0
+                  }
+                ],
+                "state": "hidden",
+                "timeoutMs": 30000,
+                "recovery": "none",
+                "optional": true,
+                "onError": "continue"
+              },
+              {
+                "id": "catalog:next-diagnostic-url-even",
+                "action": "readPageUrl",
+                "outputKey": "inventory_diagnostic_url_even"
+              },
+              {
+                "id": "catalog:next-risk-diagnostic-from-even",
+                "action": "when",
+                "condition": {
+                  "kind": "element",
+                  "target": [
+                    {
+                      "by": "xpath",
+                      "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+                      "nth": 0
+                    }
+                  ],
+                  "state": "visible",
+                  "timeoutMs": 500
+                },
+                "then": [
+                  {
+                    "id": "catalog:next-read-risk-diagnostic-from-even",
+                    "action": "readText",
+                    "target": [
+                      {
+                        "by": "css",
+                        "value": "body",
+                        "nth": 0
+                      }
+                    ],
+                    "readMode": "innerText",
+                    "trim": true,
+                    "outputKey": "inventory_diagnostic_risk_even",
+                    "recovery": "none"
+                  },
+                  {
+                    "id": "catalog:next-stop-risk-diagnostic-from-even",
+                    "action": "assertElement",
+                    "target": [
+                      {
+                        "by": "xpath",
+                        "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+                        "nth": 0
+                      }
+                    ],
+                    "state": "hidden",
+                    "timeoutMs": 500,
+                    "recovery": "none"
+                  }
+                ],
+                "onError": "continue"
+              },
+              {
+                "id": "catalog:next-permission-diagnostic-from-even",
+                "action": "when",
+                "condition": {
+                  "kind": "element",
+                  "target": [
+                    {
+                      "by": "xpath",
+                      "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                      "nth": 0
+                    }
+                  ],
+                  "state": "visible",
+                  "timeoutMs": 500
+                },
+                "then": [
+                  {
+                    "id": "catalog:next-read-permission-diagnostic-from-even",
+                    "action": "readText",
+                    "target": [
+                      {
+                        "by": "xpath",
+                        "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                        "nth": 0
+                      }
+                    ],
+                    "readMode": "innerText",
+                    "trim": true,
+                    "outputKey": "inventory_diagnostic_permission_even",
+                    "recovery": "none"
+                  },
+                  {
+                    "id": "catalog:next-stop-permission-diagnostic-from-even",
+                    "action": "assertElement",
+                    "target": [
+                      {
+                        "by": "xpath",
+                        "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                        "nth": 0
+                      }
+                    ],
+                    "state": "hidden",
+                    "timeoutMs": 500,
+                    "recovery": "none"
+                  }
+                ],
+                "onError": "continue"
+              },
+              {
+                "id": "catalog:next-assert-odd",
+                "action": "assertText",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".next-pagination",
+                    "nth": 0
+                  }
+                ],
+                "value": "(?:^|\\D)\\d*[13579]\\s*/",
+                "match": "regex",
+                "readMode": "innerText",
+                "trim": true,
+                "timeoutMs": 10000,
+                "recovery": "none"
+              }
+            ],
+            "onError": "continue"
+          },
+          {
+            "id": "catalog:next-read-url",
+            "action": "readPageUrl",
+            "outputKey": "inventory_page_url_next"
+          },
+          {
+            "id": "catalog:next-risk",
+            "action": "when",
+            "condition": {
+              "kind": "element",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+                  "nth": 0
+                }
+              ],
+              "state": "visible",
+              "timeoutMs": 500
+            },
+            "then": [
+              {
+                "id": "catalog:next-read-risk",
+                "action": "readText",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": "body",
+                    "nth": 0
+                  }
+                ],
+                "readMode": "innerText",
+                "trim": true,
+                "outputKey": "inventory_risk_text_next",
+                "recovery": "none"
+              },
+              {
+                "id": "catalog:next-stop-risk",
+                "action": "assertElement",
+                "target": [
+                  {
+                    "by": "xpath",
+                    "value": "//body[contains(.,'亲，请拖动下方滑块完成验证')]",
+                    "nth": 0
+                  }
+                ],
+                "state": "hidden",
+                "timeoutMs": 500,
+                "recovery": "none"
+              }
+            ],
+            "onError": "continue"
+          },
+          {
+            "id": "catalog:next-permission",
+            "action": "when",
+            "condition": {
+              "kind": "element",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                  "nth": 0
+                }
+              ],
+              "state": "visible",
+              "timeoutMs": 500
+            },
+            "then": [
+              {
+                "id": "catalog:next-read-permission",
+                "action": "readText",
+                "target": [
+                  {
+                    "by": "xpath",
+                    "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                    "nth": 0
+                  }
+                ],
+                "readMode": "innerText",
+                "trim": true,
+                "outputKey": "inventory_permission_text_next",
+                "recovery": "none"
+              },
+              {
+                "id": "catalog:next-stop-permission",
+                "action": "assertElement",
+                "target": [
+                  {
+                    "by": "xpath",
+                    "value": "//*[not(*) and not(ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' item-title ') or contains(concat(' ',normalize-space(@class),' '),' sku-name ') or contains(concat(' ',normalize-space(@class),' '),' sku-id ') or contains(concat(' ',normalize-space(@class),' '),' total-quantity ')]) and (not(ancestor-or-self::td or ancestor-or-self::th or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-row ')]) or ancestor-or-self::*[contains(concat(' ',normalize-space(@class),' '),' next-table-empty ')]) and (contains(normalize-space(.),'无权限') or contains(normalize-space(.),'暂无权限') or contains(normalize-space(.),'没有权限') or contains(normalize-space(.),'无权访问') or contains(normalize-space(.),'权限不足') or contains(normalize-space(.),'未授权') or normalize-space(.)='403' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403 forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='403: forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access forbidden' or translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='access is forbidden')]",
+                    "nth": 0
+                  }
+                ],
+                "state": "hidden",
+                "timeoutMs": 500,
+                "recovery": "none"
+              }
+            ],
+            "onError": "continue"
+          },
+          {
+            "id": "catalog:next-rows-visible",
+            "action": "waitFor",
+            "target": [
+              {
+                "by": "css",
+                "value": "tbody tr.next-table-row",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "recovery": "none",
+            "optional": true,
+            "onError": "continue"
+          },
+          {
+            "id": "catalog:next-content-settle",
+            "action": "waitTimeout",
+            "ms": 800
+          },
+          {
+            "id": "catalog:next-read-pagination",
+            "action": "readText",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-pagination",
+                "nth": 0
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_pagination_next",
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:next-check-scope-page",
+            "action": "assertElement",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//body['{scope}' != 'top' or (number(normalize-space(substring-before(string((//*[contains(concat(' ',normalize-space(@class),' '),' next-pagination ')]//text()[contains(.,'/')]/parent::*)[1]),'/'))) >= 1 and floor(number(normalize-space(substring-before(string((//*[contains(concat(' ',normalize-space(@class),' '),' next-pagination ')]//text()[contains(.,'/')]/parent::*)[1]),'/')))) = number(normalize-space(substring-before(string((//*[contains(concat(' ',normalize-space(@class),' '),' next-pagination ')]//text()[contains(.,'/')]/parent::*)[1]),'/'))))]",
+                "nth": 0
+              }
+            ],
+            "state": "attached",
+            "timeoutMs": 1200,
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:next-read-total",
+            "action": "readText",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-pagination[role='bottom-pagination']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".next-pagination",
+                "nth": 1
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_total_next",
+            "recovery": "none"
+          },
+          {
+            "id": "catalog:next-read-rows",
+            "action": "queryAll",
+            "containerSelector": "tbody tr.next-table-row",
+            "limit": 101,
+            "outputKey": "inventory_rows_next",
+            "fields": {
+              "productIdText": {
+                "childSelector": "td:nth-child(2)",
+                "text": true,
+                "trim": true
+              },
+              "productName": {
+                "childSelector": "a.item-title",
+                "text": true,
+                "trim": true
+              },
+              "productDetailUrl": {
+                "childSelector": "a.item-title",
+                "attr": "href"
+              },
+              "mainImageUrl": {
+                "childSelector": "img.item-img",
+                "attr": "src"
+              },
+              "productStatus": {
+                "childSelector": "td:nth-child(3)",
+                "text": true,
+                "trim": true
+              },
+              "inventoryMode": {
+                "childSelector": "td:nth-child(4)",
+                "text": true,
+                "trim": true
+              },
+              "availableStock": {
+                "childSelector": "td:nth-child(5)",
+                "text": true,
+                "trim": true
+              },
+              "preDeductedStock": {
+                "childSelector": "td:nth-child(6)",
+                "text": true,
+                "trim": true
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "catalog:finish",
+        "action": "when",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "css",
+              "value": "tbody tr.next-table-row",
+              "nth": 0
+            }
+          ],
+          "state": "attached",
+          "timeoutMs": 500
+        },
+        "then": [
+          {
+            "id": "catalog:read-final-pagination",
+            "action": "readText",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-pagination",
+                "nth": 0
+              }
+            ],
+            "readMode": "innerText",
+            "trim": true,
+            "outputKey": "inventory_pagination_final",
+            "recovery": "none"
+          }
+        ],
+        "onError": "continue"
+      }
+    ]
+  },
+  "collection": {
+    "capabilities": {
+      "before": [
+        "inventory_context"
+      ],
+      "after": [
+        "inventory_capture"
+      ]
+    },
+    "import": {
+      "subject_mode": "single"
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ],
+    "capture_schema": "ecommerce.inventory-capture.v1",
+    "inventory_grain": "product"
+  },
+  "needsParams": true
+}

@@ -1,0 +1,1329 @@
+{
+  "schemaVersion": "agentwork.rpa.atomic.v1",
+  "id": "pdd_product_list",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "platform": "pdd",
+  "name": "PDD-昨日商品明细-动态全分页",
+  "description": "昨日商品明细逐页采集；分页信息按实际页面读取，缺少总数或分页时保留有效商品行并由CLI提示全量未确认。明确空态独立校验；循环安全上限1000。",
+  "defaults": {
+    "timeoutMs": 12000,
+    "retries": 0,
+    "continueOnError": false,
+    "stepGapMs": 300
+  },
+  "steps": [
+    {
+      "action": "goto",
+      "id": "打开商品数据页",
+      "url": "https://mms.pinduoduo.com/sycm/goods_effect?currentKey=guv",
+      "waitUntil": "domcontentloaded",
+      "timeoutMs": 45000,
+      "after": [
+        {
+          "action": "waitFor",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 10000,
+          "onError": "continue",
+          "retries": 0
+        },
+        {
+          "action": "click",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog.click",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "onError": "continue",
+          "retries": 0,
+          "timeoutMs": 1000
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待商品数据渲染",
+      "ms": 4000
+    },
+    {
+      "action": "click",
+      "id": "切换商品明细页签",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='商品明细'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待商品明细渲染",
+      "ms": 1500
+    },
+    {
+      "action": "click",
+      "id": "pdd_product_list:click-table-range",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//table/preceding::label[@data-testid='beast-core-radio' and normalize-space(.)='昨日'])[last()]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//table/preceding::*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[last()]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//table/preceding::*[not(*) and normalize-space(.)='昨日'])[last()]"
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "pdd_product_list:wait-table-refresh",
+      "ms": 3000
+    },
+    {
+      "action": "waitFor",
+      "id": "pdd_product_list:wait-selected-yesterday",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//table/preceding::label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//table/preceding::*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "recovery": "auto",
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "waitFor",
+      "id": "pdd_product_list:result-ready",
+      "description": "等待可见商品明细行或带明确空态、完整商品表头及空表体的表组件；未加载、表结构不明和只缺详情链接均不能进入成功空态。",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//table//tbody/tr[.//a[@data-tracking-click-viewid='data_detail']])[1] | //*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//thead[.//*[normalize-space(.)='商品信息'] and .//*[normalize-space(.)='商品访客数'] and .//*[normalize-space(.)='成交转化率']]][.//tbody][not(.//tbody/tr)][.//*[contains(@class,'TB_emptyData_') and (normalize-space(.)='暂无数据' or normalize-space(.)='暂无商品')]]//*[contains(@class,'TB_emptyData_') and (normalize-space(.)='暂无数据' or normalize-space(.)='暂无商品')]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 15000,
+      "recovery": "none",
+      "onError": "fail"
+    },
+    {
+      "action": "if",
+      "id": "pdd_product_list:collect-data-or-empty",
+      "description": "有商品时采集有效行，有可用下一页则继续翻页；分页元数据缺失不阻断行采集。无商品时仍需完整空态证据。",
+      "condition": {
+        "kind": "element",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//table//tbody/tr[.//a[@data-tracking-click-viewid='data_detail']])[1]"
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 0
+      },
+      "then": [
+        {
+          "action": "if",
+          "id": "pdd_product_list:wait-pagination:when-present",
+          "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 2000
+          },
+          "then": [
+            {
+              "action": "waitFor",
+              "id": "pdd_product_list:wait-pagination",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination']",
+                  "nth": 0
+                }
+              ],
+              "state": "visible",
+              "recovery": "auto",
+              "optional": true,
+              "onError": "continue"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "id": "pdd_product_list:reset-first-page",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "(//ul[@data-testid='beast-core-pagination'])[1]/li[contains(@class,'PGT_pagerItem_') and normalize-space(.)='1' and not(contains(@class,'PGT_pagerItemActive_'))]"
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 500
+          },
+          "then": [
+            {
+              "action": "click",
+              "id": "pdd_product_list:click-first-page",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "(//ul[@data-testid='beast-core-pagination'])[1]/li[contains(@class,'PGT_pagerItem_') and normalize-space(.)='1']"
+                }
+              ]
+            },
+            {
+              "action": "waitTimeout",
+              "id": "pdd_product_list:wait-first-page",
+              "ms": 2500
+            }
+          ],
+          "onError": "continue"
+        },
+        {
+          "action": "readText",
+          "id": "pdd_product_list:read-first-table",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//table[.//a[@data-tracking-click-viewid='data_detail']])[1]"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_product_list_page_first_table",
+          "recovery": "auto"
+        },
+        {
+          "action": "queryAll",
+          "id": "pdd_product_list:read-first-table:directions",
+          "containerSelector": "table tbody tr:has([class*='list_goodsInfoBox__'])",
+          "fields": {
+            "product_id": {
+              "childSelector": "[class*='list_id__']",
+              "text": true,
+              "trim": true
+            },
+            "metric_0_value": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=1'] [class*='list_value__']",
+              "text": true,
+              "trim": true
+            },
+            "metric_0_ratio": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=1'] p[class*='radioWrapper']",
+              "text": true,
+              "trim": true
+            },
+            "metric_0_up": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=1'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+              "attr": "data-testid"
+            },
+            "metric_0_down": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=1'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+              "attr": "data-testid"
+            },
+            "metric_1_value": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=2'] [class*='list_value__']",
+              "text": true,
+              "trim": true
+            },
+            "metric_1_ratio": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=2'] p[class*='radioWrapper']",
+              "text": true,
+              "trim": true
+            },
+            "metric_1_up": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=2'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+              "attr": "data-testid"
+            },
+            "metric_1_down": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=2'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+              "attr": "data-testid"
+            },
+            "metric_2_value": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=3'] [class*='list_value__']",
+              "text": true,
+              "trim": true
+            },
+            "metric_2_ratio": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=3'] p[class*='radioWrapper']",
+              "text": true,
+              "trim": true
+            },
+            "metric_2_up": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=3'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+              "attr": "data-testid"
+            },
+            "metric_2_down": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=3'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+              "attr": "data-testid"
+            },
+            "metric_3_value": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=4'] [class*='list_value__']",
+              "text": true,
+              "trim": true
+            },
+            "metric_3_ratio": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=4'] p[class*='radioWrapper']",
+              "text": true,
+              "trim": true
+            },
+            "metric_3_up": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=4'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+              "attr": "data-testid"
+            },
+            "metric_3_down": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=4'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+              "attr": "data-testid"
+            },
+            "metric_4_value": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=5'] [class*='list_value__']",
+              "text": true,
+              "trim": true
+            },
+            "metric_4_ratio": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=5'] p[class*='radioWrapper']",
+              "text": true,
+              "trim": true
+            },
+            "metric_4_up": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=5'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+              "attr": "data-testid"
+            },
+            "metric_4_down": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=5'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+              "attr": "data-testid"
+            },
+            "metric_5_value": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=6'] [class*='list_value__']",
+              "text": true,
+              "trim": true
+            },
+            "metric_5_ratio": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=6'] p[class*='radioWrapper']",
+              "text": true,
+              "trim": true
+            },
+            "metric_5_up": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=6'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+              "attr": "data-testid"
+            },
+            "metric_5_down": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=6'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+              "attr": "data-testid"
+            },
+            "metric_6_value": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=7'] [class*='list_value__']",
+              "text": true,
+              "trim": true
+            },
+            "metric_6_ratio": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=7'] p[class*='radioWrapper']",
+              "text": true,
+              "trim": true
+            },
+            "metric_6_up": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=7'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+              "attr": "data-testid"
+            },
+            "metric_6_down": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=7'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+              "attr": "data-testid"
+            },
+            "metric_7_value": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=8'] [class*='list_value__']",
+              "text": true,
+              "trim": true
+            },
+            "metric_7_ratio": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=8'] p[class*='radioWrapper']",
+              "text": true,
+              "trim": true
+            },
+            "metric_7_up": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=8'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+              "attr": "data-testid"
+            },
+            "metric_7_down": {
+              "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=8'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+              "attr": "data-testid"
+            }
+          },
+          "outputKey": "pdd_product_list_page_first_table_directions",
+          "onError": "fail",
+          "timeoutMs": 5000,
+          "retries": 0
+        },
+        {
+          "action": "readText",
+          "id": "pdd_product_list:read-first-header",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//table[.//thead//*[contains(normalize-space(.),'商品信息')]])[1]//thead"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_product_list_page_first_header",
+          "recovery": "auto"
+        },
+        {
+          "action": "readText",
+          "id": "pdd_product_list:read-first-font",
+          "target": [
+            {
+              "by": "css",
+              "value": "style[data-id*='spider']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//style[contains(text(),'spider-font')]",
+              "nth": 0
+            }
+          ],
+          "readMode": "textContent",
+          "trim": true,
+          "outputKey": "pdd_product_list_page_first_font",
+          "recovery": "auto"
+        },
+        {
+          "action": "readText",
+          "id": "pdd_product_list:read-first-date",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//table/preceding::*[not(*) and contains(normalize-space(.),'统计时间')])[last()]"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_product_list_page_first_date",
+          "recovery": "auto"
+        },
+        {
+          "action": "readText",
+          "id": "pdd_product_list:read-first-selected",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//table/preceding::label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+            },
+            {
+              "by": "xpath",
+              "value": "(//table/preceding::*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[last()]"
+            }
+          ],
+          "trim": true,
+          "outputKey": "pdd_product_list_page_first_selected",
+          "recovery": "auto"
+        },
+        {
+          "action": "if",
+          "id": "pdd_product_list:read-first-pagination:when-present",
+          "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 0
+          },
+          "then": [
+            {
+              "action": "readText",
+              "id": "pdd_product_list:read-first-pagination",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination']",
+                  "nth": 0
+                }
+              ],
+              "readMode": "innerText",
+              "trim": true,
+              "outputKey": "pdd_product_list_page_first_pagination",
+              "recovery": "auto"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "id": "pdd_product_list:read-first-size:when-present",
+          "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination'] input[data-testid='beast-core-select-htmlInput']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 0
+          },
+          "then": [
+            {
+              "action": "readValue",
+              "id": "pdd_product_list:read-first-size",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination'] input[data-testid='beast-core-select-htmlInput']",
+                  "nth": 0
+                }
+              ],
+              "outputKey": "pdd_product_list_page_first_page_size",
+              "recovery": "auto"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "id": "pdd_product_list:read-first-active:when-present",
+          "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination'] [class*='PGT_pagerItemActive_']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 0
+          },
+          "then": [
+            {
+              "action": "readText",
+              "id": "pdd_product_list:read-first-active",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination'] [class*='PGT_pagerItemActive_']",
+                  "nth": 0
+                }
+              ],
+              "trim": true,
+              "outputKey": "pdd_product_list_page_first_active",
+              "recovery": "auto"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "id": "pdd_product_list:read-first-next-class:when-present",
+          "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 0
+          },
+          "then": [
+            {
+              "action": "readAttribute",
+              "id": "pdd_product_list:read-first-next-class",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                  "nth": 0
+                }
+              ],
+              "attribute": "class",
+              "outputKey": "pdd_product_list_page_first_next_class",
+              "recovery": "auto"
+            }
+          ]
+        },
+        {
+          "action": "while",
+          "id": "pdd_product_list:all-pages",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']:not([class*='PGT_disabled_'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 1500
+          },
+          "maxIterations": 1000,
+          "requireProgress": true,
+          "body": [
+            {
+              "action": "scrollIntoView",
+              "id": "pdd_product_list:scroll-next",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                  "nth": 0
+                }
+              ],
+              "block": "center"
+            },
+            {
+              "action": "click",
+              "id": "pdd_product_list:click-next",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']:not([class*='PGT_disabled_'])",
+                  "nth": 0
+                }
+              ]
+            },
+            {
+              "action": "waitTimeout",
+              "id": "pdd_product_list:wait-next-refresh",
+              "ms": 3000
+            },
+            {
+              "action": "waitFor",
+              "id": "pdd_product_list:wait-table-loading-hidden",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "[class*='TB_outerWrapper'] [data-testid='beast-core-spin-loading']",
+                  "nth": 0
+                }
+              ],
+              "state": "hidden",
+              "optional": false,
+              "onError": "fail",
+              "description": "翻页加载完成后才能读取目标页；加载超时则停止，避免把仍可见的上一页表格当成新页。"
+            },
+            {
+              "action": "readText",
+              "id": "pdd_product_list:read-next-table",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "(//table[.//a[@data-tracking-click-viewid='data_detail']])[1]"
+                }
+              ],
+              "readMode": "innerText",
+              "trim": true,
+              "outputKey": "pdd_product_list_page_next_table"
+            },
+            {
+              "action": "queryAll",
+              "id": "pdd_product_list:read-next-table:directions",
+              "containerSelector": "table tbody tr:has([class*='list_goodsInfoBox__'])",
+              "fields": {
+                "product_id": {
+                  "childSelector": "[class*='list_id__']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_0_value": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=1'] [class*='list_value__']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_0_ratio": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=1'] p[class*='radioWrapper']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_0_up": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=1'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_0_down": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=1'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_1_value": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=2'] [class*='list_value__']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_1_ratio": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=2'] p[class*='radioWrapper']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_1_up": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=2'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_1_down": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=2'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_2_value": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=3'] [class*='list_value__']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_2_ratio": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=3'] p[class*='radioWrapper']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_2_up": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=3'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_2_down": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=3'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_3_value": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=4'] [class*='list_value__']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_3_ratio": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=4'] p[class*='radioWrapper']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_3_up": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=4'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_3_down": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=4'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_4_value": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=5'] [class*='list_value__']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_4_ratio": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=5'] p[class*='radioWrapper']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_4_up": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=5'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_4_down": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=5'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_5_value": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=6'] [class*='list_value__']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_5_ratio": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=6'] p[class*='radioWrapper']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_5_up": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=6'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_5_down": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=6'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_6_value": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=7'] [class*='list_value__']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_6_ratio": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=7'] p[class*='radioWrapper']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_6_up": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=7'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_6_down": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=7'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_7_value": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=8'] [class*='list_value__']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_7_ratio": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=8'] p[class*='radioWrapper']",
+                  "text": true,
+                  "trim": true
+                },
+                "metric_7_up": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=8'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-up_filled']",
+                  "attr": "data-testid"
+                },
+                "metric_7_down": {
+                  "childSelector": "[data-tracking-viewid='cell_metric'][data-tracking-params='metric=8'] p[class*='radioWrapper'] svg[data-testid='beast-core-icon-arrow-down_filled']",
+                  "attr": "data-testid"
+                }
+              },
+              "outputKey": "pdd_product_list_page_next_table_directions",
+              "onError": "fail",
+              "timeoutMs": 5000,
+              "retries": 0
+            },
+            {
+              "action": "readText",
+              "id": "pdd_product_list:read-next-header",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "(//table[.//thead//*[contains(normalize-space(.),'商品信息')]])[1]//thead"
+                }
+              ],
+              "readMode": "innerText",
+              "trim": true,
+              "outputKey": "pdd_product_list_page_next_header"
+            },
+            {
+              "action": "readText",
+              "id": "pdd_product_list:read-next-font",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "style[data-id*='spider']",
+                  "nth": 0
+                },
+                {
+                  "by": "xpath",
+                  "value": "//style[contains(text(),'spider-font')]",
+                  "nth": 0
+                }
+              ],
+              "readMode": "textContent",
+              "trim": true,
+              "outputKey": "pdd_product_list_page_next_font"
+            },
+            {
+              "action": "readText",
+              "id": "pdd_product_list:read-next-date",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "(//table/preceding::*[not(*) and contains(normalize-space(.),'统计时间')])[last()]"
+                }
+              ],
+              "readMode": "innerText",
+              "trim": true,
+              "outputKey": "pdd_product_list_page_next_date"
+            },
+            {
+              "action": "if",
+              "id": "pdd_product_list:read-next-pagination:when-present",
+              "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+              "condition": {
+                "kind": "element",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": "ul[data-testid='beast-core-pagination']",
+                    "nth": 0
+                  }
+                ],
+                "state": "visible",
+                "timeoutMs": 0
+              },
+              "then": [
+                {
+                  "action": "readText",
+                  "id": "pdd_product_list:read-next-pagination",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination']",
+                      "nth": 0
+                    }
+                  ],
+                  "readMode": "innerText",
+                  "trim": true,
+                  "outputKey": "pdd_product_list_page_next_pagination"
+                }
+              ]
+            },
+            {
+              "action": "if",
+              "id": "pdd_product_list:read-next-size:when-present",
+              "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+              "condition": {
+                "kind": "element",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": "ul[data-testid='beast-core-pagination'] input[data-testid='beast-core-select-htmlInput']",
+                    "nth": 0
+                  }
+                ],
+                "state": "visible",
+                "timeoutMs": 0
+              },
+              "then": [
+                {
+                  "action": "readValue",
+                  "id": "pdd_product_list:read-next-size",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination'] input[data-testid='beast-core-select-htmlInput']",
+                      "nth": 0
+                    }
+                  ],
+                  "outputKey": "pdd_product_list_page_next_page_size"
+                }
+              ]
+            },
+            {
+              "action": "if",
+              "id": "pdd_product_list:read-next-active:when-present",
+              "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+              "condition": {
+                "kind": "element",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": "ul[data-testid='beast-core-pagination'] [class*='PGT_pagerItemActive_']",
+                    "nth": 0
+                  }
+                ],
+                "state": "visible",
+                "timeoutMs": 0
+              },
+              "then": [
+                {
+                  "action": "readText",
+                  "id": "pdd_product_list:read-next-active",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination'] [class*='PGT_pagerItemActive_']",
+                      "nth": 0
+                    }
+                  ],
+                  "trim": true,
+                  "outputKey": "pdd_product_list_page_next_active"
+                }
+              ]
+            },
+            {
+              "action": "readText",
+              "id": "pdd_product_list:read-next-selected",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "(//table/preceding::label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+                },
+                {
+                  "by": "xpath",
+                  "value": "(//table/preceding::*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[last()]"
+                }
+              ],
+              "trim": true,
+              "outputKey": "pdd_product_list_page_next_selected"
+            },
+            {
+              "action": "if",
+              "id": "pdd_product_list:read-next-next-class:when-present",
+              "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+              "condition": {
+                "kind": "element",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                    "nth": 0
+                  }
+                ],
+                "state": "visible",
+                "timeoutMs": 0
+              },
+              "then": [
+                {
+                  "action": "readAttribute",
+                  "id": "pdd_product_list:read-next-next-class",
+                  "target": [
+                    {
+                      "by": "css",
+                      "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                      "nth": 0
+                    }
+                  ],
+                  "attribute": "class",
+                  "outputKey": "pdd_product_list_page_next_next_class"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "id": "pdd_product_list:must-reach-last-page:when-present",
+          "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 0
+          },
+          "then": [
+            {
+              "action": "assertElement",
+              "id": "pdd_product_list:must-reach-last-page",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next'][class*='PGT_disabled_']",
+                  "nth": 0
+                }
+              ],
+              "state": "visible"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "id": "pdd_product_list:read-end-class:when-present",
+          "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 0
+          },
+          "then": [
+            {
+              "action": "readAttribute",
+              "id": "pdd_product_list:read-end-class",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination'] [data-testid='beast-core-pagination-next']",
+                  "nth": 0
+                }
+              ],
+              "attribute": "class",
+              "outputKey": "pdd_product_list_pagination_end_class",
+              "recovery": "auto"
+            }
+          ]
+        },
+        {
+          "action": "if",
+          "id": "pdd_product_list:read-end-text:when-present",
+          "description": "控件存在时读取或校验；缺少分页信息交由CLI提示完整性，不补造数据。",
+          "condition": {
+            "kind": "element",
+            "target": [
+              {
+                "by": "css",
+                "value": "ul[data-testid='beast-core-pagination']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 0
+          },
+          "then": [
+            {
+              "action": "readText",
+              "id": "pdd_product_list:read-end-text",
+              "target": [
+                {
+                  "by": "css",
+                  "value": "ul[data-testid='beast-core-pagination']",
+                  "nth": 0
+                }
+              ],
+              "trim": true,
+              "outputKey": "pdd_product_list_pagination_end_text",
+              "recovery": "auto"
+            }
+          ]
+        }
+      ],
+      "else": [
+        {
+          "action": "assertElement",
+          "id": "pdd_product_list:assert-empty-table",
+          "description": "空态要求唯一商品表组件，不接受加载中或未知表结构。",
+          "target": [
+            {
+              "by": "css",
+              "value": "#mf-mms-sycm-container [data-testid='beast-core-table']"
+            }
+          ],
+          "state": "visible",
+          "onError": "fail"
+        },
+        {
+          "action": "waitFor",
+          "id": "pdd_product_list:empty-loading-hidden",
+          "target": [
+            {
+              "by": "css",
+              "value": "#mf-mms-sycm-container [data-testid='beast-core-spin-loading']"
+            }
+          ],
+          "state": "hidden",
+          "timeoutMs": 15000,
+          "onError": "fail"
+        },
+        {
+          "action": "assertElement",
+          "id": "pdd_product_list:assert-empty",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//thead[.//*[normalize-space(.)='商品信息'] and .//*[normalize-space(.)='商品访客数'] and .//*[normalize-space(.)='成交转化率']]][.//tbody][not(.//tbody/tr)][.//*[contains(@class,'TB_emptyData_') and (normalize-space(.)='暂无数据' or normalize-space(.)='暂无商品')]]//*[contains(@class,'TB_emptyData_') and (normalize-space(.)='暂无数据' or normalize-space(.)='暂无商品')]"
+            }
+          ],
+          "state": "visible",
+          "onError": "fail"
+        },
+        {
+          "action": "readText",
+          "id": "pdd_product_list:read-empty-date",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//table/preceding::*[not(*) and contains(normalize-space(.),'统计时间')])[last()]"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_product_list_empty_date",
+          "recovery": "none",
+          "onError": "fail"
+        },
+        {
+          "action": "readText",
+          "id": "pdd_product_list:read-empty-selected",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "(//table/preceding::label[@data-testid='beast-core-radio' and @data-checked='true' and normalize-space(.)='昨日'])[last()]"
+            },
+            {
+              "by": "xpath",
+              "value": "(//table/preceding::*[contains(@class,'date-picker-item') and (contains(@class,'active') or contains(@class,'selected')) and normalize-space(.)='昨日'])[last()]"
+            }
+          ],
+          "trim": true,
+          "outputKey": "pdd_product_list_empty_selected",
+          "recovery": "none",
+          "onError": "fail"
+        },
+        {
+          "action": "readText",
+          "id": "pdd_product_list:read-empty-header",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table']//thead[.//*[normalize-space(.)=\"商品信息\"] and .//*[normalize-space(.)=\"成交转化率\"]]"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_product_list_empty_header",
+          "recovery": "none",
+          "onError": "fail"
+        },
+        {
+          "action": "readText",
+          "id": "pdd_product_list:read-empty-state",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table']//*[contains(@class,'TB_emptyData_') and (normalize-space(.)='暂无数据' or normalize-space(.)='暂无商品')]"
+            }
+          ],
+          "readMode": "innerText",
+          "trim": true,
+          "outputKey": "pdd_product_list_empty_state",
+          "recovery": "none",
+          "onError": "fail"
+        },
+        {
+          "action": "queryAll",
+          "id": "pdd_product_list:read-empty-rows",
+          "description": "读取商品表组件全部表体行；含无详情链接的商品行也必须保留，交由导入端拒绝假空态。",
+          "containerSelector": "#mf-mms-sycm-container [data-testid='beast-core-table'] tbody > tr",
+          "fields": {
+            "text": {
+              "text": true,
+              "trim": true
+            }
+          },
+          "outputKey": "pdd_product_list_empty_rows",
+          "onError": "fail"
+        },
+        {
+          "action": "queryAll",
+          "id": "pdd_product_list:read-empty-paginations",
+          "description": "保留真实分页节点数组；[]只表示没有分页控件，不伪造总数。有分页节点时导入端必须核对共有0条。",
+          "containerSelector": "#mf-mms-sycm-container ul[data-testid='beast-core-pagination']",
+          "fields": {
+            "text": {
+              "text": true,
+              "trim": true
+            }
+          },
+          "outputKey": "pdd_product_list_empty_paginations",
+          "onError": "fail"
+        },
+        {
+          "action": "assertElement",
+          "id": "pdd_product_list:confirm-empty",
+          "description": "读取后再次确认表体仍为空，防止异步出现商品行后按空态交付。",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//*[@id='mf-mms-sycm-container']//*[@data-testid='beast-core-table'][.//thead[.//*[normalize-space(.)='商品信息'] and .//*[normalize-space(.)='商品访客数'] and .//*[normalize-space(.)='成交转化率']]][.//tbody][not(.//tbody/tr)][.//*[contains(@class,'TB_emptyData_') and (normalize-space(.)='暂无数据' or normalize-space(.)='暂无商品')]]//*[contains(@class,'TB_emptyData_') and (normalize-space(.)='暂无数据' or normalize-space(.)='暂无商品')]"
+            }
+          ],
+          "state": "visible",
+          "onError": "fail"
+        }
+      ],
+      "onError": "fail",
+      "retries": 0
+    }
+  ],
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 1,
+      "end_offset_days": -1
+    },
+    "capabilities": {
+      "after": [
+        "pdd_decrypt"
+      ]
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  },
+  "unsupported": true
+}

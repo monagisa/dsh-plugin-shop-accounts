@@ -1,0 +1,309 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "douyin_product_detail_refund",
+  "verified": false,
+  "domains": [
+    "商品供给",
+    "服务履约"
+  ],
+  "needsParams": true,
+  "platform": "douyin",
+  "description": "罗盘-商品详情退款及体验下载协议：进入指定商品详情页 → 切换退款及体验 → 按参数 period 选择时间快捷档（当前要求近30天）→ 点击下载明细。",
+  "conditions": {},
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "抖店罗盘-商品详情-退款及体验-下载明细",
+    "description": "罗盘-商品详情退款及体验下载协议：进入指定商品详情页 → 切换退款及体验 → 按参数 period 选择时间快捷档（当前要求近30天）→ 点击下载明细。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "product_detail_refund_experience:打开商品详情页",
+        "url": "https://compass.jinritemai.com/shop/product-detail?product_id=${productId}&from_page=%2Fshop%2Fcommodity%2Fproduct-list&from=%2Fshop%2Fmerchandise-traffic",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 20000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_refund_experience:等待首屏渲染",
+        "ms": 4000
+      },
+      {
+        "action": "click",
+        "optional": true,
+        "id": "product_detail_refund_experience:关闭右上角通知警告",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-notification-notice-close')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'ecom-notification-notice-close')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 3000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_refund_experience:等待通知消失",
+        "ms": 800
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_refund_experience:等待商品详情页壳",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品详情') and contains(normalize-space(.),'商品ID')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品ID') and contains(normalize-space(.),'${productId}')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_refund_experience:切换退款及体验",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='退款及体验'] or normalize-space(.)='退款及体验']//*[contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='退款及体验'] or normalize-space(.)='退款及体验'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "退款及体验",
+            "match": "exactThenContains",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'tabs-tab')][.//*[normalize-space(.)='退款及体验'] or normalize-space(.)='退款及体验'])[1]",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1500
+        },
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "fail"
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_refund_experience:回验退款及体验已选中",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][contains(@class,'aurora-tabs-tab-active')][.//*[normalize-space(.)='退款及体验'] or normalize-space(.)='退款及体验'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'退款') and contains(normalize-space(.),'体验')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_refund_experience:点击时间维度-month",
+        "description": "退款及体验页固定点击近30天，不走更多面板；选期失败即停止，不允许沿用页面默认周期。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[@data-node-key='thirty']//*[@role='tab' or contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-nav')][.//*[normalize-space(.)='实时']]//*[@role='tab'][.//*[normalize-space(.)='近30天']])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[@data-btm='d90219' and normalize-space(.)='近30天'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "近30天",
+            "match": "exact",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1800
+        },
+        "timeoutMs": 12000,
+        "retries": 0,
+        "onError": "fail"
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_refund_experience:回验时间维度已选中-month",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[@data-node-key='thirty']//*[@role='tab' and @aria-selected='true'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-nav')][.//*[normalize-space(.)='实时']]//*[@role='tab' and @aria-selected='true'][.//*[normalize-space(.)='近30天']])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab-active')][.//*[normalize-space(.)='近30天'] or normalize-space(.)='近30天'])[1]"
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_refund_experience:等待快捷时间刷新",
+        "ms": 3000
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_refund_experience:等待下载明细按钮出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "下载明细",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "downloadFile",
+        "id": "product_detail_refund_experience:点击下载明细按钮",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-btn')][contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(normalize-space(.),'下载明细')]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "下载明细",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 90000,
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "doudianProductDetailRefundExperienceFile"
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 30,
+      "end_offset_days": -1
+    },
+    "parameter_bindings": {
+      "period": {
+        "constant": "近30天"
+      },
+      "productId": {
+        "source": "$filter.productId"
+      }
+    },
+    "import": {
+      "subject_mode": "single"
+    }
+  }
+}

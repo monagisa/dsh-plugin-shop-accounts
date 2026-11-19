@@ -1,0 +1,142 @@
+{
+  "schemaVersion": "agentwork.rpa.atomic.v1",
+  "id": "pdd_service_violation",
+  "verified": false,
+  "domains": [
+    "服务履约"
+  ],
+  "platform": "pdd",
+  "name": "PDD-违规信息-页面采集",
+  "description": "Read-only PDD 违规信息 page collection. One page, one goto.",
+  "defaults": {
+    "timeoutMs": 8000,
+    "retries": 1,
+    "continueOnError": true,
+    "stepGapMs": 300
+  },
+  "steps": [
+    {
+      "action": "goto",
+      "id": "打开违规信息页",
+      "url": "https://mms.pinduoduo.com/pg/violation_list/mall_manage?msfrom=mms_sidenav",
+      "waitUntil": "domcontentloaded",
+      "after": [
+        {
+          "action": "waitFor",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 10000,
+          "onError": "continue",
+          "retries": 0
+        },
+        {
+          "action": "click",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog.click",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "onError": "continue",
+          "retries": 0,
+          "timeoutMs": 1000
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待违规信息渲染",
+      "ms": 5000
+    },
+    {
+      "action": "readText",
+      "id": "读取违规信息文本",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "outputKey": "violation_text",
+      "recovery": "auto"
+    }
+  ],
+  "collection": {
+    "capabilities": {
+      "after": [
+        "pdd_decrypt"
+      ]
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  }
+}

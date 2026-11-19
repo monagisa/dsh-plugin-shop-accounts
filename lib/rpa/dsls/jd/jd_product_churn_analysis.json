@@ -1,0 +1,435 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "jd_product_churn_analysis",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "needsParams": true,
+  "platform": "jd",
+  "description": "京东商智单品分析-流失分析：选择近30天，切到「流失分析」Tab 后下载流失分析、净流失去向商品 TOP20（SPU），再切 SKU 下载净流失去向商品 TOP20（SKU），共三份报表。流失分析下载按钮使用 core-indicator-card 限定区块，避免大容器内多个按钮匹配。",
+  "conditions": {
+    "time": {
+      "kind": "fixed",
+      "value": "month"
+    },
+    "filter": {
+      "kind": "required",
+      "fields": {
+        "productIds": {
+          "type": "stringArray",
+          "minItems": 1,
+          "maxItems": 1
+        }
+      },
+      "bindings": {
+        "${productId}": "$filter.productId"
+      }
+    }
+  },
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "京东商智单品分析-流失分析",
+    "description": "单品分析页 -> 选时间档 -> 流失分析Tab -> 下载流失分析 -> 下载净流失去向商品TOP20(SPU) -> 切SKU -> 下载净流失去向商品TOP20(SKU)。三个下载点各自独立 outputKey。",
+    "defaults": {
+      "timeoutMs": 12000,
+      "retries": 0,
+      "continueOnError": true,
+      "stepGapMs": 250,
+      "conditionTimeoutMs": 2500
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "sp_churn:进入单品分析页",
+        "url": "https://jdsz.jd.com/szweb/view/single-product-analysis.html?id={productId}&proType=spu&dateValue=%7B%22currentKey%22%3A%22todayRealtime%22%7D&channel=all&from=productDetail",
+        "waitUntil": "domcontentloaded",
+        "timeoutMs": 30000,
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "jd.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "jd.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitForLoadState",
+        "id": "sp_churn:等待DOM加载",
+        "loadState": "domcontentloaded"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_churn:等待首屏渲染",
+        "ms": 5000
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_churn:等待一级Tab出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-tabs-item') and normalize-space()='流失分析']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'tabs-item') or contains(@class,'tab-item') or @role='tab'][normalize-space(.)='流失分析'])[1]"
+          },
+          {
+            "by": "text",
+            "value": "流失分析",
+            "match": "exact",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "recovery": "auto",
+        "onError": "continue",
+        "description": "整个 DSL 的入口探测步。定位器不单依赖平台私有 class（jmt-tabs-item），补角色/类名模糊匹配与纯文本兜底。本步只做可见性探测，成败由后续 Tab 激活校验与各数据读取步骤判定，故为 continue。",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "sp_churn:选择时间档-近30天",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-combo-date-picker')]//*[contains(@class,'jmt-combo-date-picker-list-tag') and normalize-space()='近30天']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'date-picker')]//*[contains(@class,'date-picker-list-tag')][normalize-space(.)='近30天'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'jmt-combo-date-picker-list-tag')][normalize-space(.)='近30天'])[1]"
+          }
+        ],
+        "force": true,
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 3500
+        },
+        "timeoutMs": 20000,
+        "retries": 2,
+        "onError": "continue",
+        "description": "选择「近30天」快捷周期；定位依次使用 jmt-combo-date-picker 路径、date-picker 类名和 li 文本候选。"
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_churn:校验时间档已选中-近30天",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'jmt-combo-date-picker-list-tag-select') and normalize-space()='近30天']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "sp_churn:切换到流失分析Tab",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-tabs-item') and normalize-space()='流失分析']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'tabs-item') or contains(@class,'tab-item') or @role='tab'][normalize-space(.)='流失分析'])[1]"
+          },
+          {
+            "by": "text",
+            "value": "流失分析",
+            "match": "exact",
+            "nth": 0
+          }
+        ],
+        "force": true,
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 4000
+        },
+        "timeoutMs": 20000,
+        "retries": 2,
+        "onError": "continue",
+        "description": "定位器三级兜底，不单依赖 jmt-tabs-item。continue 而非 fail：Tab 未切换成功时后续「等待流失分析Tab激活」仍会拦截，且各读取步骤本身为 continue，不应让本步单点抖动终止整个单品采集。与 sp_traffic 同类步骤保持一致。"
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_churn:等待流失分析Tab激活",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-tabs-active-item') and normalize-space()='流失分析']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'active')][normalize-space(.)='流失分析'])[1]"
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 20000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_churn:等待流失分析区块渲染",
+        "description": "必须用 core-indicator-card 锚定；jmt-card-v2 会同时命中流失分析卡与TOP20卡。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'core-indicator-card') and .//*[normalize-space()='流失分析']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "recovery": "auto",
+        "optional": true,
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_churn:等待流失数据加载",
+        "ms": 2500
+      },
+      {
+        "action": "scrollIntoView",
+        "id": "sp_churn:滚动到流失分析下载按钮",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'core-indicator-card') and .//*[normalize-space()='流失分析']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "block": "center",
+        "timeoutMs": 15000,
+        "onError": "continue"
+      },
+      {
+        "action": "downloadFile",
+        "id": "sp_churn:下载流失分析",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'core-indicator-card') and .//*[normalize-space()='流失分析']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 90000,
+        "retries": 1,
+        "onError": "continue",
+        "outputKey": "jdSpChurnSummaryFile"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_churn:流失分析下载后等待",
+        "ms": 2500
+      },
+      {
+        "action": "press",
+        "id": "[try]sp_churn:向下滚动加载TOP20区块",
+        "key": "PageDown",
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_churn:等待TOP20懒加载",
+        "ms": 1500
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_churn:等待净流失去向TOP20区块",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'core-indicator-card') and .//*[normalize-space()='净流失去向商品TOP20']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "scrollIntoView",
+        "id": "sp_churn:滚动到TOP20下载按钮",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'core-indicator-card') and .//*[normalize-space()='净流失去向商品TOP20']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "block": "center",
+        "timeoutMs": 15000,
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_churn:TOP20滚动后等待",
+        "ms": 1500
+      },
+      {
+        "action": "downloadFile",
+        "id": "sp_churn:下载净流失去向TOP20-SPU",
+        "description": "默认停留在 SPU 维度，先取 SPU 口径。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'core-indicator-card') and .//*[normalize-space()='净流失去向商品TOP20']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 90000,
+        "retries": 1,
+        "onError": "continue",
+        "outputKey": "jdSpChurnTop20SpuFile"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_churn:TOP20-SPU下载后等待",
+        "ms": 2500
+      },
+      {
+        "action": "clickAndWait",
+        "id": "sp_churn:切换到SKU维度",
+        "description": "SPU/SKU 为 jmt RadioGroup 的 label，选中态 class 为 jmt-radio-checked。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'core-indicator-card') and .//*[normalize-space()='净流失去向商品TOP20']]//label[contains(@class,'jmt-radio') and .//*[normalize-space()='SKU']]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//label[contains(@class,'jmt-radio') and .//*[normalize-space()='SKU']]",
+            "nth": 0
+          }
+        ],
+        "force": true,
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 4000
+        },
+        "timeoutMs": 20000,
+        "retries": 2,
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_churn:校验SKU维度已选中",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//label[contains(@class,'jmt-radio-checked') and .//*[normalize-space()='SKU']]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_churn:等待SKU维度数据刷新",
+        "ms": 3000
+      },
+      {
+        "action": "scrollIntoView",
+        "id": "sp_churn:重新滚动到TOP20下载按钮",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'core-indicator-card') and .//*[normalize-space()='净流失去向商品TOP20']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "block": "center",
+        "timeoutMs": 15000,
+        "onError": "continue"
+      },
+      {
+        "action": "downloadFile",
+        "id": "sp_churn:下载净流失去向TOP20-SKU",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'core-indicator-card') and .//*[normalize-space()='净流失去向商品TOP20']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 90000,
+        "retries": 1,
+        "onError": "continue",
+        "outputKey": "jdSpChurnTop20SkuFile"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_churn:TOP20-SKU下载后等待",
+        "ms": 2000
+      },
+      {
+        "action": "readText",
+        "id": "sp_churn:读取流失分析页面文本",
+        "target": [
+          {
+            "by": "css",
+            "value": "body",
+            "nth": 0
+          }
+        ],
+        "readMode": "innerText",
+        "trim": true,
+        "outputKey": "sp_churn_body_text",
+        "recovery": "auto"
+      }
+    ]
+  },
+  "collection": {
+    "import": {
+      "subject_mode": "single",
+      "report_sources": true
+    }
+  }
+}

@@ -1,0 +1,726 @@
+{
+  "schemaVersion": "agentwork.rpa.atomic.v1",
+  "id": "pdd_transaction_overview",
+  "verified": false,
+  "domains": [
+    "经营总览"
+  ],
+  "platform": "pdd",
+  "name": "PDD-交易数据-页面采集",
+  "description": "只读采集拼多多交易数据页，一次导航后读取「交易概况」卡片区的 10 个指标（数值和环比）。__spider_font 私有字体由后置依据 pdd_spider_font_face_css 动态解码。",
+  "defaults": {
+    "timeoutMs": 8000,
+    "retries": 1,
+    "continueOnError": true,
+    "stepGapMs": 300
+  },
+  "steps": [
+    {
+      "action": "goto",
+      "id": "打开交易数据页",
+      "url": "https://mms.pinduoduo.com/sycm/stores_data/operation",
+      "waitUntil": "domcontentloaded",
+      "after": [
+        {
+          "action": "waitFor",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 10000,
+          "onError": "continue",
+          "retries": 0
+        },
+        {
+          "action": "click",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog.click",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "onError": "continue",
+          "retries": 0,
+          "timeoutMs": 1000
+        }
+      ],
+      "timeoutMs": 45000,
+      "retries": 1
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待交易数据渲染",
+      "ms": 12000
+    },
+    {
+      "action": "click",
+      "id": "关闭新消息浮窗(交易数据)",
+      "target": [
+        {
+          "by": "css",
+          "value": "i.ImportantList_close__d0eKb",
+          "nth": 0
+        },
+        {
+          "by": "css",
+          "value": "div[class*=\"ImportantList_msgbox\"] i[class*=\"close\"]",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+          "nth": 0
+        }
+      ],
+      "timeoutMs": 2000,
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待浮窗关闭动画(交易数据)",
+      "ms": 500
+    },
+    {
+      "action": "waitFor",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div[2]/div[1]/div[2]/div/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div[2]/div[1]/div[2]/div/div[2]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div[2]/div[1]/div[2]/div/div[2]//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item')]//*[normalize-space(.)='昨日'][not(.//*[normalize-space(.)='昨日'])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'date-picker-item-inner')][normalize-space(.)='昨日'])[1]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 30000,
+      "onError": "continue",
+      "id": "pdd_trade:wait-trade-quick-range-visible",
+      "retries": 2,
+      "optional": true
+    },
+    {
+      "action": "click",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@id='mf-mms-sycm-container']/div/div/div/div[2]/div[1]/div[2]/div/div[2]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div[2]/div[1]/div[2]/div/div[2]//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']/div/div/div/div[2]/div[1]/div[2]/div/div[2]//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item-inner') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item')]//*[normalize-space(.)='昨日'][not(.//*[normalize-space(.)='昨日'])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[@id='mf-mms-sycm-container']//*[contains(@class,'date-picker-item') and normalize-space(.)='昨日'])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'date-picker-item-inner')][normalize-space(.)='昨日'])[1]"
+        }
+      ],
+      "timeoutMs": 20000,
+      "onError": "fail",
+      "id": "pdd_trade:click-trade-quick-range",
+      "retries": 3
+    },
+    {
+      "action": "waitTimeout",
+      "ms": 6000,
+      "id": "pdd_trade:wait-trade-range-refresh"
+    },
+    {
+      "action": "waitFor",
+      "id": "等待交易概况锚点",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='交易概况'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 6000,
+      "onError": "continue",
+      "optional": true
+    },
+    {
+      "action": "readText",
+      "id": "读取交易数据文本",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "outputKey": "trade_text",
+      "recovery": "auto"
+    },
+    {
+      "action": "readText",
+      "id": "采集spider-font字体URL",
+      "target": [
+        {
+          "by": "css",
+          "value": "style[data-id*='spider']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "//style[contains(text(),'spider-font')]",
+          "nth": 0
+        }
+      ],
+      "readMode": "textContent",
+      "trim": true,
+      "timeoutMs": 4000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_spider_font_face_css"
+    },
+    {
+      "action": "waitFor",
+      "id": "等待交易概况卡片区",
+      "target": [
+        {
+          "by": "css",
+          "value": "[class*='card_cardWrapper']",
+          "nth": 0
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 10000,
+      "onError": "continue",
+      "optional": true
+    },
+    {
+      "action": "scrollIntoView",
+      "id": "滚动到交易概况卡片区",
+      "target": [
+        {
+          "by": "css",
+          "value": "[class*='card_cardWrapper']",
+          "nth": 0
+        }
+      ],
+      "timeoutMs": 6000,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易概况卡片区",
+      "target": [
+        {
+          "by": "css",
+          "value": "[class*='card_cardWrapper']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')]/ancestor::*[contains(@class,'card_cardWrapper')])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 8000,
+      "onError": "continue",
+      "outputKey": "pdd_trade_overview_cards_text"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易概况统计时间",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[contains(normalize-space(.),'统计时间') and (contains(normalize-space(.),'～') or contains(normalize-space(.),'~'))][not(.//*[contains(normalize-space(.),'统计时间') and (contains(normalize-space(.),'～') or contains(normalize-space(.),'~'))])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(normalize-space(.),'统计时间')][not(.//*[contains(normalize-space(.),'统计时间')])])[1]"
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(normalize-space(.),'统计时间')])[last()]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 8000,
+      "onError": "continue",
+      "outputKey": "pdd_trade_stat_time_text"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-成交金额",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='transaction_amount']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='成交金额']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_transaction_amount_text"
+    },
+    {
+      "id": "读取环比方向-transaction_amount",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='transaction_amount'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_transaction_amount_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-成交订单数",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='number_of_completed_orders']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='成交订单数']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_number_of_completed_orders_text"
+    },
+    {
+      "id": "读取环比方向-number_of_completed_orders",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='number_of_completed_orders'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_number_of_completed_orders_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-成交买家数",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='number_of_transactional_buyers']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='成交买家数']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_number_of_transactional_buyers_text"
+    },
+    {
+      "id": "读取环比方向-number_of_transactional_buyers",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='number_of_transactional_buyers'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_number_of_transactional_buyers_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-成交转化率",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='transaction_conversion_rate']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='成交转化率']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_transaction_conversion_rate_text"
+    },
+    {
+      "id": "读取环比方向-transaction_conversion_rate",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='transaction_conversion_rate'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_transaction_conversion_rate_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-客单价",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='unit_price_per_customer']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='客单价']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_unit_price_per_customer_text"
+    },
+    {
+      "id": "读取环比方向-unit_price_per_customer",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='unit_price_per_customer'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_unit_price_per_customer_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-成交老买家占比",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='proportion_of_old_buyers']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='成交老买家占比']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_proportion_of_old_buyers_text"
+    },
+    {
+      "id": "读取环比方向-proportion_of_old_buyers",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='proportion_of_old_buyers'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_proportion_of_old_buyers_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-店铺关注用户数",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='store_following_users']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='店铺关注用户数']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_store_following_users_text"
+    },
+    {
+      "id": "读取环比方向-store_following_users",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='store_following_users'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_store_following_users_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-退款金额",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='refund_amount']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='退款金额']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_refund_amount_text"
+    },
+    {
+      "id": "读取环比方向-refund_amount",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='refund_amount'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_refund_amount_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-退款单数",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='refund_number']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='退款单数']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_refund_number_text"
+    },
+    {
+      "id": "读取环比方向-refund_number",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='refund_number'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_refund_number_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    },
+    {
+      "action": "readText",
+      "id": "读取交易指标-平均访客价值",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='average_visitor_value']",
+          "nth": 0
+        },
+        {
+          "by": "xpath",
+          "value": "(//*[contains(@class,'card_cardItem')][.//*[normalize-space(.)='平均访客价值']])[1]"
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "timeoutMs": 5000,
+      "retries": 0,
+      "onError": "continue",
+      "outputKey": "pdd_trade_card_average_visitor_value_text"
+    },
+    {
+      "id": "读取环比方向-average_visitor_value",
+      "action": "readAttribute",
+      "target": [
+        {
+          "by": "css",
+          "value": "[data-tracking-click-viewid='average_visitor_value'] [class*='radioWrapper'] [style*='color']",
+          "nth": 0
+        }
+      ],
+      "attribute": "style",
+      "outputKey": "pdd_trade_card_average_visitor_value_trend",
+      "timeoutMs": 2500,
+      "onError": "continue"
+    }
+  ],
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 1,
+      "end_offset_days": -1
+    },
+    "capabilities": {
+      "after": [
+        "pdd_decrypt"
+      ]
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  }
+}

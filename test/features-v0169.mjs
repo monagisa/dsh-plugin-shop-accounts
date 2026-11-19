@@ -53,12 +53,13 @@ const byId = (id) => items.find((it) => it.id === id);
 const rawOf = (id) => D.loadDsl(id).raw;
 
 // ── A. 配方清单 ─────────────────────────────────────────────────────────────
-section('A. 配方清单：7 份种子，覆盖 5 个平台');
+section('A. 配方清单：7 份已校准种子，覆盖 5 个平台');
 
-await test('种子共 7 份，按平台分组符合预期', () => {
-  assert.equal(items.length, 7, '种子数量应为 7，实际 ' + items.length);
+await test('已校准种子共 7 份，按平台分组符合预期', () => {
+  const verified = items.filter((it) => it.verified === true);
+  assert.equal(verified.length, 7, '已校准种子应为 7 份，实际 ' + verified.length);
   const groups = {};
-  for (const it of items) (groups[it.platform] = groups[it.platform] || []).push(it.id);
+  for (const it of verified) (groups[it.platform] = groups[it.platform] || []).push(it.id);
   assert.deepEqual(groups.taobao.sort(), ['tb_shop_overview']);
   assert.deepEqual(groups.tmall.sort(), ['tmall_shop_overview']);
   assert.deepEqual(groups.pdd.sort(), ['pdd_shop_overview']);
@@ -66,8 +67,8 @@ await test('种子共 7 份，按平台分组符合预期', () => {
   assert.deepEqual(groups.douyin.sort(), ['douyin_shop_income_expense', 'douyin_shop_transaction']);
 });
 
-await test('每份种子都能编译，且都声明了产物', () => {
-  for (const it of items) {
+await test('已校准的种子都能编译，且都声明了产物', () => {
+  for (const it of items.filter((x) => x.verified === true)) {
     const compiled = R.compileExecution(rawOf(it.id), { ...WINDOW, runId: 'seed' });
     assert.ok(compiled.ops.length > 0, it.id + ' 没有编译出任何步骤');
     assert.ok(compiled.declaredArtifacts.length > 0, it.id + ' 没有声明产物');
@@ -210,7 +211,9 @@ await test('天猫账号 prepare 时挑到天猫配方', () => {
 });
 
 await test('抖音账号 prepare 时挑到抖音配方（两份都在计划里）', () => {
-  const dsls = items.filter((it) => it.platform === 'douyin').map((it) => ({ meta: it, raw: rawOf(it.id) }));
+  const dsls = items
+    .filter((it) => it.platform === 'douyin' && it.verified === true)
+    .map((it) => ({ meta: it, raw: rawOf(it.id) }));
   const out = J.prepareJob({
     account: { id: 'acc_douyin_v169', platform: 'douyin', name: 'v169 抖音店' },
     dsls,

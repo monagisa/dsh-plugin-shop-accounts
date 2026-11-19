@@ -1,0 +1,1002 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "douyin_ads_overview_detail",
+  "verified": false,
+  "domains": [
+    "运营推广"
+  ],
+  "needsParams": true,
+  "platform": "douyin",
+  "description": "千川整体投放概览明细页面采集协议：进入千川首页 → 按 period 选择昨天/最近7天/最近30天 → 读取各投放类型正文和统计周期；不支持自定义日期。",
+  "conditions": {
+    "time": {
+      "kind": "preset",
+      "bindings": {
+        "{period}": {
+          "day": "昨天",
+          "week": "最近7天",
+          "month": "最近30天"
+        }
+      },
+      "dateConstraints": {
+        "preset": "period",
+        "endOffsetDays": -1,
+        "endOffsetDaysByPreset": {
+          "week": 0,
+          "month": 0
+        },
+        "timezone": "Asia/Shanghai"
+      }
+    },
+    "filter": {
+      "kind": "required",
+      "bindings": {
+        "{advertiserId}": "$condition.advertiserId"
+      },
+      "parameterSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "period"
+        ],
+        "properties": {
+          "period": {
+            "type": "string",
+            "enum": [
+              "昨天",
+              "最近7天",
+              "最近30天"
+            ]
+          },
+          "advertiserId": {
+            "type": "string",
+            "default": "",
+            "pattern": "^(?:[0-9]+)?$"
+          }
+        }
+      }
+    }
+  },
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "抖店整体投放概览明细",
+    "description": "千川整体投放概览明细页面采集协议：进入千川首页 → 按 period 选择昨天/最近7天/最近30天 → 读取各投放类型正文和统计周期；不支持自定义日期。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 1,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "id": "qc_overview_detail:打开千川登录入口",
+        "action": "goto",
+        "description": "深链会整体超时，必须从 /login 进入，由平台自动跳转到已登录首页。 坑：上一任务 closeOnFinish 关页与本任务建会话重叠时，报 'newCDPSession: no object with guid'，任务秒挂。仅在任务间隔 <1s 时出现。本步 retries 挡不住它：报错发生在建会话阶段，执行器还没进入 goto，重试逻辑不生效（实测崩溃记录 dur=49ms、后续 31 步全 skipped）。只能在 launch/调度层解决：等上一页关闭完成再启动下一个任务。",
+        "url": "https://qianchuan.jinritemai.com/login",
+        "waitUntil": "domcontentloaded",
+        "retries": 2,
+        "retryDelayMs": 3000,
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "dy.qianchuan.dismiss-known-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ".tools-vmok-plugin-modal button.close-button[aria-label='关闭']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".tools-vmok-plugin-modal iconpark-icon.close[name='oc-icon-close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".tools-vmok-plugin-modal__close-icon:not(.tools-vmok-plugin-modal__close-icon--hide)",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//div[contains(@class,'tools-vmok-plugin-modal')]//*[@name='oc-icon-close' or @aria-label='关闭']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".promotion-modal-wrap img[alt='关闭']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".tippy-box[data-theme='firefly-bubble'][role='tooltip'] firefly-content [part='firefly-close-button']",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 20000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "id": "dy.qianchuan.dismiss-known-dialog.click",
+            "action": "when",
+            "optional": true,
+            "onError": "continue",
+            "retries": 0,
+            "condition": {
+              "kind": "element",
+              "state": "visible",
+              "target": [
+                {
+                  "by": "css",
+                  "value": ".tools-vmok-plugin-modal button.close-button[aria-label='关闭']",
+                  "nth": 0
+                },
+                {
+                  "by": "css",
+                  "value": ".tools-vmok-plugin-modal iconpark-icon.close[name='oc-icon-close']",
+                  "nth": 0
+                },
+                {
+                  "by": "css",
+                  "value": ".tools-vmok-plugin-modal__close-icon:not(.tools-vmok-plugin-modal__close-icon--hide)",
+                  "nth": 0
+                },
+                {
+                  "by": "xpath",
+                  "value": "//div[contains(@class,'tools-vmok-plugin-modal')]//*[@name='oc-icon-close' or @aria-label='关闭']",
+                  "nth": 0
+                },
+                {
+                  "by": "css",
+                  "value": ".promotion-modal-wrap img[alt='关闭']",
+                  "nth": 0
+                },
+                {
+                  "by": "css",
+                  "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                  "nth": 0
+                }
+              ],
+              "timeoutMs": 0
+            },
+            "then": [
+              {
+                "action": "click",
+                "optional": true,
+                "id": "dy.qianchuan.dismiss-known-dialog.click.do",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".tools-vmok-plugin-modal button.close-button[aria-label='关闭']",
+                    "nth": 0
+                  },
+                  {
+                    "by": "css",
+                    "value": ".tools-vmok-plugin-modal iconpark-icon.close[name='oc-icon-close']",
+                    "nth": 0
+                  },
+                  {
+                    "by": "css",
+                    "value": ".tools-vmok-plugin-modal__close-icon:not(.tools-vmok-plugin-modal__close-icon--hide)",
+                    "nth": 0
+                  },
+                  {
+                    "by": "xpath",
+                    "value": "//div[contains(@class,'tools-vmok-plugin-modal')]//*[@name='oc-icon-close' or @aria-label='关闭']",
+                    "nth": 0
+                  },
+                  {
+                    "by": "css",
+                    "value": ".promotion-modal-wrap img[alt='关闭']",
+                    "nth": 0
+                  },
+                  {
+                    "by": "css",
+                    "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                    "nth": 0
+                  }
+                ],
+                "onError": "continue",
+                "retries": 0,
+                "timeoutMs": 1000
+              }
+            ]
+          },
+          {
+            "id": "dy.qianchuan.dismiss-firefly-tooltip.click",
+            "action": "when",
+            "optional": true,
+            "onError": "continue",
+            "retries": 0,
+            "condition": {
+              "kind": "element",
+              "state": "visible",
+              "target": [
+                {
+                  "by": "css",
+                  "value": ".tippy-box[data-theme='firefly-bubble'][role='tooltip'] firefly-content [part='firefly-close-button']",
+                  "nth": 0
+                }
+              ],
+              "timeoutMs": 0
+            },
+            "then": [
+              {
+                "action": "click",
+                "optional": true,
+                "id": "dy.qianchuan.dismiss-firefly-tooltip.click.do",
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".tippy-box[data-theme='firefly-bubble'][role='tooltip'] firefly-content [part='firefly-close-button']",
+                    "nth": 0
+                  }
+                ],
+                "onError": "continue",
+                "retries": 0,
+                "timeoutMs": 1000
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "qc_overview_detail:wait-account-entry",
+        "action": "waitFor",
+        "recovery": "none",
+        "retries": 0,
+        "onError": "continue",
+        "state": "visible",
+        "timeoutMs": 60000,
+        "description": "等待可见账户列表或已登录首页，标题先出现不代表候选列表已就绪。",
+        "target": [
+          {
+            "by": "css",
+            "value": ".account-selector:visible .account-list-item:visible, #firstTitle_data:visible",
+            "nth": 0
+          }
+        ],
+        "optional": true
+      },
+      {
+        "id": "qc_overview_detail:read-account-entry-url",
+        "action": "readPageUrl",
+        "recovery": "none",
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "qc_overview_detail_account_entry_url"
+      },
+      {
+        "id": "qc_overview_detail:read-advertiser-candidates",
+        "action": "queryAll",
+        "recovery": "none",
+        "retries": 0,
+        "onError": "fail",
+        "containerSelector": ".account-selector .account-list-item",
+        "fields": {
+          "text": {
+            "text": true,
+            "trim": true
+          },
+          "style": {
+            "attr": "style"
+          },
+          "hidden": {
+            "attr": "hidden"
+          }
+        },
+        "outputKey": "qc_overview_detail_advertiser_candidates",
+        "description": "保存原始候选作为失败证据；选择逻辑另用可见定位器，不将隐藏节点算作候选。"
+      },
+      {
+        "id": "qc_overview_detail:选择千川账户",
+        "action": "if",
+        "onError": "continue",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "css",
+              "value": ".account-selector:visible .account-list-item:visible",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 1000
+        },
+        "then": [
+          {
+            "id": "qc_overview_detail:resolve-advertiser",
+            "action": "if",
+            "onError": "continue",
+            "condition": {
+              "kind": "element",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "//body[string-length('{advertiserId}') > 0]"
+                }
+              ],
+              "state": "visible",
+              "timeoutMs": 0
+            },
+            "then": [
+              {
+                "id": "qc_overview_detail:wait-target-advertiser",
+                "action": "waitFor",
+                "recovery": "none",
+                "retries": 0,
+                "onError": "continue",
+                "state": "visible",
+                "timeoutMs": 15000,
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".account-selector:visible .account-list-item:visible:is(:text-matches(\"(^|[^0-9]){advertiserId}([^0-9]|$)\"):visible, :has(:text-matches(\"(^|[^0-9]){advertiserId}([^0-9]|$)\"):visible))"
+                  }
+                ],
+                "optional": true
+              },
+              {
+                "id": "qc_overview_detail:assert-target-advertiser-unique",
+                "action": "assertElement",
+                "recovery": "none",
+                "retries": 0,
+                "onError": "fail",
+                "state": "hidden",
+                "timeoutMs": 15000,
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ":nth-match(.account-selector:visible .account-list-item:visible:is(:text-matches(\"(^|[^0-9]){advertiserId}([^0-9]|$)\"):visible, :has(:text-matches(\"(^|[^0-9]){advertiserId}([^0-9]|$)\"):visible)), 2)"
+                  }
+                ]
+              },
+              {
+                "id": "qc_overview_detail:read-target-advertiser",
+                "action": "readText",
+                "recovery": "none",
+                "retries": 0,
+                "onError": "fail",
+                "readMode": "innerText",
+                "trim": true,
+                "outputKey": "qc_overview_detail_target-advertiser",
+                "timeoutMs": 15000,
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".account-selector:visible .account-list-item:visible:is(:text-matches(\"(^|[^0-9]){advertiserId}([^0-9]|$)\"):visible, :has(:text-matches(\"(^|[^0-9]){advertiserId}([^0-9]|$)\"):visible))"
+                  }
+                ]
+              },
+              {
+                "id": "qc_overview_detail:choose-target-advertiser",
+                "action": "click",
+                "recovery": "none",
+                "retries": 0,
+                "onError": "fail",
+                "timeoutMs": 15000,
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ".account-selector:visible .account-list-item:visible:is(:text-matches(\"(^|[^0-9]){advertiserId}([^0-9]|$)\"):visible, :has(:text-matches(\"(^|[^0-9]){advertiserId}([^0-9]|$)\"):visible))"
+                  }
+                ]
+              }
+            ],
+            "else": [
+              {
+                "id": "qc_overview_detail:read-only-advertiser",
+                "action": "readText",
+                "recovery": "none",
+                "retries": 0,
+                "onError": "fail",
+                "readMode": "innerText",
+                "trim": true,
+                "outputKey": "qc_overview_detail_only-advertiser",
+                "timeoutMs": 15000,
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ":nth-match(.account-selector:visible .account-list-item:visible, 1)"
+                  }
+                ]
+              },
+              {
+                "id": "qc_overview_detail:choose-only-advertiser",
+                "action": "click",
+                "recovery": "none",
+                "retries": 0,
+                "onError": "fail",
+                "timeoutMs": 15000,
+                "target": [
+                  {
+                    "by": "css",
+                    "value": ":nth-match(.account-selector:visible .account-list-item:visible, 1)"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "qc_overview_detail:assert-account-picker-closed",
+        "action": "assertElement",
+        "recovery": "none",
+        "retries": 0,
+        "onError": "fail",
+        "state": "hidden",
+        "timeoutMs": 15000,
+        "target": [
+          {
+            "by": "css",
+            "value": ".account-selector:visible .account-list-item:visible",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "qc_overview_detail:wait-advertiser-home",
+        "action": "waitFor",
+        "recovery": "none",
+        "retries": 0,
+        "onError": "continue",
+        "state": "visible",
+        "timeoutMs": 60000,
+        "target": [
+          {
+            "by": "css",
+            "value": "#firstTitle_data:visible"
+          }
+        ],
+        "optional": true
+      },
+      {
+        "id": "qc_overview_detail:read-advertiser-home-url",
+        "action": "readPageUrl",
+        "recovery": "none",
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "qc_overview_detail_advertiser_home_url"
+      },
+      {
+        "id": "qc_overview_detail:verify-advertiser",
+        "action": "if",
+        "onError": "continue",
+        "condition": {
+          "kind": "element",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//body[string-length('{advertiserId}') > 0]"
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 0
+        },
+        "then": [
+          {
+            "id": "qc_overview_detail:assert-current-advertiser",
+            "action": "assertElement",
+            "recovery": "none",
+            "retries": 0,
+            "onError": "fail",
+            "state": "visible",
+            "timeoutMs": 15000,
+            "description": "指定 ID 时，首页必须有该完整数字 ID 的可见证据；仅选择页关闭不能证明归属。",
+            "target": [
+              {
+                "by": "css",
+                "value": ":text-matches(\"(^|[^0-9]){advertiserId}([^0-9]|$)\"):visible",
+                "nth": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "qc_overview_detail:Esc预关弹窗",
+        "action": "press",
+        "key": "Escape",
+        "timeoutMs": 3000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "弹窗预关闭。多数千川模态支持 Esc 关闭，实测该动作耗时 7~16ms，成本可忽略。位置在选择千川账户之后：该账户切换动作可能触发遮挡弹窗，而 goto.after 的 Hook 探测跑在账户切换之前，覆盖不到它。坑：本文件没有精确定位器兜底（promotion_sdk 弹窗仅在 product_goods 出现过），若 Esc 对某个弹窗无效，后续 hover 会被遮挡打满超时。"
+      },
+      {
+        "id": "qc_overview_detail:Esc兜底关弹窗",
+        "action": "press",
+        "key": "Escape",
+        "timeoutMs": 3000,
+        "retries": 0,
+        "onError": "continue",
+        "description": "2026-08-16 兜底：若遮挡弹窗未被关闭，hover 会打满超时，故连按两次 Esc。坑：这两次 Esc 是目前唯一的通用兜底 —— 原先与之配套的 4 步 dismiss 探测序列已于 2026-09-03 移除（它们由 Converter 托管、只注入在 goto.after，位置在账户切换之前，探测 36 次 0 命中）。"
+      },
+      {
+        "id": "qc_overview_detail:弹窗关闭后稳定等待",
+        "action": "waitTimeout",
+        "ms": 2500,
+        "onError": "continue",
+        "description": "2026-08-16 弹窗时序修复：实测有弹窗时关闭动作成功(666ms)，但紧接的「切换到推商品」ACTION_TIMEOUT 打满 20s；无弹窗时该步仅需 68ms。原因是关闭弹窗后页面做关闭动画与重排，元素可点击性检查持续不通过。故在全部弹窗关闭动作之后补 2.5s 稳定等待。（原描述称『最后一个 dismiss 步之后』，该 dismiss 序列已于 2026-09-03 移除，现在的前置动作是两次 Esc；product_goods 还多一步 promotion_sdk 精确关闭。）"
+      },
+      {
+        "id": "qc_overview_detail:LOGIN_REQUIRED__do-not-retry__未登录或登录态失效",
+        "action": "assertElement",
+        "state": "detached",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[normalize-space(.)='扫码登录'][not(.//*[normalize-space(.)='扫码登录'])]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[normalize-space(.)='账户登录'][not(.//*[normalize-space(.)='账户登录'])]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[normalize-space(.)='账号登录'][not(.//*[normalize-space(.)='账号登录'])]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[normalize-space(.)='手机号登录'][not(.//*[normalize-space(.)='手机号登录'])]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[normalize-space(.)='验证码登录'][not(.//*[normalize-space(.)='验证码登录'])]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 5000,
+        "onError": "fail",
+        "description": "登录态短路守卫（不可重试类异常）。与 jd/pdd 同范式：断言登录页专有文本（扫码登录/账户登录/账号登录/手机号登录/验证码登录）不存在，命中即判定登录态失效。位置固定在账户选择与弹窗处理之后、『等待顶部导航就绪』之前：本 DSL 入口 URL 即 /login，依赖平台自动跳转到已登录首页，守卫若紧跟 goto 会在跳转完成前误判；放在此处则跳转已有十余秒完成窗口，仍停在登录页即可确认失效。stepId 含 'LOGIN_REQUIRED__do-not-retry__'，上层据此提示重新登录且不重试，而非让后续 75s 导航等待打满、报出语义模糊的 LOCATOR_NOT_FOUND。已登录的业务页不含这些文本，detached 断言通过，零误伤。"
+      },
+      {
+        "id": "qc_overview_detail:等待顶部导航就绪",
+        "action": "waitFor",
+        "description": "轮询等待顶部锚点。实测首屏渲染耗时波动大（28s 未就绪 / 43s 已就绪），固定等待不可靠。 顶部导航锚点采用两级：首选 #firstTitle_data，降级 [id^='firstTitle_'] —— 命中任一顶部导航项即认为导航栏已渲染。降级只放宽『导航栏是否就绪』这一个判断，紧随其后的『悬停数据菜单』仍精确锁定 #firstTitle_data 并自带 20s 超时与 3 次重试，故放宽不会导致点错菜单项。仅千川页面实测有效的锚点可加入此处，aurora-* 系列属抖音罗盘页面，不适用。 坑：本步失败(LOCATOR_NOT_FOUND)时 report.json 只有错误码，无截图无 DOM 快照，无法回溯当时页面。曾用 when(state=hidden) 做失败前取证，但该状态在元素不存在时立即成立（Playwright 实测 14.5ms 返回，非等满超时），会在正常慢加载时误触发，已移除。如需现场证据，应在 launch 层对失败任务保留页面，或由引擎在步骤失败时统一截图。",
+        "target": [
+          {
+            "by": "css",
+            "value": "#firstTitle_data",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[id^='firstTitle_']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[id*='firstTitle']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 75000,
+        "retries": 1,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "id": "qc_overview_detail:等待数据概览区",
+        "action": "waitFor",
+        "description": "首页「数据概览」汇总区，实测 class=summaryArea-vN_zFI（哈希后缀会变，用前缀匹配）；单次等待 50 秒并重试 1 次，避免同一页面状态下连续长时间空等。",
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='summaryArea-']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='summaryArea']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(.),'数据概览')][not(.//*[contains(normalize-space(.),'数据概览')])])[1]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 50000,
+        "retries": 1,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "id": "qc_overview_detail:打开统计周期选择器",
+        "action": "click",
+        "description": "首页日期控件。注意与全域投放页不同：这里 wrapper class=report-shortcuts-datepicker-wrapper，文本「统计周期：」。",
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='report-shortcuts-datepicker']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='aurora-qc-picker-range']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 20000,
+        "retries": 3,
+        "onError": "fail"
+      },
+      {
+        "id": "qc_overview_detail:等待时间面板",
+        "action": "waitTimeout",
+        "ms": 2500
+      },
+      {
+        "id": "qc_overview_detail:选择时间档",
+        "action": "click",
+        "description": "仅支持 昨天/最近7天/最近30天；其余自定义时间不支持。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='{period}'][not(.//*[normalize-space(.)='{period}'])])[1]"
+          }
+        ],
+        "timeoutMs": 20000,
+        "retries": 3,
+        "onError": "fail"
+      },
+      {
+        "id": "qc_overview_detail:等待数据刷新",
+        "action": "waitTimeout",
+        "ms": 10000
+      },
+      {
+        "id": "qc_overview_detail:确认日期筛选后概览就绪",
+        "action": "waitFor",
+        "description": "每个任务都在当前页面重新尝试请求周期；日期点击后再次等待概览区，日期控件失败时允许保留页面默认周期并交由后处理标记。",
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='summaryArea-']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "retries": 1,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "id": "qc_overview_detail:读取消耗卡总览",
+        "action": "readText",
+        "readMode": "innerText",
+        "trim": true,
+        "description": "summaryArea 区一次性拿到 账户整体消耗/乘方计划消耗/标准投放消耗/全域投放消耗/品牌投放消耗 5 张卡及其环比。",
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='summaryArea-']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "doudian_qc_overview_detail_summary_text",
+        "recovery": "auto"
+      },
+      {
+        "id": "qc_overview_detail:滚动到乘方计划消耗",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'乘方计划消耗')][not(.//*[contains(normalize-space(.),'乘方计划消耗')])]/ancestor::*[3]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 8000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "id": "qc_overview_detail:切换到乘方计划消耗",
+        "action": "click",
+        "description": "点击『乘方计划消耗』消耗卡切换下方指标区。可点击层级为 summaryCard-（叶子/explainTitle-/summaryTitle-/summaryCard-），实测 rpa-msyskpf0 通过 ancestor::*[3] 命中。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'乘方计划消耗')][not(.//*[contains(normalize-space(.),'乘方计划消耗')])]/ancestor::*[3]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "fail"
+      },
+      {
+        "id": "qc_overview_detail:等待乘方计划消耗数据刷新",
+        "action": "waitTimeout",
+        "ms": 4500
+      },
+      {
+        "id": "qc_overview_detail:读取乘方计划消耗指标区",
+        "action": "readText",
+        "readMode": "innerText",
+        "trim": true,
+        "description": "读 metricGrid- 通用容器，不依赖具体指标名——四个 tab 指标名各不相同：乘方=综合营销ROI/综合成本/净成交金额/净成交订单数/整体成交金额/整体消耗；标准=消耗/展示次数/点击率/直接支付ROI/直接成交订单数/直接成交金额；全域=整体消耗/净成交ROI/净成交金额/净成交订单数/净成交金额结算率/1小时内退款率。",
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='metricGrid-']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='trendData-'] [class*='metricGrid-']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_qc_overview_detail_chengfang_text"
+      },
+      {
+        "id": "qc_overview_detail:滚动到标准投放消耗",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'标准投放消耗')][not(.//*[contains(normalize-space(.),'标准投放消耗')])]/ancestor::*[3]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 8000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "id": "qc_overview_detail:切换到标准投放消耗",
+        "action": "click",
+        "description": "点击『标准投放消耗』消耗卡切换下方指标区。可点击层级为 summaryCard-（叶子/explainTitle-/summaryTitle-/summaryCard-），实测 rpa-msyskpf0 通过 ancestor::*[3] 命中。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'标准投放消耗')][not(.//*[contains(normalize-space(.),'标准投放消耗')])]/ancestor::*[3]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "fail"
+      },
+      {
+        "id": "qc_overview_detail:等待标准投放消耗数据刷新",
+        "action": "waitTimeout",
+        "ms": 4500
+      },
+      {
+        "id": "qc_overview_detail:读取标准投放消耗指标区",
+        "action": "readText",
+        "readMode": "innerText",
+        "trim": true,
+        "description": "读 metricGrid- 通用容器，不依赖具体指标名——四个 tab 指标名各不相同：乘方=综合营销ROI/综合成本/净成交金额/净成交订单数/整体成交金额/整体消耗；标准=消耗/展示次数/点击率/直接支付ROI/直接成交订单数/直接成交金额；全域=整体消耗/净成交ROI/净成交金额/净成交订单数/净成交金额结算率/1小时内退款率。",
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='metricGrid-']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='trendData-'] [class*='metricGrid-']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_qc_overview_detail_biaozhun_text"
+      },
+      {
+        "id": "qc_overview_detail:滚动到全域投放消耗",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'全域投放消耗')][not(.//*[contains(normalize-space(.),'全域投放消耗')])]/ancestor::*[3]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 8000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "id": "qc_overview_detail:切换到全域投放消耗",
+        "action": "click",
+        "description": "点击『全域投放消耗』消耗卡切换下方指标区。可点击层级为 summaryCard-（叶子/explainTitle-/summaryTitle-/summaryCard-），实测 rpa-msyskpf0 通过 ancestor::*[3] 命中。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'全域投放消耗')][not(.//*[contains(normalize-space(.),'全域投放消耗')])]/ancestor::*[3]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "fail"
+      },
+      {
+        "id": "qc_overview_detail:等待全域投放消耗数据刷新",
+        "action": "waitTimeout",
+        "ms": 4500
+      },
+      {
+        "id": "qc_overview_detail:读取全域投放消耗指标区",
+        "action": "readText",
+        "readMode": "innerText",
+        "trim": true,
+        "description": "读 metricGrid- 通用容器，不依赖具体指标名——四个 tab 指标名各不相同：乘方=综合营销ROI/综合成本/净成交金额/净成交订单数/整体成交金额/整体消耗；标准=消耗/展示次数/点击率/直接支付ROI/直接成交订单数/直接成交金额；全域=整体消耗/净成交ROI/净成交金额/净成交订单数/净成交金额结算率/1小时内退款率。",
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='metricGrid-']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='trendData-'] [class*='metricGrid-']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_qc_overview_detail_quanyu_text"
+      },
+      {
+        "id": "qc_overview_detail:滚动到品牌投放消耗",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'品牌投放消耗')][not(.//*[contains(normalize-space(.),'品牌投放消耗')])]/ancestor::*[3]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 8000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "id": "qc_overview_detail:切换到品牌投放消耗",
+        "action": "click",
+        "description": "点击『品牌投放消耗』消耗卡切换下方指标区。可点击层级为 summaryCard-（叶子/explainTitle-/summaryTitle-/summaryCard-），实测 rpa-msyskpf0 通过 ancestor::*[3] 命中。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'品牌投放消耗')][not(.//*[contains(normalize-space(.),'品牌投放消耗')])]/ancestor::*[3]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "fail"
+      },
+      {
+        "id": "qc_overview_detail:等待品牌投放消耗数据刷新",
+        "action": "waitTimeout",
+        "ms": 4500
+      },
+      {
+        "id": "qc_overview_detail:读取品牌投放消耗指标区",
+        "action": "readText",
+        "readMode": "innerText",
+        "trim": true,
+        "description": "读 metricGrid- 通用容器，不依赖具体指标名——四个 tab 指标名各不相同：乘方=综合营销ROI/综合成本/净成交金额/净成交订单数/整体成交金额/整体消耗；标准=消耗/展示次数/点击率/直接支付ROI/直接成交订单数/直接成交金额；全域=整体消耗/净成交ROI/净成交金额/净成交订单数/净成交金额结算率/1小时内退款率。",
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='metricGrid-']",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='trendData-'] [class*='metricGrid-']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_qc_overview_detail_pinpai_text"
+      },
+      {
+        "id": "qc_overview_detail:读取统计周期",
+        "action": "readText",
+        "readMode": "innerText",
+        "trim": true,
+        "target": [
+          {
+            "by": "css",
+            "value": "[class*='report-shortcuts-datepicker']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_qc_overview_detail_stat_period_text"
+      },
+      {
+        "id": "qc_overview_detail:读取统计周期-起始",
+        "action": "readAttribute",
+        "attribute": "value",
+        "description": "2026-08-19 修正：日期不在文本节点里。实测(rpa-mszi66qy) wrapper/父/祖先 innerText 均只有『统计周期：』，真实日期在 wrapper 内两个 input 的 value 属性上（起始 input[0]、结束 input[1]）。故改为 readAttribute value 分别读起止，原 readText 保留作为兜底上下文。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'report-shortcuts-datepicker')])[1]//input",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-qc-picker-range')])[1]//input",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_qc_overview_detail_stat_period_start"
+      },
+      {
+        "id": "qc_overview_detail:读取统计周期-结束",
+        "action": "readAttribute",
+        "attribute": "value",
+        "description": "同上，结束日期取 input[1]。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'report-shortcuts-datepicker')])[1]//input",
+            "nth": 1
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-qc-picker-range')])[1]//input",
+            "nth": 1
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "outputKey": "doudian_qc_overview_detail_stat_period_end"
+      }
+    ]
+  },
+  "collection": {
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  }
+}

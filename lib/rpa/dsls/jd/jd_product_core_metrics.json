@@ -1,0 +1,605 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "jd_product_core_metrics",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "needsParams": true,
+  "platform": "jd",
+  "description": "京东商智单品核心数据：尝试在商品明细页检索商品ID并读取结果，然后按SPU URL直接进入单品页，选择快捷时间档，读取头部主图并下载核心数据与SKU构成。SKU构成在下载设置确定按钮上监听下载。原检索与部分下载步骤允许失败继续，没有商品存在或所属店铺断言，需后处理核实商品身份、周期与产物完整性。",
+  "conditions": {
+    "time": {
+      "kind": "fixed",
+      "value": "month"
+    },
+    "filter": {
+      "kind": "required",
+      "fields": {
+        "productIds": {
+          "type": "stringArray",
+          "minItems": 1,
+          "maxItems": 1
+        }
+      },
+      "bindings": {
+        "${productId}": "$filter.productId"
+      }
+    }
+  },
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "京东商智单品分析-核心数据与SKU构成",
+    "description": "商品明细页检索商品ID -> 进入单品分析页 -> 选择时间档 -> 下载核心数据 -> 下载SKU构成。两个下载点均为 downloadFile：runner 先注册下载监听再点击，等待落盘完成，文件路径经 outputs 返回。",
+    "defaults": {
+      "timeoutMs": 12000,
+      "retries": 0,
+      "continueOnError": true,
+      "stepGapMs": 250,
+      "conditionTimeoutMs": 2500
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "sp_core:打开商智-商品明细",
+        "url": "https://jdsz.jd.com/szweb/view/product/productDetail.html",
+        "waitUntil": "domcontentloaded",
+        "timeoutMs": 30000,
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "jd.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "jd.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitForLoadState",
+        "id": "sp_core:等待商品明细DOM加载",
+        "loadState": "domcontentloaded"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_core:等待商品明细渲染",
+        "ms": 4000
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_core:等待商品ID输入框出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//input[contains(@class,'jd-input-multiple-input-input')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 20000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "click",
+        "id": "[try]sp_core:清除已有商品ID标签",
+        "description": "多值输入组件可能残留上次检索的 tag，先尝试点掉，避免与本次商品ID叠加。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//span[contains(@class,'jd-input-multiple-tag')]//*[contains(@class,'close') or name()='svg'])[1]"
+          }
+        ],
+        "timeoutMs": 3000,
+        "onError": "continue"
+      },
+      {
+        "action": "click",
+        "id": "sp_core:聚焦商品ID输入框",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//input[contains(@class,'jd-input-multiple-input-input')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000,
+        "retries": 1,
+        "onError": "continue"
+      },
+      {
+        "action": "type",
+        "id": "sp_core:输入商品ID",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//input[contains(@class,'jd-input-multiple-input-input')]",
+            "nth": 0
+          }
+        ],
+        "value": "${productId}",
+        "clear": true,
+        "delay": 40,
+        "timeoutMs": 15000,
+        "retries": 1,
+        "onError": "continue"
+      },
+      {
+        "action": "press",
+        "id": "sp_core:回车生成商品ID标签",
+        "description": "实测该多值输入必须按 Enter 才会把文本转成 tag，否则「查询」不会带上该商品ID。",
+        "key": "Enter",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//input[contains(@class,'jd-input-multiple-input-input')]",
+            "nth": 0
+          }
+        ],
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_core:等待标签生成",
+        "ms": 800
+      },
+      {
+        "action": "clickAndWait",
+        "id": "sp_core:点击查询",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'container-right')]//button[normalize-space()='查询']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[normalize-space()='查询'])[1]"
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 3000
+        },
+        "timeoutMs": 15000,
+        "retries": 1,
+        "onError": "continue"
+      },
+      {
+        "action": "readText",
+        "id": "sp_core:读取商品明细检索结果",
+        "description": "留存检索后的页面文本作为「商品存在且归属当前店铺」的证据。",
+        "target": [
+          {
+            "by": "css",
+            "value": "body",
+            "nth": 0
+          }
+        ],
+        "readMode": "innerText",
+        "trim": true,
+        "outputKey": "sp_core_product_detail_text",
+        "recovery": "auto"
+      },
+      {
+        "action": "goto",
+        "id": "sp_core:进入单品分析页",
+        "description": "商品明细页的「单品分析」按钮点击后新开标签页，RPA 会话无法跟随，因此直接按同格式 URL 导航。dateValue 固定用站点自身生成的 {\"currentKey\":\"todayRealtime\"}（携带空 currentValue 数组会导致页面白屏），具体时间档随后通过点击顶部档位按钮切换。",
+        "url": "https://jdsz.jd.com/szweb/view/single-product-analysis.html?id={productId}&proType=spu&dateValue=%7B%22currentKey%22%3A%22todayRealtime%22%7D&channel=all&from=productDetail",
+        "waitUntil": "domcontentloaded",
+        "timeoutMs": 30000,
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "jd.generic.dismiss-dialog#2",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "jd.generic.dismiss-dialog.click#2",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitForLoadState",
+        "id": "sp_core:等待单品分析DOM加载",
+        "loadState": "domcontentloaded"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_core:等待单品分析首屏渲染",
+        "ms": 5000
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_core:等待单品页头部主图容器出现",
+        "description": "单品分析页头部卡片渲染后再读取商品主图，避免在商品明细表格中找图。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'title-max-width')]//img[1]",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "div.title-max-width img",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 20000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "readAttribute",
+        "id": "sp_core:读取单品页主图src",
+        "description": "主图位于单品分析页头部 title-max-width 容器内，不在商品明细表格首行。读取真实 img src 作为报告头主图候选。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'title-max-width')]//img[1]",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "div.title-max-width img",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'header-module-affix-card')]//img[1]",
+            "nth": 0
+          }
+        ],
+        "attribute": "src",
+        "outputKey": "jd_product_main_image_01",
+        "timeoutMs": 12000,
+        "onError": "continue"
+      },
+      {
+        "action": "readAttribute",
+        "id": "sp_core:读取单品页主图currentSrc",
+        "description": "部分浏览器会把最终图片地址暴露在 currentSrc，作为 src 的兜底。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'title-max-width')]//img[1]",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "div.title-max-width img",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'header-module-affix-card')]//img[1]",
+            "nth": 0
+          }
+        ],
+        "attribute": "currentSrc",
+        "outputKey": "jd_product_main_image_02",
+        "timeoutMs": 12000,
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_core:等待一级Tab出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-tabs-item') and normalize-space()='核心数据']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "recovery": "auto",
+        "optional": true,
+        "onError": "continue"
+      },
+      {
+        "action": "clickAndWait",
+        "id": "sp_core:切换到核心数据Tab",
+        "description": "核心数据通常为默认 Tab，但显式点击可避免页面默认激活 Tab 变化导致后续 SKU构成 区块被卸载。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-tabs-item') and normalize-space()='核心数据']",
+            "nth": 0
+          }
+        ],
+        "force": true,
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1500
+        },
+        "timeoutMs": 20000,
+        "retries": 1,
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_core:等待核心数据Tab激活",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-tabs-active-item') and normalize-space()='核心数据']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "sp_core:选择时间档-近30天",
+        "description": "选择「近30天」快捷周期，顶部档位为 li 列表。页面 .ai-search 浮层可能拦截点击，使用已声明的 force；定位依次使用 jmt-combo-date-picker 路径、date-picker 类名和 li 文本候选。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-combo-date-picker')]//*[contains(@class,'jmt-combo-date-picker-list-tag') and normalize-space()='近30天']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'date-picker')]//*[contains(@class,'date-picker-list-tag')][normalize-space(.)='近30天'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'jmt-combo-date-picker-list-tag')][normalize-space(.)='近30天'])[1]"
+          }
+        ],
+        "force": true,
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 3500
+        },
+        "timeoutMs": 20000,
+        "retries": 2,
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_core:校验时间档已选中-近30天",
+        "description": "选中态 class 为 jmt-combo-date-picker-list-tag-select；未命中说明档位没切成功，后续下载口径会错。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'jmt-combo-date-picker-list-tag-select') and normalize-space()='近30天']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_core:等待档位切换后数据刷新",
+        "ms": 3000
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_core:等待核心数据区块渲染",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-card-v2') and .//*[normalize-space()='核心数据']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "recovery": "auto",
+        "optional": true,
+        "onError": "continue"
+      },
+      {
+        "action": "scrollIntoView",
+        "id": "sp_core:滚动到核心数据下载按钮",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-card-v2') and .//*[normalize-space()='核心数据']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "block": "center",
+        "timeoutMs": 15000,
+        "onError": "continue"
+      },
+      {
+        "action": "downloadFile",
+        "id": "sp_core:下载核心数据",
+        "description": "页面同名「下载数据」按钮众多，必须用区块标题锚定。点击即 blob 直下，无确认弹窗。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-card-v2') and .//*[normalize-space()='核心数据']]//button[contains(.,'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 90000,
+        "retries": 1,
+        "onError": "continue",
+        "outputKey": "jdSpCoreSummaryFile"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_core:核心数据下载后等待",
+        "ms": 2500
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_core:等待SKU构成区块渲染",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-card-v2')][.//h2[normalize-space()='SKU构成']]//button[contains(normalize-space(.),'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "scrollIntoView",
+        "id": "sp_core:滚动到SKU构成下载按钮",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-card-v2')][.//h2[normalize-space()='SKU构成']]//button[contains(normalize-space(.),'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "block": "center",
+        "timeoutMs": 15000,
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_core:SKU构成滚动后等待懒加载",
+        "ms": 1500
+      },
+      {
+        "action": "clickAndWait",
+        "id": "sp_core:打开SKU构成下载设置",
+        "description": "SKU 构成下载需确认「下载设置」弹窗；在确认按钮上注册下载监听。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-card-v2')][.//h2[normalize-space()='SKU构成']]//button[contains(normalize-space(.),'下载数据')]",
+            "nth": 0
+          }
+        ],
+        "force": true,
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1200
+        },
+        "timeoutMs": 20000,
+        "retries": 1,
+        "onError": "continue"
+      },
+      {
+        "action": "waitFor",
+        "id": "sp_core:等待SKU构成下载设置确认按钮",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'product-detail-table-download-modal')]//button[normalize-space()='确定']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-dialog-portal') and .//*[contains(normalize-space(.),'下载设置')]]//button[normalize-space()='确定']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "onError": "continue",
+        "optional": true
+      },
+      {
+        "action": "downloadFile",
+        "id": "sp_core:确认并下载SKU构成",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'product-detail-table-download-modal')]//button[normalize-space()='确定']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'jmt-dialog-portal') and .//*[contains(normalize-space(.),'下载设置')]]//button[normalize-space()='确定']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 90000,
+        "retries": 1,
+        "onError": "continue",
+        "outputKey": "jdSpSkuCompositionFile"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "sp_core:SKU构成下载后等待",
+        "ms": 2000
+      },
+      {
+        "action": "readText",
+        "id": "sp_core:读取单品分析页面文本",
+        "target": [
+          {
+            "by": "css",
+            "value": "body",
+            "nth": 0
+          }
+        ],
+        "readMode": "innerText",
+        "trim": true,
+        "outputKey": "sp_core_body_text",
+        "recovery": "auto"
+      }
+    ]
+  },
+  "collection": {
+    "import": {
+      "subject_mode": "single",
+      "report_sources": true
+    }
+  }
+}

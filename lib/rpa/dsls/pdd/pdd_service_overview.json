@@ -1,0 +1,280 @@
+{
+  "schemaVersion": "agentwork.rpa.atomic.v1",
+  "id": "pdd_service_overview",
+  "verified": false,
+  "domains": [
+    "服务履约"
+  ],
+  "platform": "pdd",
+  "name": "PDD-服务数据-页面采集",
+  "description": "Read-only PDD 服务数据 page collection. One page, one goto.",
+  "defaults": {
+    "timeoutMs": 8000,
+    "retries": 1,
+    "continueOnError": true,
+    "stepGapMs": 300
+  },
+  "steps": [
+    {
+      "action": "goto",
+      "id": "打开服务数据页",
+      "url": "https://mms.pinduoduo.com/sycm/goods_quality/jump",
+      "waitUntil": "domcontentloaded",
+      "after": [
+        {
+          "action": "waitFor",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "state": "visible",
+          "timeoutMs": 10000,
+          "onError": "continue",
+          "retries": 0
+        },
+        {
+          "action": "click",
+          "optional": true,
+          "id": "pdd.dismiss-known-dialog.click",
+          "target": [
+            {
+              "by": "css",
+              "value": "#umd-msgbox-handler i.ImportantList_close__d0eKb",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "div[class*='ImportantList_msgbox'] i[class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='close-modal']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//div[contains(@class,'ImportantList_msgbox')]//i[contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='NewMsgBox_'] [class*='close']",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+              "nth": 0
+            }
+          ],
+          "onError": "continue",
+          "retries": 0,
+          "timeoutMs": 1000
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待服务数据渲染",
+      "ms": 5000
+    },
+    {
+      "action": "waitFor",
+      "id": "等待服务数据锚点",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='消费者体验指标'])[last()]"
+        }
+      ],
+      "state": "visible",
+      "timeoutMs": 6000,
+      "onError": "continue",
+      "optional": true
+    },
+    {
+      "action": "readText",
+      "id": "读取服务概览文本",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "outputKey": "service_overview_text",
+      "recovery": "auto"
+    },
+    {
+      "action": "click",
+      "id": "切换售后数据",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='售后数据'])[last()]"
+        }
+      ],
+      "onError": "continue"
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待售后数据渲染",
+      "ms": 3000
+    },
+    {
+      "action": "readText",
+      "id": "读取售后数据文本",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "outputKey": "service_aftersale_text",
+      "recovery": "auto"
+    },
+    {
+      "action": "click",
+      "id": "切换评价数据",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='评价数据'])[last()]"
+        }
+      ],
+      "onError": "continue"
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待评价数据渲染",
+      "ms": 3000
+    },
+    {
+      "action": "readText",
+      "id": "读取评价数据文本",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "outputKey": "service_review_text",
+      "recovery": "auto"
+    },
+    {
+      "action": "click",
+      "id": "切换客服数据",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='客服数据'])[last()]"
+        }
+      ],
+      "onError": "continue"
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待客服数据渲染",
+      "ms": 3000
+    },
+    {
+      "action": "readText",
+      "id": "读取客服数据文本",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "outputKey": "service_customer_text",
+      "recovery": "auto"
+    },
+    {
+      "action": "click",
+      "id": "切换综合体验星级",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "(//*[not(*) and normalize-space(.)='综合体验星级'])[last()]"
+        }
+      ],
+      "onError": "continue"
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待综合体验星级渲染",
+      "ms": 3000
+    },
+    {
+      "action": "readText",
+      "id": "读取综合体验星级文本",
+      "target": [
+        {
+          "by": "css",
+          "value": "body",
+          "nth": 0
+        }
+      ],
+      "readMode": "innerText",
+      "trim": true,
+      "outputKey": "service_star_text",
+      "recovery": "auto"
+    }
+  ],
+  "collection": {
+    "capabilities": {
+      "after": [
+        "pdd_decrypt"
+      ]
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "raw_envelope",
+        "pointer": ""
+      }
+    ]
+  }
+}

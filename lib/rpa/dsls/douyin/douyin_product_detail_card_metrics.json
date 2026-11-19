@@ -1,0 +1,394 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "douyin_product_detail_card_metrics",
+  "verified": false,
+  "domains": [
+    "商品供给"
+  ],
+  "needsParams": true,
+  "platform": "douyin",
+  "description": "罗盘-商品详情商品卡数据下载协议：进入指定商品详情页 → 切换商品卡数据 → 按参数 period 选择时间快捷档（当前要求填写近30天）→ 若下载明细按钮 disabled 则不采集 → 下载后导入阶段只保留“分来源趋势数据”和“搜索词明细趋势数据”两个 sheet。",
+  "conditions": {},
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "抖店罗盘-商品详情-商品卡数据-下载明细",
+    "description": "罗盘-商品详情商品卡数据下载协议：进入指定商品详情页 → 切换商品卡数据 → 按参数 period 选择时间快捷档（当前要求填写近30天）→ 若下载明细按钮 disabled 则不采集 → 下载后导入阶段只保留“分来源趋势数据”和“搜索词明细趋势数据”两个 sheet。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 0,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "action": "goto",
+        "id": "product_detail_card:打开商品详情页",
+        "url": "https://compass.jinritemai.com/shop/product-detail?product_id=${productId}&from_page=%2Fshop%2Fcommodity%2Fproduct-list&from=%2Fshop%2Fmerchandise-traffic",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 20000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "dy.generic.dismiss-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_card:等待首屏渲染",
+        "ms": 4000
+      },
+      {
+        "action": "click",
+        "optional": true,
+        "id": "product_detail_card:关闭右上角通知警告",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'aurora-notification-notice-close')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'ecom-notification-notice-close')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 3000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_card:等待通知消失",
+        "ms": 800
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_card:等待商品详情页壳",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品详情') and contains(normalize-space(.),'商品ID')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品ID') and contains(normalize-space(.),'${productId}')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_card:切换商品卡数据",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='商品卡数据'] or normalize-space(.)='商品卡数据']//*[contains(@class,'aurora-tabs-tab-btn')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][.//*[normalize-space(.)='商品卡数据'] or normalize-space(.)='商品卡数据'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "商品卡数据",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1500
+        },
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "fail"
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_card:回验商品卡数据已选中",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-tab')][contains(@class,'aurora-tabs-tab-active')][.//*[normalize-space(.)='商品卡数据'] or normalize-space(.)='商品卡数据'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'商品卡')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue",
+        "recovery": "auto",
+        "optional": true
+      },
+      {
+        "action": "clickAndWait",
+        "id": "product_detail_card:点击时间维度-period",
+        "description": "商品卡数据页顶部时间条按参数 period 直接点击快捷档位；当前要求 period 填写“近30天”，不走「更多」二级面板。",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-tabs-nav')][.//*[normalize-space(.)='实时'] and .//*[normalize-space(.)='近30天']]//*[normalize-space(.)='近30天'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[@data-node-key='period' or @data-node-key='month']//*[contains(@class,'aurora-tabs-tab-btn') or @role='tab' or normalize-space(.)='近30天'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-dorami-date-picker-wrapper')]//*[@data-btm='period' and normalize-space(.)='近30天'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "text",
+            "value": "近30天",
+            "match": "exactThenContains",
+            "nth": 0
+          }
+        ],
+        "waitAfterClick": {
+          "type": "timeout",
+          "ms": 1800
+        },
+        "timeoutMs": 12000,
+        "retries": 0,
+        "onError": "fail"
+      },
+      {
+        "action": "waitTimeout",
+        "id": "product_detail_card:等待快捷时间刷新",
+        "ms": 3000
+      },
+      {
+        "action": "waitFor",
+        "id": "product_detail_card:等待下载明细按钮出现",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//button[contains(normalize-space(.),'下载明细')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//*[self::span or self::div][normalize-space(.)='下载明细']])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[@role='button' and contains(normalize-space(.),'下载明细')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'aurora-btn') and contains(normalize-space(.),'下载明细')])[1]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 15000,
+        "retries": 0,
+        "onError": "fail",
+        "recovery": "auto",
+        "description": "确认页面存在“下载明细”按钮，包含禁用状态；按钮缺失仍为真实失败，禁用状态仅表示本次跳过下载。"
+      },
+      {
+        "action": "if",
+        "id": "product_detail_card:按下载按钮状态处理",
+        "condition": {
+          "anyOf": [
+            {
+              "kind": "element",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "(//button[contains(normalize-space(.),'下载明细')])[1]",
+                  "nth": 0
+                },
+                {
+                  "by": "xpath",
+                  "value": "(//button[.//*[self::span or self::div][normalize-space(.)='下载明细']])[1]",
+                  "nth": 0
+                },
+                {
+                  "by": "xpath",
+                  "value": "(//*[@role='button' and contains(normalize-space(.),'下载明细')])[1]",
+                  "nth": 0
+                },
+                {
+                  "by": "xpath",
+                  "value": "(//*[contains(@class,'aurora-btn') and contains(normalize-space(.),'下载明细')])[1]",
+                  "nth": 0
+                }
+              ],
+              "state": "disabled",
+              "timeoutMs": 0
+            },
+            {
+              "kind": "element",
+              "target": [
+                {
+                  "by": "xpath",
+                  "value": "((//button[contains(normalize-space(.),'下载明细')])[1])[contains(@class,'disabled')]",
+                  "nth": 0
+                },
+                {
+                  "by": "xpath",
+                  "value": "((//button[.//*[self::span or self::div][normalize-space(.)='下载明细']])[1])[contains(@class,'disabled')]",
+                  "nth": 0
+                },
+                {
+                  "by": "xpath",
+                  "value": "((//*[@role='button' and contains(normalize-space(.),'下载明细')])[1])[contains(@class,'disabled')]",
+                  "nth": 0
+                },
+                {
+                  "by": "xpath",
+                  "value": "((//*[contains(@class,'aurora-btn') and contains(normalize-space(.),'下载明细')])[1])[contains(@class,'disabled')]",
+                  "nth": 0
+                }
+              ],
+              "state": "visible",
+              "timeoutMs": 0
+            }
+          ]
+        },
+        "onError": "fail",
+        "retries": 0,
+        "recovery": "none",
+        "description": "下载按钮具有原生禁用状态或 disabled 类名时，直接跳过下载，不点击、不重试。",
+        "then": [
+          {
+            "action": "waitTimeout",
+            "id": "product_detail_card:下载按钮禁用时跳过",
+            "ms": 0,
+            "retries": 0,
+            "onError": "fail",
+            "recovery": "none",
+            "description": "按钮已确认为禁用，本次直接跳过下载。"
+          }
+        ],
+        "else": [
+          {
+            "action": "downloadFile",
+            "id": "product_detail_card:点击下载明细按钮",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "(//button[contains(normalize-space(.),'下载明细')])[1]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "(//button[.//*[self::span or self::div][normalize-space(.)='下载明细']])[1]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "(//*[@role='button' and contains(normalize-space(.),'下载明细')])[1]",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "(//*[contains(@class,'aurora-btn') and contains(normalize-space(.),'下载明细')])[1]",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 30000,
+            "retries": 0,
+            "onError": "continue",
+            "outputKey": "doudianProductDetailCardFile",
+            "description": "按钮未禁用时下载明细；下载失败保留原始错误，不将跳过下载解释为业务无数据。"
+          }
+        ]
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 30,
+      "end_offset_days": -1
+    },
+    "parameter_bindings": {
+      "period": {
+        "constant": "近30天"
+      },
+      "productId": {
+        "source": "$filter.productId"
+      }
+    },
+    "import": {
+      "subject_mode": "single"
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "download_ref",
+        "output_key": "doudianProductDetailCardFile",
+        "skip_when": {
+          "reason": "button_disabled",
+          "control_step_id": "product_detail_card:按下载按钮状态处理",
+          "step_id": "product_detail_card:下载按钮禁用时跳过",
+          "download_step_id": "product_detail_card:点击下载明细按钮",
+          "required_steps": [
+            {
+              "step_id": "product_detail_card:切换商品卡数据",
+              "action": "clickAndWait"
+            },
+            {
+              "step_id": "product_detail_card:点击时间维度-period",
+              "action": "clickAndWait"
+            },
+            {
+              "step_id": "product_detail_card:等待下载明细按钮出现",
+              "action": "waitFor"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
