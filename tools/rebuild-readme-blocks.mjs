@@ -48,6 +48,7 @@ const SUITES = [
   ['features-v0198.mjs', 10, '窗口里已经登录时不再自动代填'],
   ['features-v0202.mjs', 10, '定时采集到点自己启动 ego（以前要手动先打开一次）'],
   ['features-v0203.mjs', 17, '本机浏览器扫描（Google Chrome、Microsoft Edge 与 ego lite）'],
+  ['features-v02036.mjs', 7, 'ego 执行器把页内请求的结果正确写入产物（不再写成 [object Object]）'],
   ['features-v02035.mjs', 11, '登录页滑块自动滑到底（跨 frame 坐标换算、多套轨迹重试）'],
   ['features-v02034.mjs', 6, '接口在页内读取（不跳转到 JSON 页面、执行失败不静默）'],
   ['features-v02033.mjs', 6, '生意参谋接口改为页内请求（页面不离开首页）'],
