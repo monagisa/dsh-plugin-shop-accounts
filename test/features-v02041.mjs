@@ -98,13 +98,13 @@ await test('D1 prepareJobForAccount 会先抓商品 ID 再把参数传给配方'
   assert.ok(src.includes('skipped.paramAuto'), '摘掉的配方要记录在 skipped');
 });
 
-await test('D2 界面：没有可跑配方的域置灰、不可点', () => {
+await test('D2 界面：每个采集内容都标出可跑份数（v0.20.42 改成勾选清单，不再置灰）', () => {
   const src = fs.readFileSync(path.join(LIB, 'client.js'), 'utf8');
-  assert.ok(src.includes('var runnable = row ? Number(row.runnable || 0) : 0;'), '按 runnable 判断');
-  assert.ok(src.includes('var disabled = runnable === 0;'), '没有可跑配方就禁用');
-  assert.ok(src.includes('disabled: disabled'), '按钮要带 disabled');
-  assert.ok(src.includes('if (disabled) return;'), '点击时再拦一次');
-  assert.ok(src.includes("hint + '（这个域现在没有能跑的配方）'"), '要说明为什么点不了');
+  assert.ok(src.includes('function domRows()'), '要有采集内容清单函数');
+  assert.ok(src.includes("' 可跑 · 共 '"), '要标出可跑份数');
+  assert.ok(src.includes('暂无配方'), '没有配方的要标暂无配方');
+  assert.ok(src.includes('详细配置 · '), '弹窗标题按店铺名');
+  assert.ok(!src.includes('var disabled = runnable === 0;'), 'v0.20.42 去掉了置灰（全部内容都可勾选）');
 });
 
 await test('D3 /state 下发 productParams 能力位', () => {

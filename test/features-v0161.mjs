@@ -96,7 +96,8 @@ test('采集卡片：状态胶囊 + 同一个开关的按钮', () => {
   assert.match(clientSrc, /定时采集：已暂停/);
   assert.match(clientSrc, /加入定时采集/);
   assert.match(clientSrc, /暂停定时采集/);
-  assert.match(clientSrc, /保存采集域/);
+  // v0.20.42：采集内容改成「详细配置」弹窗保存，按钮文案随之变化。
+  assert.match(clientSrc, /应用配置/);
 });
 
 test('密码卡：一句话说明 + 操作按钮齐全', () => {

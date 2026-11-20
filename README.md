@@ -360,7 +360,8 @@ node test/features-v0192.mjs   # 9 项：窗口在别处关掉后状态跟上（
 node test/features-v0198.mjs   # 10 项：窗口里已经登录时不再自动代填
 node test/features-v0202.mjs   # 10 项：定时采集到点自己启动 ego（以前要手动先打开一次）
 node test/features-v0203.mjs   # 17 项：本机浏览器扫描（Google Chrome、Microsoft Edge 与 ego lite）
-node test/features-v02041.mjs  # 15 项：商品 ID 自动补全 + 采集域只列能跑的
+node test/features-v02042.mjs  # 7 项：采集内容改成「详细配置」勾选清单
+node test/features-v02041.mjs  # 15 项：商品 ID 自动补全（采集前抓店铺商品 ID）
 node test/features-v02040.mjs  # 9 项：拼多多商品概况（读卡片 + 通用指标对解析）
 node test/features-v02037.mjs  # 12 项：采集域决定跑哪些配方（域过滤、已校准门控、界面配方数）
 node test/features-v02036.mjs  # 7 项：ego 执行器把页内请求的结果正确写入产物（不再写成 [object Object]）
@@ -382,13 +383,13 @@ node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome�
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前 56 套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 57 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**865 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**872 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -435,7 +436,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.41**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.42**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
