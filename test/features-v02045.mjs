@@ -86,14 +86,14 @@ test('B2 卡片文本解析：首尾相接的「标签 今日值 昨日 ¥值」
   assert.equal(rec.yesterday.pay_ord_cnt, undefined, '不该把下一张卡的数字当昨日值');
 });
 
-test('C1 拼多多按域可跑份数：经营总览/商品供给/服务履约/流量转化 都有，运营推广仍等登录', () => {
+test('C1 拼多多按域可跑份数：五个域都有可跑配方（运营推广由推广概况配方补上）', () => {
   const st = dsls.dslRecipeStats('pdd');
   const by = st.byDomain;
   assert.equal(by['经营总览'].runnable, 2);
   assert.ok(by['商品供给'].runnable >= 2);
   assert.equal(by['服务履约'].runnable, 2);
   assert.equal(by['流量转化'].runnable, 1);
-  assert.equal(by['运营推广'].runnable, 0);
+  assert.ok(by['运营推广'].runnable >= 1, '运营推广现在有推广概况配方了');
 });
 
 test('C2 淘宝五项采集域都至少有一份可跑配方', () => {

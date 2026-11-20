@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "rpa.dsl.v1",
+  "id": "pdd_ads_overview",
+  "verified": true,
+  "domains": ["运营推广"],
+  "platform": "pdd",
+  "description": "拼多多推广概况（多多招财首页）：读取今日花费、账户余额、推广中商品数与实时成交指标。",
+  "conditions": {
+    "time": {
+      "kind": "snapshot",
+      "timezone": "Asia/Shanghai",
+      "dateConstraints": { "endOffsetDays": -1 }
+    }
+  },
+  "template": {
+    "schemaVersion": "rpa.dsl.v1",
+    "name": "拼多多推广概况",
+    "description": "打开多多招财的推广概况页，读取实时概况卡片上的花费、余额与成交指标。页面上的数字是明文，不需要字体解码。",
+    "steps": [
+      {
+        "id": "pdd_ads_overview:打开推广概况",
+        "action": "goto",
+        "url": "https://yingxiao.pinduoduo.com/mains/promotionOverview",
+        "waitUntil": "domcontentloaded",
+        "description": "多多招财首页（推广概况），页面本身可直进，不需要额外登录。"
+      },
+      {
+        "id": "pdd_ads_overview:等待概况加载",
+        "action": "waitTimeout",
+        "ms": 9000
+      },
+      {
+        "id": "pdd_ads_overview:等待概况卡片",
+        "action": "waitFor",
+        "target": [{ "by": "css", "value": "body" }],
+        "timeoutMs": 8000,
+        "onError": "continue"
+      },
+      {
+        "id": "pdd_ads_overview:读取概况指标",
+        "action": "evaluate",
+        "outputKey": "pddAdsOverview",
+        "expression": "const pairs = [['今日花费','推广花费'],['总余额','推广余额'],['推广中','推广中商品数'],['成交营销花费','成交营销花费'],['净交易额','净交易额'],['实际净投产比','净投产比'],['净成交笔数','净成交笔数'],['交易额','推广交易额'],['实际投产比','推广投产比'],['总营销花费','总营销花费'],['推广成交花费','推广成交花费'],['每笔净成交花费','每笔净成交花费']];\nconst text = (document.body.innerText || '').replace(/\\s+/g, ' ');\nconst items = [];\nfor (const [needle, label] of pairs) {\n  const at = text.indexOf(needle);\n  if (at < 0) continue;\n  const seg = text.slice(at + needle.length, at + needle.length + 40);\n  const hit = seg.match(/[0-9]+(?:\\.[0-9]+)?/);\n  if (!hit) continue;\n  items.push({ label: label, today: hit[0], yesterday: '' });\n}\nreturn JSON.stringify({ asOf: new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10), items: items });"
+      },
+      {
+        "id": "pdd_ads_overview:read-page-url",
+        "action": "readPageUrl",
+        "outputKey": "finalUrl"
+      }
+    ]
+  },
+  "collection": {
+    "artifacts": [
+      { "role": "business", "kind": "json_string", "output_key": "pddAdsOverview" }
+    ],
+    "schedule": { "mode": "snapshot" }
+  }
+}
