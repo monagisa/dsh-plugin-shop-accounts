@@ -227,7 +227,8 @@ function writeTables(jobDir, job) {
     if (!t || t.state !== 'ok') continue;
     if ((t.artifacts || []).some((a) => a && a.present && a.filePath)) continue; // 下载型配方平台已经给了表格，不再重复生成
     const dir = path.join(jobDir, 'artifacts', String(t.taskId || 'task'));
-    const out = path.join(dir, dslItemFileSafe(t.dslId) + '_' + stamp + '_表格.xlsx');
+    const shopSeg = shopNameSafe(job.accountName) ? shopNameSafe(job.accountName) + '_' : '';
+    const out = path.join(dir, dslItemFileSafe(t.dslId) + '_' + stamp + '_' + shopSeg + '表格.xlsx');
     if (fs.existsSync(out)) continue;
     const rows = [];
     let labels = ['指标', '今日值', '昨日值'];
