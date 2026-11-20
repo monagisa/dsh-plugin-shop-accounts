@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "rpa.dsl.v1",
+  "id": "douyin_traffic_overview",
+  "verified": true,
+  "domains": ["流量转化"],
+  "platform": "douyin",
+  "description": "抖音电商罗盘「搜索-流量概况」：读取搜索渠道的成交金额、订单量、曝光人数与点击/成交转化率。",
+  "conditions": {
+    "time": {
+      "kind": "snapshot",
+      "timezone": "Asia/Shanghai",
+      "dateConstraints": { "endOffsetDays": -1 }
+    }
+  },
+  "template": {
+    "schemaVersion": "rpa.dsl.v1",
+    "name": "抖音搜索流量概况",
+    "description": "打开罗盘的搜索流量概况页，读取搜索概览卡片上的金额、订单、曝光与转化指标；页面数字为明文。",
+    "steps": [
+      {
+        "id": "douyin_traffic_overview:open-traffic-analysis",
+        "action": "goto",
+        "url": "https://compass.jinritemai.com/shop/search/traffic-analysis",
+        "waitUntil": "domcontentloaded",
+        "description": "直接打开「搜索-流量概况」；若落到首页，说明登录态失效，由登录守卫拦截。"
+      },
+      {
+        "id": "douyin_traffic_overview:wait-shell",
+        "action": "waitTimeout",
+        "ms": 8000
+      },
+      {
+        "id": "douyin_traffic_overview:wait-cards",
+        "action": "waitFor",
+        "target": [{ "by": "css", "value": "body" }],
+        "timeoutMs": 8000,
+        "onError": "continue"
+      },
+      {
+        "id": "douyin_traffic_overview:read-overview",
+        "action": "evaluate",
+        "outputKey": "douyinTrafficOverview",
+        "expression": "const pairs = [['搜索用户支付金额','搜索用户支付金额'],['搜索订单量','搜索订单量'],['搜索曝光人数','搜索结果曝光人数'],['搜索点击率','搜索点击率'],['搜索点击成交率','搜索点击成交率']];\nconst text = (document.body.innerText || '').replace(/\\s+/g, ' ');\nconst items = [];\nfor (const [needle, label] of pairs) {\n  const at = text.indexOf(needle);\n  if (at < 0) continue;\n  const seg = text.slice(at + needle.length, at + needle.length + 24);\n  const hit = seg.match(/[0-9]+(?:\\.[0-9]+)?/);\n  if (!hit) continue;\n  items.push({ label: label, today: hit[0], yesterday: '' });\n}\nreturn JSON.stringify({ asOf: new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10), items: items });"
+      },
+      {
+        "id": "douyin_traffic_overview:read-page-url",
+        "action": "readPageUrl",
+        "outputKey": "finalUrl"
+      }
+    ]
+  },
+  "collection": {
+    "artifacts": [
+      { "role": "business", "kind": "json_string", "output_key": "douyinTrafficOverview" }
+    ],
+    "schedule": { "mode": "snapshot" }
+  }
+}

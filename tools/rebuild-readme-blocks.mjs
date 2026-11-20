@@ -48,6 +48,7 @@ const SUITES = [
   ['features-v0198.mjs', 10, '窗口里已经登录时不再自动代填'],
   ['features-v0202.mjs', 10, '定时采集到点自己启动 ego（以前要手动先打开一次）'],
   ['features-v0203.mjs', 17, '本机浏览器扫描（Google Chrome、Microsoft Edge 与 ego lite）'],
+  ['features-v02048.mjs', 8, '抖音搜索流量概况配方（流量转化有了可跑配方）'],
   ['features-v02047.mjs', 8, '拼多多推广概况配方（运营推广有了可跑配方）'],
   ['features-v02046.mjs', 8, '登录守卫的 detached 语义（隐藏的登录模板不再误判）'],
   ['features-v02045.mjs', 10, '拼多多流量与商品明细校准（读输入框、卡片指标解析）'],
