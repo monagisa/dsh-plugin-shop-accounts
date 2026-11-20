@@ -78,9 +78,9 @@ await test('A2 没店名时返回空串（老数据保持旧命名）', () => {
 await test('B1 产物文件名带店铺名', () => {
   const { jobDir, job } = writeFakeJob('b1', '测试铺', 'tb_shop_overview');
   organizeArtifacts(jobDir, job);
-  const files = fs.readdirSync(path.join(jobDir, 'artifacts', 't_001'));
+  const files = fs.readdirSync(path.join(jobDir, 'artifacts'));
   assert.ok(
-    files.some((f) => f.startsWith('淘宝-店铺概览_20261120-1200_测试铺_')),
+    files.some((f) => f.startsWith('采集数据_20261120-1200_测试铺')),
     '产物名没带店铺名：' + files.join(','),
   );
 });
@@ -99,8 +99,8 @@ await test('B3 没有店名的作业仍是旧命名（不会把老数据改坏�
   organizeArtifacts(jobDir, job);
   const manifest = JSON.parse(fs.readFileSync(path.join(jobDir, 'artifacts', 'manifest.json'), 'utf8'));
   assert.equal(manifest.naming, '<采集项>_<YYYYMMDD-HHmm>_<原始文件名>');
-  const files = fs.readdirSync(path.join(jobDir, 'artifacts', 't_001'));
-  assert.ok(files.some((f) => f.startsWith('淘宝-店铺概览_20261120-1200_') && !f.includes('__')), '旧命名被动过了：' + files.join(','));
+  const files = fs.readdirSync(path.join(jobDir, 'artifacts'));
+  assert.ok(files.some((f) => f === '采集数据_20261120-1200.xlsx'), '旧命名被动过了：' + files.join(','));
 });
 
 await test('C1 作业目录名按「店名_采集项」排列', () => {

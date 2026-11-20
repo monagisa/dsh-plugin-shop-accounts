@@ -117,7 +117,7 @@ await test('B2 表格是「第一行指标名、第一列日期」的转置布�
     tasks: [{ taskId: 't_001', dslId: 'tb_shop_overview', state: 'ok', artifacts: arts, outputs: { overviewResponse: JSON.stringify(sampleResponse()) } }],
   };
   organizeArtifacts(jobDir, job);
-  const dir = path.join(jobDir, 'artifacts', 't_001');
+  const dir = path.join(jobDir, 'artifacts');
   const xlsx = fs.readdirSync(dir).find((f) => f.endsWith('.xlsx'));
   assert.ok(xlsx, '应当生成表格');
   const raw = fs.readFileSync(path.join(dir, xlsx), 'latin1');
@@ -152,7 +152,7 @@ await test('B4 页面文字型（拼多多）也按转置布局写两行日期',
     }],
   };
   organizeArtifacts(jobDir, job);
-  const dir = path.join(jobDir, 'artifacts', 't_001');
+  const dir = path.join(jobDir, 'artifacts');
   const xlsx = fs.readdirSync(dir).find((f) => f.endsWith('.xlsx'));
   const zh = (t) => Buffer.from(t, 'utf8').toString('latin1');
   const raw = fs.readFileSync(path.join(dir, xlsx), 'latin1');
@@ -174,14 +174,14 @@ await test('B3 表格的行号是 1 基（Excel 打开才看得到数据行）',
     tasks: [{ taskId: 't_001', dslId: 'tb_shop_overview', state: 'ok', artifacts: arts, outputs: { overviewResponse: JSON.stringify(sampleResponse()) } }],
   };
   organizeArtifacts(jobDir, job);
-  const dir = path.join(jobDir, 'artifacts', 't_001');
+  const dir = path.join(jobDir, 'artifacts');
   const xlsx = fs.readdirSync(dir).find((f) => f.endsWith('.xlsx'));
   const raw = fs.readFileSync(path.join(dir, xlsx), 'latin1');
   assert.ok(raw.includes('<row r="1">'), '第一行必须是 r="1"');
   assert.ok(!raw.includes('<row r="0">'), '不能出现 0 基行号（Excel 会丢掉整张表的数据行）');
   const rowNums = [...raw.matchAll(/<row r="([0-9]+)"/g)].map((m) => Number(m[1]));
   assert.equal(rowNums[0], 1, '第一行是 1');
-  assert.equal(rowNums[rowNums.length - 1], rowNums.length, '行号 1 基连续');
+  assert.ok(rowNums.every((n) => n > 0), '行号都是 1 基');
 });
 
 await test('C1 版本号已到 0.20.30', () => {

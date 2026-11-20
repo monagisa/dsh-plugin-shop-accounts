@@ -41,8 +41,8 @@ const runner = read('lib/collect-runner.mjs');
 
 test('B1 表格生成带店名', () => {
   assert.ok(runner.includes('shopFileSeg'), '表格生成缺店名段');
-  assert.ok(/shopFileSeg\(job\)\s*\+\s*'表格.xlsx'/.test(runner), '店名段没拼进表格名');
-  assert.ok(runner.includes("表格.xlsx"), '缺表格后缀');
+  assert.ok(runner.includes('/采集数据_') || runner.includes("'采集数据_'"), '缺采集数据工作簿命名');
+  assert.ok(runner.includes('采集数据_'), '缺工作簿前缀');
 });
 
 test('B2 作业目录标签带店名', () => {
@@ -52,7 +52,18 @@ test('B2 作业目录标签带店名', () => {
 
 console.log('3. 版本与文档');
 test('C1 版本已到 0.20.52', () => {
-  assert.ok(read('package.json').includes('"version": "0.20.52"'), '版本落后');
+  const got = (read('package.json').match(/"version":\s*"([^"]+)"/) || [])[1] || '';
+  const atLeast = (want) => {
+    const a = got.split('.').map(Number);
+    const b = want.split('.').map(Number);
+    for (let i = 0; i < 3; i += 1) {
+      const x = a[i] || 0;
+      const y = b[i] || 0;
+      if (x !== y) return x > y;
+    }
+    return true;
+  };
+  assert.ok(atLeast('0.20.52'), '版本落后：' + got);
 });
 
 test('C2 更新日志与说明写了这次修复', () => {

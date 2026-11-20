@@ -281,8 +281,8 @@ await test('organizeArtifacts：指标型作业也生成表格并写进 manifest
   fs.writeFileSync(path.join(dir, 'job.json'), JSON.stringify(job, null, 2), 'utf8');
   const manifest = J.organizeArtifacts(dir, job);
   const files = manifest.files.map((f) => f.fileName);
-  assert.ok(files.includes('拼多多-店铺概览_20261101-0900_测试铺_表格.xlsx'), '没生成表格：' + files.join(','));
-  assert.ok(fs.existsSync(path.join(dir, 'artifacts', 't_001', '拼多多-店铺概览_20261101-0900_测试铺_表格.xlsx')), '表格文件不在产物目录');
+  assert.ok(files.some((n) => n === '采集数据_20261101-0900_测试铺.xlsx'), '没生成表格：' + files.join(','));
+  assert.ok(fs.existsSync(path.join(dir, 'artifacts', '采集数据_20261101-0900_测试铺.xlsx')), '表格文件不在产物目录');
   assert.ok((manifest.items || []).some((i) => i.name === '拼多多-店铺概览'), 'manifest 没标采集项名');
   assert.ok(manifest.files.some((f) => f.kind === 'xlsx'), 'manifest 没记表格');
 });
