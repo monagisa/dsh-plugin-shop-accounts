@@ -98,13 +98,13 @@ await test('D1 prepareJobForAccount 会先抓商品 ID 再把参数传给配方'
   assert.ok(src.includes('skipped.paramAuto'), '摘掉的配方要记录在 skipped');
 });
 
-await test('D2 界面：每个采集内容都标出可跑份数（v0.20.42 改成勾选清单，不再置灰）', () => {
+await test('D2 界面：采集域是一排勾选项 + 「保存采集域」按钮（简洁样式）', () => {
   const src = fs.readFileSync(path.join(LIB, 'client.js'), 'utf8');
-  assert.ok(src.includes('function domRows()'), '要有采集内容清单函数');
-  assert.ok(src.includes("' 可跑 · 共 '"), '要标出可跑份数');
-  assert.ok(src.includes('暂无配方'), '没有配方的要标暂无配方');
-  assert.ok(src.includes('详细配置 · '), '弹窗标题按店铺名');
-  assert.ok(!src.includes('var disabled = runnable === 0;'), 'v0.20.42 去掉了置灰（全部内容都可勾选）');
+  assert.ok(src.includes("h('input', { type: 'checkbox'"), '采集内容要能勾选');
+  assert.ok(src.includes('保存采集域'), '缺保存按钮');
+  assert.ok(src.includes('项配方'), '要标出每个域有几份配方');
+  assert.ok(!src.includes('collOpen'), '不该再有详细配置弹窗');
+  assert.ok(src.includes('collectionDomains'), '采集域勾选要读账号上的 collectionDomains');
 });
 
 await test('D3 /state 下发 productParams 能力位', () => {

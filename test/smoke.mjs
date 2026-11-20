@@ -1248,7 +1248,7 @@ await test('列表 6 列对齐 / 弹窗不透明 / 预览列表不被压扁 / �
   // ③ 弹窗正文自己滚、按钮固定在底部；预览列表不许被 flex 压成一条线（以前压到 4px，行全看不见）。
   assert.ok(/\.sa-dialog\{[\s\S]*?overflow:hidden/.test(dialog), '弹窗本体不滚，交给正文滚，否则底部按钮会被挤出视野');
   // v0.20.42：新增「详细配置」采集内容弹窗后一共 3 个弹窗，每个都要有可滚动正文区。
-  assert.equal((clientSrc.match(/className: 'sa-dialog-body'/g) || []).length, 3, '三个弹窗（新增/编辑、调整排期、详细配置）都要包一层可滚动的正文区');
+  assert.equal((clientSrc.match(/className: 'sa-dialog-body'/g) || []).length, 2, '两个弹窗（新增/编辑、调整排期）都要包一层可滚动的正文区');
   assert.ok(/\.sa-plist\{[^}]*flex:0 0 auto/.test(clientSrc), '预览列表不能被 flex-shrink 压扁');
   assert.ok(/\.sa-scroll\{[^}]*flex:0 0 auto/.test(clientSrc), '滚动区不能被 flex-shrink 压扁');
   // ④ 排期预览要能拖拽排序：行上必须挂 drag 事件（HTML5 drag&drop），并且有拖拽手柄。

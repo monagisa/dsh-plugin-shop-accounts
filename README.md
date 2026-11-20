@@ -366,7 +366,7 @@ node test/features-v02046.mjs  # 8 项：登录守卫的 detached 语义（隐�
 node test/features-v02045.mjs  # 10 项：拼多多流量与商品明细校准（读输入框、卡片指标解析）
 node test/features-v02044.mjs  # 8 项：页面字体解码在主世界求值（部分解码不再整轮失败）
 node test/features-v02043.mjs  # 13 项：采集域统一五项（去掉竞争洞察）
-node test/features-v02042.mjs  # 7 项：采集内容改成「详细配置」勾选清单
+node test/features-v02042.mjs  # 7 项：采集内容保持内联勾选 + 保存采集域（简洁样式）
 node test/features-v02041.mjs  # 15 项：商品 ID 自动补全（采集前抓店铺商品 ID）
 node test/features-v02040.mjs  # 9 项：拼多多商品概况（读卡片 + 通用指标对解析）
 node test/features-v02037.mjs  # 12 项：采集域决定跑哪些配方（域过滤、已校准门控、界面配方数）
@@ -442,7 +442,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.48**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.49**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 

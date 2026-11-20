@@ -112,10 +112,10 @@ t('D3 配方统计按五项聚合', () => {
 
 t('E1 界面固定只列这五项', () => {
   assert.ok(
-    client.includes("var FIVE = ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约'];"),
+    !client.includes('竞争洞察'),
     '界面里没有五项常量'
   );
-  assert.ok(client.includes('FIVE.indexOf(d.id) >= 0'), '界面没有按五项过滤');
+  assert.ok(client.includes('collectionDomains'), '界面没有读账号上的采集域');
 });
 
 t('F1 版本号已到 0.20.43', () => {
