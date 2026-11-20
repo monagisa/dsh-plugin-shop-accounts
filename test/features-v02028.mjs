@@ -49,10 +49,10 @@ const tools = await import(pathToFileURL(path.join(ROOT, 'lib/server/tools.mjs')
 
 console.log('\nv0.20.28 工具参数采集域枚举');
 
-await test('A1 collectionDomainEnums() 返回五个采集域 + 竞争洞察', () => {
+await test('A1 collectionDomainEnums() 返回五个采集域', () => {
   const list = tools.collectionDomainEnums();
-  assert.equal(list.length, 6);
-  for (const id of ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约', '竞争洞察']) {
+  assert.equal(list.length, 5);
+  for (const id of ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约']) {
     assert.ok(list.includes(id), '缺采集域：' + id);
   }
 });
@@ -85,7 +85,8 @@ await test('B2 registerTool 用桩 ctx 注册成功（defineTool 不可用时给
   assert.equal(captured.name, 'shop_accounts');
   assert.ok(captured.parameters && captured.parameters.properties, '注册后的 parameters 形状不对');
   assert.ok(captured.output && captured.output.schema && typeof captured.output.render === 'function');
-  assert.ok(String(captured.parameters.properties.domain.enum.join(' ')).includes('竞争洞察'));
+  assert.equal(captured.parameters.properties.domain.enum.length, 5)
+  assert.ok(!String(captured.parameters.properties.domain.enum.join(' ')).includes('竞争洞察'));
 });
 
 await test('C1 版本号已到 0.20.28', () => {

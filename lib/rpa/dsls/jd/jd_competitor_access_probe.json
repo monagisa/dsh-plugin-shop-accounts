@@ -3,7 +3,7 @@
   "id": "jd_competitor_access_probe",
   "verified": false,
   "domains": [
-    "竞争洞察"
+    "经营总览"
   ],
   "platform": "jd",
   "description": "保留原noAuth/noPageAuth.html?menuCode=competeProduct权限提示页面的只读快照；当前流程不进入竞品业务页，也不采集竞品指标。",

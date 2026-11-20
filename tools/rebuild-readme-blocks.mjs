@@ -48,6 +48,7 @@ const SUITES = [
   ['features-v0198.mjs', 10, '窗口里已经登录时不再自动代填'],
   ['features-v0202.mjs', 10, '定时采集到点自己启动 ego（以前要手动先打开一次）'],
   ['features-v0203.mjs', 17, '本机浏览器扫描（Google Chrome、Microsoft Edge 与 ego lite）'],
+  ['features-v02043.mjs', 13, '采集域统一五项（去掉竞争洞察）'],
   ['features-v02042.mjs', 7, '采集内容改成「详细配置」勾选清单'],
   ['features-v02041.mjs', 15, '商品 ID 自动补全（采集前抓店铺商品 ID）'],
   ['features-v02040.mjs', 9, '拼多多商品概况（读卡片 + 通用指标对解析）'],

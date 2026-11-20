@@ -2,9 +2,10 @@
 /**
  * features-v0120.mjs —— v0.12.0 目录层（「平台 → 采集域 → 指标」模型）：
  *   1. 目录文件本身：可解析、规模合理、只含骨架（不含取值路径 / 聚合规则等实现细节）
- *   2. 平台 → 域：淘宝/天猫 6 个域（多「竞争洞察」），抖店/京东/拼多多 5 个域
+ *   2. 平台 → 域：所有平台统一五项（经营总览 / 流量转化 / 运营推广 / 商品供给 / 服务履约）；
+ *      淘宝/天猫目录里多出来的「竞争洞察」被过滤，不再下发
  *   3. 指标查询：按 id 查名字/度量类型/所需字段；跨平台不认
- *   4. 按平台校验：pdd 不能采「竞争洞察」，taobao 可以（配置 + import + query 三处）
+ *   4. 按平台校验：五项之外的域（如「竞争洞察」）在所有平台都被拒（配置 + import + query 三处）
  *   5. 落库记录带 metricId：能查、能过滤、参与去重哈希
  *   6. HTTP /catalog 与 /state 暴露；工具 action=catalog；界面显示指标数
  *
@@ -47,7 +48,7 @@ const DS = await import(url('lib/datastore.mjs'));
 // ── 1. 目录文件 ─────────────────────────────────────────────────────────────
 section('1. 目录文件（平台 → 域 → 指标）');
 
-await test('目录可加载：6 个平台、指标总数 ≥ 3000', () => {
+await test('目录可加载：5 个平台、指标总数 ≥ 3000', () => {
   assert.equal(CAT.catalogReady(), true);
   const info = CAT.catalogInfo();
   assert.equal(info.ready, true);
@@ -72,22 +73,29 @@ await test('目录只保留骨架：不含取值路径 / 聚合规则 / 加密�
 // ── 2. 平台 → 域 ────────────────────────────────────────────────────────────
 section('2. 平台 → 采集域');
 
-await test('淘宝/天猫 6 个域（多「竞争洞察」），抖店/京东/拼多多 5 个域', () => {
-  const tb = CAT.catalogDomains('taobao').map((d) => d.id);
-  assert.deepEqual(tb, ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约', '竞争洞察']);
-  assert.deepEqual(CAT.catalogDomains('tmall').map((d) => d.id), tb);
-  for (const pid of ['douyin', 'jd', 'pdd']) {
+await test('所有平台统一五项，淘宝/天猫不再有第六个域「竞争洞察」', () => {
+  const FIVE = ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约'];
+  for (const pid of ['taobao', 'tmall', 'douyin', 'jd', 'pdd']) {
     const ids = CAT.catalogDomains(pid).map((d) => d.id);
-    assert.deepEqual(ids, ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约'], pid + ' 域不对');
+    assert.deepEqual(ids, FIVE, pid + ' 域不对');
+    assert.deepEqual(CAT.catalogDomainIds(pid), FIVE, pid + ' catalogDomainIds 与 catalogDomains 不一致');
   }
+  assert.ok(!CAT.catalogDomains('taobao').some((d) => d.id === '竞争洞察'), '淘宝目录不该再有竞争洞察');
+  assert.ok(!CAT.catalogDomains('tmall').some((d) => d.id === '竞争洞察'), '天猫目录不该再有竞争洞察');
 });
 
-await test('域带指标数：淘宝运营推广 540 项、竞争洞察 78 项', () => {
+await test('域带指标数：淘宝运营推广 540 项、商品供给 165 项，且没有竞争洞察域', () => {
   const tb = CAT.catalogDomains('taobao');
   const ad = tb.find((d) => d.id === '运营推广');
+  assert.ok(ad, '淘宝没有运营推广域');
   assert.equal(ad.metricCount, 540);
-  const comp = tb.find((d) => d.id === '竞争洞察');
-  assert.equal(comp.metricCount, 78);
+  const supply = tb.find((d) => d.id === '商品供给');
+  assert.ok(supply, '淘宝没有商品供给域');
+  assert.equal(supply.metricCount, 165);
+  assert.ok(!tb.some((d) => d.id === '竞争洞察'), '淘宝不该有竞争洞察域');
+  const pddAd = CAT.catalogDomains('pdd').find((d) => d.id === '运营推广');
+  assert.ok(pddAd, '拼多多没有运营推广域');
+  assert.equal(pddAd.metricCount, 90, '拼多多运营推广指标数不对');
 });
 
 await test('目录里没有的平台（1688）退回默认 5 域且不拦指标校验', () => {
@@ -114,9 +122,9 @@ await test('跨平台不认：淘宝的指标 id 在拼多多上查不到', () =
 });
 
 await test('按域列指标：字段齐全且都属于该域', () => {
-  const list = CAT.catalogMetrics('taobao', '竞争洞察');
-  assert.equal(list.length, 78);
-  assert.ok(list.every((m) => m.domain === '竞争洞察'));
+  const list = CAT.catalogMetrics('taobao', '商品供给');
+  assert.equal(list.length, 165);
+  assert.ok(list.every((m) => m.domain === '商品供给'));
   assert.ok(list.every((m) => typeof m.name === 'string' && m.name.length > 0));
 });
 
@@ -124,13 +132,20 @@ await test('按域列指标：字段齐全且都属于该域', () => {
 section('4. 按平台校验采集域');
 
 const C = await import(url('lib/collection.mjs'));
-await test('配置：淘宝能选「竞争洞察」，拼多多不能', () => {
-  const tb = C.normalizeCollection({ enabled: true, domains: ['竞争洞察'] }, {}, { allow: CAT.catalogDomainIds('taobao') });
-  assert.deepEqual(tb.domains, ['竞争洞察']);
-  assert.throws(
-    () => C.normalizeCollection({ enabled: true, domains: ['竞争洞察'] }, {}, { allow: CAT.catalogDomainIds('pdd') }),
-    /未知采集域/,
+await test('配置：五项内的域能存，五项之外的「竞争洞察」所有平台都拒', () => {
+  const ok = C.normalizeCollection(
+    { enabled: true, domains: ['商品供给', '服务履约'] },
+    {},
+    { allow: CAT.catalogDomainIds('taobao') },
   );
+  assert.deepEqual(ok.domains, ['商品供给', '服务履约']);
+  for (const pid of ['taobao', 'tmall', 'pdd', 'jd', 'douyin']) {
+    assert.throws(
+      () => C.normalizeCollection({ enabled: true, domains: ['竞争洞察'] }, {}, { allow: CAT.catalogDomainIds(pid) }),
+      /未知采集域/,
+      `${pid} 应拒绝五项之外的「竞争洞察」`,
+    );
+  }
 });
 
 // ── 5. 落库记录带 metricId ─────────────────────────────────────────────────
@@ -221,13 +236,17 @@ async function call(method, p, body, headers) {
   return { status: res.statusCode, json, body: res.body };
 }
 
-await test('GET /catalog 概览：平台 + 每平台域清单 + 指标总数', async () => {
+await test('GET /catalog 概览：平台 + 每平台五项域清单 + 指标总数', async () => {
   const r = await call('GET', '/shop-accounts/catalog');
   assert.equal(r.status, 200);
   assert.equal(r.json.ready, true);
   assert.ok(r.json.totalMetrics >= 3000);
-  assert.ok(r.json.platformDomains.taobao.some((d) => d.id === '竞争洞察'));
-  assert.ok(!r.json.platformDomains.pdd.some((d) => d.id === '竞争洞察'));
+  const FIVE = ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约'];
+  for (const pid of ['taobao', 'tmall', 'douyin', 'jd', 'pdd']) {
+    assert.deepEqual(r.json.platformDomains[pid].map((d) => d.id), FIVE, pid + ' 下发的域清单不对');
+  }
+  assert.ok(!r.json.platformDomains.taobao.some((d) => d.id === '竞争洞察'), '淘宝不该再下发竞争洞察');
+  assert.ok(!r.json.platformDomains.tmall.some((d) => d.id === '竞争洞察'), '天猫不该再下发竞争洞察');
 });
 
 await test('GET /catalog?platform=taobao&domain=运营推广：540 项、默认截断', async () => {
@@ -250,10 +269,11 @@ let pddId = '';
 await test('建淘宝店 + 拼多多店（后续按平台校验用）', async () => {
   const a = await call('POST', '/shop-accounts/accounts', {
     platform: 'taobao', loginName: 'v120tb@example.com', password: 'V120-P@ss1', name: 'v120 淘宝店',
-    collection: { enabled: true, domains: ['竞争洞察'], time: '09:00' },
+    collection: { enabled: true, domains: ['运营推广', '商品供给'], time: '09:00' },
   });
   assert.equal(a.status, 200);
   taobaoId = a.json.account.id;
+  assert.deepEqual(a.json.account.collection.domains, ['运营推广', '商品供给'], '建号时合法五项域应能存下来');
   const b = await call('POST', '/shop-accounts/accounts', {
     platform: 'pdd', loginName: 'v120pdd@example.com', password: 'V120-P@ss2', name: 'v120 拼多多店',
   });
@@ -261,35 +281,49 @@ await test('建淘宝店 + 拼多多店（后续按平台校验用）', async ()
   pddId = b.json.account.id;
 });
 
-await test('/state：目录概览 + 每账号按平台下发域清单（带指标数）', async () => {
+await test('/state：目录概览 + 每账号按平台下发五项域清单（带指标数）', async () => {
   const r = await call('GET', '/shop-accounts/state');
   assert.equal(r.status, 200);
   assert.equal(r.json.catalog.ready, true);
+  const FIVE = ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约'];
   const tb = r.json.accounts.find((a) => a.id === taobaoId);
   const pdd = r.json.accounts.find((a) => a.id === pddId);
-  assert.ok(tb.collectionDomains.some((d) => d.id === '竞争洞察'));
-  assert.ok(!pdd.collectionDomains.some((d) => d.id === '竞争洞察'));
+  assert.ok(tb, '没找到淘宝店');
+  assert.ok(pdd, '没找到拼多多店');
+  assert.deepEqual(tb.collectionDomains.map((d) => d.id), FIVE, '淘宝下发域清单不对');
+  assert.deepEqual(pdd.collectionDomains.map((d) => d.id), FIVE, '拼多多下发域清单不对');
+  assert.ok(!tb.collectionDomains.some((d) => d.id === '竞争洞察'), '淘宝不该下发竞争洞察');
   const ad = tb.collectionDomains.find((d) => d.id === '运营推广');
   assert.equal(ad.metricCount, 540);
+  const supply = tb.collectionDomains.find((d) => d.id === '商品供给');
+  assert.equal(supply.metricCount, 165, '商品供给指标数不对');
+  const pddAd = pdd.collectionDomains.find((d) => d.id === '运营推广');
+  assert.equal(pddAd.metricCount, 90, '拼多多运营推广指标数不对');
 });
 
-await test('拼多多采「竞争洞察」被 400 挡回，淘宝可以', async () => {
-  const bad = await call('POST', `/shop-accounts/accounts/${pddId}/collect-import`, {
-    domain: '竞争洞察', items: [], coverageStart: '2026-10-01', coverageEnd: '2026-10-02',
-  });
-  assert.equal(bad.status, 400);
-  assert.match(bad.json.error, /不是这个平台的采集域/);
+await test('五项之外的「竞争洞察」在所有平台都被 400 挡回（import 与 query 都拒）', async () => {
+  const OUT = '竞争洞察';
+  for (const [id, pid] of [[taobaoId, 'taobao'], [pddId, 'pdd']]) {
+    const bad = await call('POST', `/shop-accounts/accounts/${id}/collect-import`, {
+      domain: OUT, items: [], coverageStart: '2026-10-01', coverageEnd: '2026-10-02',
+    });
+    assert.equal(bad.status, 400, `${pid} import 应 400，实际 ${bad.status}`);
+    assert.match(bad.json.error, /不是这个平台的采集域/);
+    assert.match(bad.json.error, new RegExp(OUT), '错误信息应点名这个域');
 
+    const q = await call('GET', `/shop-accounts/accounts/${id}/collect-records?domain=` + encodeURIComponent(OUT));
+    assert.equal(q.status, 400, `${pid} query 应 400，实际 ${q.status}`);
+    assert.match(q.json.error, /不是这个平台的采集域/);
+  }
+
+  // 五项之内的域仍然能正常导入
   const ok = await call('POST', `/shop-accounts/accounts/${taobaoId}/collect-import`, {
-    domain: '竞争洞察',
-    items: [{ bizDate: '2026-10-01', metric: '竞品支付金额', value: 999 }],
+    domain: '商品供给',
+    items: [{ bizDate: '2026-10-01', metric: '在售商品数', value: 120 }],
     coverageStart: '2026-10-01', coverageEnd: '2026-10-01',
   });
   assert.equal(ok.status, 200);
   assert.equal(ok.json.imported, 1);
-
-  const q = await call('GET', `/shop-accounts/accounts/${pddId}/collect-records?domain=` + encodeURIComponent('竞争洞察'));
-  assert.equal(q.status, 400);
 });
 
 await test('collect-import 带目录外的 metricId → 400 并点名', async () => {
@@ -310,14 +344,17 @@ await test('collect-import 带目录外的 metricId → 400 并点名', async ()
   assert.ok(Array.isArray(wrong.json.unknownMetricIds) && wrong.json.unknownMetricIds.length === 1);
 });
 
-await test('PUT /collection：淘宝能存「竞争洞察」，拼多多 400', async () => {
+await test('PUT /collection：五项内的域能存，五项之外的「竞争洞察」所有平台 400', async () => {
   const ok = await call('PUT', `/shop-accounts/accounts/${taobaoId}/collection`, {
-    enabled: true, domains: ['竞争洞察', '经营总览'], time: '08:30',
+    enabled: true, domains: ['商品供给', '经营总览'], time: '08:30',
   });
   assert.equal(ok.status, 200);
-  assert.deepEqual(ok.json.account.collection.domains, ['竞争洞察', '经营总览']);
-  const bad = await call('PUT', `/shop-accounts/accounts/${pddId}/collection`, { enabled: true, domains: ['竞争洞察'] });
-  assert.equal(bad.status, 400);
+  assert.deepEqual(ok.json.account.collection.domains, ['商品供给', '经营总览']);
+  for (const [id, pid] of [[taobaoId, 'taobao'], [pddId, 'pdd']]) {
+    const bad = await call('PUT', `/shop-accounts/accounts/${id}/collection`, { enabled: true, domains: ['竞争洞察'] });
+    assert.equal(bad.status, 400, `${pid} 应 400，实际 ${bad.status}`);
+    assert.match(bad.json.error, /未知采集域/);
+  }
 });
 
 // ── 7. 工具与界面 ───────────────────────────────────────────────────────────
@@ -326,10 +363,16 @@ section('7. 工具定义与界面');
 const toolSrc = readServerSource(ROOT);
 const clientSrc = fs.readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8');
 
-await test('工具：新增 catalog 动作，域枚举含「竞争洞察」', () => {
+await test('工具：catalog 动作还在，采集域枚举恰好五项、不含「竞争洞察」', async () => {
   assert.ok(/enum: \['list'[\s\S]*?'catalog'/.test(toolSrc), 'action 枚举里没有 catalog');
   assert.ok(toolSrc.includes("action === 'catalog'"), '没有 catalog 分支');
-  assert.ok(toolSrc.includes("['竞争洞察']") || toolSrc.includes("'竞争洞察'"), '域枚举没放开竞争洞察');
+  const TOOLS = await import(url('lib/server/tools.mjs'));
+  assert.deepEqual(
+    TOOLS.collectionDomainEnums(),
+    ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约'],
+    '工具域枚举不是五项',
+  );
+  assert.ok(!TOOLS.collectionDomainEnums().includes('竞争洞察'), '工具域枚举不该含竞争洞察');
 });
 
 await test('界面：域清单来自 /state（带指标数），不再硬编码 5 个域', () => {
@@ -348,11 +391,23 @@ await test('采集提示词带指标规模与 catalog 指令', () => {
   assert.ok(prompt.includes('-scheduler-运营推广'), '提示词里没有 domain_id');
 });
 
-await test('买家账号：目录层多出来的「竞争洞察」也会被剔除', () => {
-  const acc = { id: 'acc_taobao_b', platform: 'taobao', accountType: 'buyer', name: '买家号', collection: { enabled: true, domains: ['经营总览', '服务履约', '竞争洞察'] } };
-  const prompt = C.collectionPrompt(acc, { domainMeta: CAT.catalogDomains('taobao') });
-  assert.ok(!prompt.includes('-scheduler-竞争洞察'), '买家账号不该采竞争洞察');
-  assert.ok(prompt.includes('-scheduler-服务履约'), '商品/服务侧应保留');
+await test('买家账号：只保留商品/服务侧域，五个域里已没有「竞争洞察」', () => {
+  const meta = CAT.catalogDomains('taobao');
+  assert.deepEqual(meta.map((d) => d.id), ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约']);
+  assert.ok(!meta.some((d) => d.id === '竞争洞察'), '任何账号都看不到竞争洞察');
+
+  // 买家号配了商品/服务侧域：原样下发给它
+  const acc = { id: 'acc_taobao_b', platform: 'taobao', accountType: 'buyer', name: '买家号', collection: { enabled: true, domains: ['商品供给', '服务履约'] } };
+  const prompt = C.collectionPrompt(acc, { domainMeta: meta });
+  assert.ok(!prompt.includes('竞争洞察'), '目录里已没有竞争洞察，提示词不该出现它');
+  assert.ok(prompt.includes('-scheduler-商品供给'), '商品侧应保留');
+  assert.ok(prompt.includes('-scheduler-服务履约'), '服务侧应保留');
+
+  // 买家号即使配了经营域，也会被剔除并说明
+  const acc2 = { id: 'acc_taobao_b2', platform: 'taobao', accountType: 'buyer', name: '买家二号', collection: { enabled: true, domains: ['经营总览', '服务履约'] } };
+  const prompt2 = C.collectionPrompt(acc2, { domainMeta: meta });
+  assert.ok(!prompt2.includes('-scheduler-经营总览'), '买家账号不该采经营总览');
+  assert.ok(prompt2.includes('已自动剔除'), '剔除经营域时应有说明');
 });
 
 // ── 汇总 ────────────────────────────────────────────────────────────────────

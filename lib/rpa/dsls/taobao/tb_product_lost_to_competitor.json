@@ -3,8 +3,7 @@
   "id": "tb_product_lost_to_competitor",
   "verified": true,
   "domains": [
-    "商品供给",
-    "竞争洞察"
+    "商品供给"
   ],
   "platform": "taobao",
   "description": "按商品ID与日期范围通过灵眼自助取数下载流失竞店分布报表（竞店流失金额/占比等11列）。",
