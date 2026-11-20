@@ -1,7 +1,7 @@
 {
   "schemaVersion": "agentwork.rpa.atomic.v1",
   "id": "pdd_transaction_overview",
-  "verified": false,
+  "verified": true,
   "domains": [
     "经营总览"
   ],
@@ -716,6 +716,53 @@
       ]
     },
     "artifacts": [
+      {
+        "role": "business",
+        "kind": "text_metrics",
+        "output_key": "pdd_trade_overview_cards_text",
+        "metrics": [
+          {
+            "id": "gmv",
+            "label": "成交金额"
+          },
+          {
+            "id": "pay_ord_cnt",
+            "label": "成交订单数"
+          },
+          {
+            "id": "pay_byr_cnt",
+            "label": "成交买家数"
+          },
+          {
+            "id": "pay_cvr",
+            "label": "成交转化率"
+          },
+          {
+            "id": "unit_price",
+            "label": "客单价"
+          },
+          {
+            "id": "old_byr_rate",
+            "label": "成交老买家占比"
+          },
+          {
+            "id": "follow_usr_cnt",
+            "label": "关注用户数"
+          },
+          {
+            "id": "refund_amt",
+            "label": "退款金额"
+          },
+          {
+            "id": "refund_cnt",
+            "label": "退款单数"
+          },
+          {
+            "id": "uv_value",
+            "label": "访客价值"
+          }
+        ]
+      },
       {
         "role": "business",
         "kind": "raw_envelope",

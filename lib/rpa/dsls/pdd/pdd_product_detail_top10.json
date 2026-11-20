@@ -1,7 +1,7 @@
 {
   "schemaVersion": "agentwork.rpa.atomic.v1",
   "id": "pdd_product_detail_top10",
-  "verified": false,
+  "verified": true,
   "domains": [
     "商品供给"
   ],
@@ -8816,6 +8816,45 @@
       ]
     },
     "artifacts": [
+      {
+        "role": "business",
+        "kind": "text_metrics",
+        "output_key": "pdd_product_detail_overview_cards_text",
+        "metrics": [
+          {
+            "id": "goods_uv",
+            "label": "商品访客数"
+          },
+          {
+            "id": "goods_pv",
+            "label": "商品浏览量"
+          },
+          {
+            "id": "goods_like_uv",
+            "label": "商品收藏用户数"
+          },
+          {
+            "id": "goods_visit_num",
+            "label": "被访问商品数"
+          },
+          {
+            "id": "gmv",
+            "label": "成交金额"
+          },
+          {
+            "id": "pay_ord_cnt",
+            "label": "成交订单数"
+          },
+          {
+            "id": "pay_byr_cnt",
+            "label": "成交买家数"
+          },
+          {
+            "id": "pay_cvr",
+            "label": "成交转化率"
+          }
+        ]
+      },
       {
         "role": "business",
         "kind": "raw_envelope",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "agentwork.rpa.atomic.v1",
   "id": "pdd_traffic_overview",
-  "verified": false,
+  "verified": true,
   "domains": [
     "流量转化"
   ],
@@ -2091,8 +2091,9 @@
       ],
       "state": "visible",
       "timeoutMs": 5000,
-      "onError": "fail",
-      "recovery": "auto"
+      "onError": "continue",
+      "recovery": "auto",
+      "optional": true
     },
     {
       "action": "readValue",
@@ -2745,10 +2746,56 @@
     "artifacts": [
       {
         "role": "business",
+        "kind": "text_metrics",
+        "output_key": "pdd_traffic_overview_cards_text",
+        "metrics": [
+          {
+            "id": "shop_uv",
+            "label": "店铺访客数"
+          },
+          {
+            "id": "shop_pv",
+            "label": "店铺浏览量"
+          },
+          {
+            "id": "goods_uv",
+            "label": "商品访客数"
+          },
+          {
+            "id": "goods_pv",
+            "label": "商品浏览量"
+          },
+          {
+            "id": "pay_byr_cnt",
+            "label": "成交买家数"
+          },
+          {
+            "id": "pay_ord_cnt",
+            "label": "成交订单数"
+          },
+          {
+            "id": "gmv",
+            "label": "成交金额"
+          },
+          {
+            "id": "pay_cvr",
+            "label": "成交转化率"
+          },
+          {
+            "id": "unit_price",
+            "label": "客单价"
+          },
+          {
+            "id": "uv_value",
+            "label": "成交访客价值"
+          }
+        ]
+      },
+      {
+        "role": "business",
         "kind": "raw_envelope",
         "pointer": ""
       }
     ]
-  },
-  "unsupported": true
+  }
 }

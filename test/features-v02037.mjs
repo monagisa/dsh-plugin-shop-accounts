@@ -42,8 +42,9 @@ await test('A1 配方元信息里读得到 domains / verified / needsParams / un
   assert.ok(seed, '找不到 tb_shop_overview');
   assert.ok(Array.isArray(seed.domains) && seed.domains.length, '老配方没有补上 domains');
   assert.equal(seed.verified, true, '已校准的配方没有标 verified');
-  const pddUnsupported = inventory.filter((m) => m.unsupported === true).map((m) => m.id);
-  assert.ok(pddUnsupported.length >= 1, '没有识别出引擎不支持的配方（readvalue 那两份）');
+  // v0.20.45 起引擎补上了 readValue，之前靠它判「不支持」的配方不再标 unsupported。
+  const stillUnsupported = inventory.filter((m) => m.unsupported === true).map((m) => m.id);
+  assert.ok(stillUnsupported.length === 0, '不该再有被标不支持的配方：' + stillUnsupported.join(','));
   assert.ok(inventory.some((m) => m.needsParams === true), '没有识别出需要业务参数的配方');
 });
 
@@ -91,11 +92,11 @@ await test('B3 需要业务参数的配方默认跳过（传 allowNeedsParams �
   assert.ok(allow.pickedIds.includes('jd_product_core_metrics') || allow.skipped.unverified.includes('jd_product_core_metrics'), '传了 allowNeedsParams 仍被挡在缺参关');
 });
 
-await test('B4 引擎不支持的动作（readvalue）直接跳过，不塞进计划充数', () => {
+await test('B4 补了 readValue 之后，拼多多流量配方能进计划（不再被标不支持）', () => {
   const acc = fakeAccount('pdd', ['流量转化']);
   const r = support.selectRecipesForAccount(acc, inventory, { includeDownload: true, includeUnverified: true });
-  assert.ok(r.skipped.unsupported.includes('pdd_traffic_overview'), 'readvalue 配方没被标成不支持');
-  assert.ok(!r.pickedIds.includes('pdd_traffic_overview'), '不支持的配方进了计划');
+  assert.ok(!r.skipped.unsupported.includes('pdd_traffic_overview'), '仍然被标成不支持');
+  assert.ok(r.pickedIds.includes('pdd_traffic_overview'), '拼多多流量配方没进计划');
 });
 
 await test('B5 勾的域一个配方都没有时，报「没有已校准的配方」而不是跑空', async () => {
