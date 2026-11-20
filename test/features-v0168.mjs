@@ -228,15 +228,16 @@ await test('有私有区字符但没认出任何字形 → 报 PDD_FONT_DECRYPT_
   assert.match(String(res.error), /字形/);
 });
 
-await test('认出一部分、剩下的还原不了 → 也算失败并列出残留码位', async () => {
+await test('认出一部分、剩下的还原不了 → 不判整轮失败，残留码位按缺失处理', async () => {
   const compiled = { ops: outOps, postprocess: ['pdd_decrypt'], declaredArtifacts: [] };
   const res = await rpa.runOps(
     compiled,
     textDriver('客\ue3f7 单\ue111', { ok: true, mapping: { E3F7: '4' } }),
     {},
   );
-  assert.equal(res.ok, false);
-  assert.equal(res.code, 'PDD_FONT_DECRYPT_FAILED');
+  // v0.20.44：参考位图只有 0–9，认不出的多半是 `.` `%` `¥` 这类符号 —— 与上游口径一致：
+  // 这些格子按「缺失」处理，其它指标照常采集，不把整轮判失败。
+  assert.equal(res.ok, true);
   assert.equal(res.postprocess.pdd_decrypt.action, 'decrypt-partial');
   assert.deepEqual(res.postprocess.pdd_decrypt.remaining, ['U+E111']);
 });
