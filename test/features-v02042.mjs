@@ -49,13 +49,14 @@ test('A5 保留「复制采集任务提示词」这个辅助动作', () => {
   assert.ok(client.includes('复制采集任务提示词'), '把复制提示词一起删掉了');
 });
 
-test('A6 采集域旁边仍标出有几项指标（保持信息但不弹窗）', () => {
-  assert.ok(client.includes('项指标'), '采集域旁边没有指标数');
+test('A6 采集域按钮只显示「域名 · 指标数」，配方信息放到悬浮提示里', () => {
+  assert.ok(client.includes("' · ' + d.metricCount"), '采集中域名旁边没有指标数');
+  assert.ok(client.includes('title: hint'), '配方信息没有放到悬浮提示');
 });
 
 test('B1 版本已到 0.20.49，且 CHANGELOG / README 有记录', () => {
-  assert.ok(pkg.version >= '0.20.49');
-  assert.ok(fs.readFileSync(R('CHANGELOG.md'), 'utf8').includes('v0.20.49'));
+  assert.ok(pkg.version >= '0.20.50');
+  assert.ok(fs.readFileSync(R('CHANGELOG.md'), 'utf8').includes('v0.20.50'));
   assert.ok(fs.readFileSync(R('README.md'), 'utf8').includes(pkg.version));
 });
 

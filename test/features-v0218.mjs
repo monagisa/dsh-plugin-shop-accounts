@@ -338,7 +338,7 @@ await test('prepare 结果与作业状态里带采集项名，界面「上次采
   assert.ok(runner.includes('name: dslItemName(id)'), 'prepare 没给任务加采集项名');
   assert.ok(runner.includes('export function lastJobItems'), '没有 lastJobItems');
   assert.ok(state.includes('lastJobItems(a.id)'), '状态没带上次采集项');
-  assert.ok(client.includes("' · 采集项：'"), '界面没列出采集项名');
+  assert.ok(client.includes('names.slice(0, 2)'), '界面没列出采集项名');
 });
 
 await test('迁移工具按采集项名改名并补 items', () => {
