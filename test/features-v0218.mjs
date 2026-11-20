@@ -111,7 +111,7 @@ await test('organizeArtifacts：文件改成 <采集项>_<时间>_<原名>，man
   assert.equal(downloads.length, 1);
   assert.equal(downloads[0].fileName, name);
   assert.equal(downloads[0].item, '抖店-成交分析');
-  assert.equal(manifest.naming, '<采集项>_<YYYYMMDD-HHmm>_<原始文件名>');
+  assert.equal(manifest.naming, '<采集项>_<YYYYMMDD-HHmm>_<店名>_<原始文件名>');
   assert.ok((manifest.items || []).some((i) => i.name === '抖店-成交分析'), 'manifest 没标采集项名');
   const manifestFile = path.join(jobDir, 'artifacts', 'manifest.json');
   assert.ok(fs.existsSync(manifestFile), 'manifest.json 没落盘');
@@ -281,8 +281,8 @@ await test('organizeArtifacts：指标型作业也生成表格并写进 manifest
   fs.writeFileSync(path.join(dir, 'job.json'), JSON.stringify(job, null, 2), 'utf8');
   const manifest = J.organizeArtifacts(dir, job);
   const files = manifest.files.map((f) => f.fileName);
-  assert.ok(files.includes('拼多多-店铺概览_20261101-0900_表格.xlsx'), '没生成表格：' + files.join(','));
-  assert.ok(fs.existsSync(path.join(dir, 'artifacts', 't_001', '拼多多-店铺概览_20261101-0900_表格.xlsx')), '表格文件不在产物目录');
+  assert.ok(files.includes('拼多多-店铺概览_20261101-0900_测试铺_表格.xlsx'), '没生成表格：' + files.join(','));
+  assert.ok(fs.existsSync(path.join(dir, 'artifacts', 't_001', '拼多多-店铺概览_20261101-0900_测试铺_表格.xlsx')), '表格文件不在产物目录');
   assert.ok((manifest.items || []).some((i) => i.name === '拼多多-店铺概览'), 'manifest 没标采集项名');
   assert.ok(manifest.files.some((f) => f.kind === 'xlsx'), 'manifest 没记表格');
 });
@@ -303,7 +303,7 @@ await test('下载型作业不再重复生成表格（平台已经给了 xlsx）
   };
   const manifest = J.organizeArtifacts(jobDir, job);
   assert.ok(!manifest.files.some((f) => f.kind === 'xlsx'), '下载型不该再生成表格：' + JSON.stringify(manifest.files));
-  assert.ok(!fs.existsSync(path.join(jobDir, 'artifacts', 't_001', '抖店-成交分析_20261101-0900_表格.xlsx')), '不该有表格文件');
+  assert.ok(!fs.existsSync(path.join(jobDir, 'artifacts', 't_001', '抖店-成交分析_20261101-0900_x_表格.xlsx')), '不该有表格文件');
 });
 
 // ── H. 采集项的中文名（v0.20.21）────────────────────────────────────────────

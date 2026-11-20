@@ -277,7 +277,7 @@ cookie 罐本地备份：`--restore-last-session` 无法覆盖使用者直接点
 | 会话 cookie 备份（加密） | `<数据目录>/profiles/<账号 id>/dsh-session-cookies.json`：AES-256-GCM，主密钥由系统密钥后端保护（Windows DPAPI / macOS 钥匙串） |
 | 密码库 | `<数据目录>/account-secrets.enc`：同一把主密钥 + AES-256-GCM；密钥后端不可用时整库禁用，不保存明文 |
 | 采集数据（记录） | `<数据目录>/collection/<账号 id>/`：`dsl-coverage.json` 配方覆盖台账、`records.jsonl` 记录、`imports.json` 导入记录 |
-| 采集数据（产物） | `<数据目录>/collection/<账号 id>/jobs/job_<YYYYMMDD-HHmm>_<随机 6 位>_<采集项>/`：`job.json` 作业、`artifacts/<采集项>_<YYYYMMDD-HHmm>_<原始文件名>` 产物、`artifacts/manifest.json` 本次交付清单（含采集项与状态） |
+| 采集数据（产物） | `<数据目录>/collection/<账号 id>/jobs/job_<YYYYMMDD-HHmm>_<随机 6 位>_<采集项>/`：`job.json` 作业、`artifacts/<采集项>_<YYYYMMDD-HHmm>_<店名>_<原始文件名>` 产物、`artifacts/manifest.json` 本次交付清单（含采集项与状态） |
 | 采集数据（表格） | 每份作业的 `artifacts/<任务 id>/` 下都有表格：下载型配方是平台自己导出的 xlsx（保留原始文件名），指标型配方由插件生成 `<采集项>_<YYYYMMDD-HHmm>_表格.xlsx`（第一行是各指标名（列头在顶部），第一列是日期（每行一天）；读接口 JSON 的配方按 30 天铺开，页面文字型只有今天与昨天两行）。淘宝、天猫读接口的配方在生意参谋首页里用页内请求取回 JSON（同源带登录态），页面全程不离开首页，不会跳到接口页、也不会把满是 JSON 的页面留在窗口里 |
 | 调试端口 | Chrome 模式从 `portBase`（默认 9222）起自动寻找空闲端口，一店一端口；ego 模式无端口 |
 
@@ -360,6 +360,7 @@ node test/features-v0192.mjs   # 9 项：窗口在别处关掉后状态跟上（
 node test/features-v0198.mjs   # 10 项：窗口里已经登录时不再自动代填
 node test/features-v0202.mjs   # 10 项：定时采集到点自己启动 ego（以前要手动先打开一次）
 node test/features-v0203.mjs   # 17 项：本机浏览器扫描（Google Chrome、Microsoft Edge 与 ego lite）
+node test/features-v0251.mjs   # 8 项：采集数据命名带店名（作业目录、产物文件名、manifest）
 node test/features-v02048.mjs  # 8 项：抖音搜索流量概况配方（流量转化有了可跑配方）
 node test/features-v02047.mjs  # 8 项：拼多多推广概况配方（运营推广有了可跑配方）
 node test/features-v02046.mjs  # 8 项：登录守卫的 detached 语义（隐藏的登录模板不再误判）
@@ -389,13 +390,13 @@ node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome�
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前 63 套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 64 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**927 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**935 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -442,7 +443,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.50**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.51**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 

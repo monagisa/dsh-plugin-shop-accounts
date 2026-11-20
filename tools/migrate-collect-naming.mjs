@@ -20,7 +20,7 @@ import path from 'node:path';
 import { dataDir } from '../lib/store.mjs';
 import { readableJobId, runStamp } from '../lib/collect-runner.mjs';
 import { flattenRows, writeXlsx } from '../lib/xlsx.mjs';
-import { dslItemFileSafe, dslItemName, jobItemsLabel, sheetNameSafe } from '../lib/dsl-names.mjs';
+import { dslItemFileSafe, dslItemName, jobItemsLabel, sheetNameSafe, shopNameSafe } from '../lib/dsl-names.mjs';
 
 const READABLE = /^job_\d{8}-\d{4}_[a-z0-9]{3,12}(?:_[^\\/:*?"<>|]+)?$/;
 /** v0.20.23：目录名要带采集项，所以老的「没带采集项」的可读 id 也要再改一次。 */
@@ -47,6 +47,7 @@ function readJson(file) {
 }
 
 function writeJson(file, value) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(value, null, 2), 'utf8');
 }
 
@@ -78,15 +79,12 @@ function renameJobDir(jobDir, jobFile) {
   const parsed = /^job_(\d{8}-\d{4})_([a-z0-9]{3,12})(?:_([^\\/:*?"<>|]+))?$/.exec(base);
   const stamp = parsed ? parsed[1] : '';
   const tail = parsed ? parsed[2] : (base.split('_').pop() || '');
-  const label = jobItemsLabel((job.tasks || []).map((t) => t.dslId)) || '无采集项';
+  const shop = shopNameSafe(job.accountName);
+  const label = [shop, jobItemsLabel((job.tasks || []).map((t) => t.dslId)) || '无采集项'].filter(Boolean).join('_');
   const nextId = parsed
     ? 'job_' + stamp + '_' + tail + (label ? '_' + label : '')
     : readableJobId(created, tail, label);
   if (current === nextId && base === nextId) {
-    job.jobId = current;
-    return { jobDir, job };
-  }
-  if (READABLE_WITH_LABEL.test(current) && current === base) {
     job.jobId = current;
     return { jobDir, job };
   }
@@ -97,7 +95,14 @@ function renameJobDir(jobDir, jobFile) {
   }
   report.renamed.push({ from: base, to: nextId });
   if (dry) return { jobDir, job, nextId };
-  if (nextDir !== jobDir) fs.renameSync(jobDir, nextDir);
+  if (nextDir !== jobDir) {
+    try {
+      fs.renameSync(jobDir, nextDir);
+    } catch (err) {
+      report.skipped.push({ dir: base, reason: '目录改名失败：' + String((err && err.message) || err) });
+      return null;
+    }
+  }
   job.jobId = nextId;
   writeJson(path.join(nextDir, 'job.json'), job);
   return { jobDir: nextDir, job };
@@ -113,11 +118,15 @@ function renameArtifactFiles(jobDir, job) {
     const taskJsonFile = path.join(artRoot, name + '.json');
     const taskJson = readJson(taskJsonFile);
     const dslId = String((taskJson && taskJson.dslId) || '');
+    const shop = shopNameSafe(job.accountName);
     const oldPrefix = dslId ? dslId + '_' + stamp + '_' : '';
-    const prefix = dslId ? dslItemFileSafe(dslId) + '_' + stamp + '_' : '';
+    const midPrefix = dslId ? dslItemFileSafe(dslId) + '_' + stamp + '_' : '';
+    const prefix = midPrefix + (shop ? shop + '_' : '');
     for (const fileName of listFiles(path.join(artRoot, name))) {
       if (!prefix || fileName.startsWith(prefix)) continue;
-      const rest = oldPrefix && fileName.startsWith(oldPrefix) ? fileName.slice(oldPrefix.length) : fileName;
+      let rest = fileName;
+      if (oldPrefix && rest.startsWith(oldPrefix)) rest = rest.slice(oldPrefix.length);
+      else if (midPrefix && rest.startsWith(midPrefix)) rest = rest.slice(midPrefix.length);
       const from = path.join(artRoot, name, fileName);
       const to = path.join(artRoot, name, prefix + rest);
       if (fs.existsSync(to)) continue;
@@ -197,7 +206,9 @@ function writeManifest(jobDir, job) {
     createdAt: job.createdAt,
     finishedAt: job.finishedAt || '',
     window: (job.plan && job.plan.window) || null,
-    naming: '<采集项>_<YYYYMMDD-HHmm>_<原始文件名>',
+    naming: shopNameSafe(job.accountName)
+      ? '<采集项>_<YYYYMMDD-HHmm>_<店名>_<原始文件名>'
+      : '<采集项>_<YYYYMMDD-HHmm>_<原始文件名>',
     files,
     items: (job.tasks || []).map((t) => ({ taskId: t.taskId, dslId: t.dslId, name: dslItemName(t.dslId), state: t.state })),
     tasks: (job.tasks || []).map((t) => ({ taskId: t.taskId, dslId: t.dslId, state: t.state })),
