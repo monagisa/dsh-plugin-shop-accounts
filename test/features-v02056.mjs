@@ -31,8 +31,11 @@ ok(/relogin: args\.drive === true,/.test(tools), 'B2 collect-job 真跑时带 re
 // C 组：单任务硬超时
 ok(support.includes('export async function executeOps(account, ops, downloadDir, compiledInfo = {}, opts = {})'), 'C1 executeOps 接受每任务预算');
 ok(support.includes('const timeoutMs = Math.max(30000, Number(opts.timeoutMs) || 150000);'), 'C2 默认 150 秒、最小 30 秒');
-ok(support.includes('}, { timeoutMs: perTask });') && support.includes('const perTask = Math.max(30000, Number(body.taskTimeoutMs) || 150000);'), 'C3 批量链路逐任务独立预算');
+ok(support.includes('}, { timeoutMs: perTask });') && support.includes('const isDownloadTask = Array.isArray(task.declaredArtifacts)') && support.includes('(isDownloadTask ? 300000 : 150000)'), 'C3 批量链路逐任务独立预算（下载型 300 秒，其余 150 秒）');
 ok(!support.includes('{ timeoutMs: 300000, downloadDir }'), 'C4 旧的固定 300 秒已清除');
+ok(support.includes("String((x || {}).kind || '') === 'download_ref'"), 'E1 下载型配方单独给 300 秒预算');
+const egoSrc = read('lib/ego.mjs');
+ok(!egoSrc.includes('Math.min(120000, Number(opts.timeoutMs)') && egoSrc.includes('Math.min(300000, Number(opts.timeoutMs)'), 'E2 换窗口重跑的上限不再固定 120 秒');
 
 // D 组：文档与版本
 ok(support.includes('body.__collectionHint.loginBootstrap = loginBootstrap;'), 'D1 登录前置结果写进作业报告');

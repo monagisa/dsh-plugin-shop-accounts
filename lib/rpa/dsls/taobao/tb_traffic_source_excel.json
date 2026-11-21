@@ -6,7 +6,7 @@
     "流量转化"
   ],
   "platform": "taobao",
-  "description": "淘宝流量来源 Excel 直链导出：在生意参谋首页拼出官方导出地址并注入置顶链接，用下载动作点它落盘；不走页面上的「生成报表 / 下载报表」按钮。",
+  "description": "淘宝流量来源 Excel 导出：在生意参谋首页用页内同步请求直接取导出接口的 xls 字节并落盘（不点「生成报表/下载报表」，也不依赖浏览器下载事件）。",
   "conditions": {
     "time": {
       "kind": "range",
@@ -16,7 +16,7 @@
     }
   },
   "template": {
-    "description": "打开生意参谋首页 → 注入导出直链 → 点击下载 → 记录最终地址",
+    "description": "打开生意参谋首页 → 页内请求导出接口取字节 → 记录最终地址",
     "steps": [
       {
         "id": "tb_traffic_source_excel:goto",
@@ -46,23 +46,13 @@
       {
         "id": "tb_traffic_source_excel:wait-shell",
         "action": "waitTimeout",
-        "ms": 2500
+        "ms": 2000
       },
       {
-        "id": "tb_traffic_source_excel:inject-link",
-        "action": "evaluate",
-        "outputKey": "trafficSourceLink",
-        "expression": "const range = '{dateRange}';\nconst onLogin = /login|passport/i.test(location.hostname) || /(^|\\/)login(\\.htm|\\/|$)/i.test(location.pathname) || location.pathname.includes('/custom/login');\nif (onLogin) throw new Error('LOGIN_REQUIRED__do-not-retry__未登录或登录态失效');\nif (location.origin !== 'https://sycm.taobao.com') throw new Error('UNEXPECTED_PAGE');\nconst id = 'dsh-traffic-source-summary-excel';\nconst old = document.getElementById(id);\nif (old) old.remove();\nconst a = document.createElement('a');\na.id = id;\na.href = location.origin + '/flow/gray/excel.do?_path_=v4/excel/shop/source/platform/summay/v4&dateType=day&dateRange=' + range + '&crowdType=all&needCate=true';\na.textContent = '下载流量来源Excel';\na.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483647;padding:2px 6px;background:#fff;color:#1677ff;font-size:12px;line-height:18px;';\n(document.body || document.documentElement).appendChild(a);\nreturn { ok: true, href: a.href };"
-      },
-      {
-        "id": "tb_traffic_source_excel:click-download",
-        "action": "downloadFile",
-        "target": [
-          {
-            "by": "css",
-            "value": "#dsh-traffic-source-summary-excel"
-          }
-        ],
+        "id": "tb_traffic_source_excel:fetch-excel",
+        "action": "fetchFile",
+        "url": "https://sycm.taobao.com/flow/gray/excel.do?_path_=v4/excel/shop/source/platform/summay/v4&dateType=day&dateRange={dateRange}&crowdType=all&needCate=true",
+        "outputKey": "trafficSourceExcel",
         "timeoutMs": 90000
       },
       {
@@ -77,7 +67,7 @@
         "kind": "download_ref",
         "output_key": "trafficSourceExcel",
         "extensions": [
-          "xlsx"
+          "xls"
         ]
       }
     ]
