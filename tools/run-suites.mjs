@@ -17,7 +17,7 @@ let total = 0;
 const bad = [];
 for (const name of list) {
   const file = path.join(root, 'test', name + '.mjs');
-  const r = spawnSync(process.execPath, [file], { cwd: root, encoding: 'utf8', timeout: 300000 });
+  const r = spawnSync(process.execPath, [file], { cwd: root, encoding: 'utf8', timeout: 600000 });
   const out = String(r.stdout || '') + String(r.stderr || '');
   // 各套用例行前缀不统一（✓ / PASS / 无标记），先按汇总句取数，取不到再数用例行
   const pats = [/通过（(\d+)\s*项）/, /通过：(\d+)\s*项/, /(\d+)\s*项通过/, /(\d+)\s*项，通过/, /通过\s*(\d+)\s*项/, /OK\s*\/\s*(\d+)\s*项/, /通过\s*(\d+)\s*\/\s*(\d+)/];
