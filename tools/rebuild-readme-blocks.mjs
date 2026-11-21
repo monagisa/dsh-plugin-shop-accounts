@@ -49,6 +49,7 @@ const SUITES = [
   ['features-v0202.mjs', 10, '定时采集到点自己启动 ego（以前要手动先打开一次）'],
   ['features-v0203.mjs', 17, '本机浏览器扫描（Google Chrome、Microsoft Edge 与 ego lite）'],
   ['features-v0252.mjs', 7, '迁移工具补齐：补表格时也带店名，清理旧命名副本'],
+  ['features-v02054.mjs', 8, '窗口归用户控制时自动换一个新窗口继续采'],
   ['features-v0253.mjs', 7, '一次采集只生成一个工作簿（每个采集域一个工作表）'],
   ['features-v0251.mjs', 8, '采集数据命名带店名（作业目录、产物文件名、manifest）'],
   ['features-v02048.mjs', 8, '抖音搜索流量概况配方（流量转化有了可跑配方）'],
