@@ -31,7 +31,8 @@ ok(/relogin: args\.drive === true,/.test(tools), 'B2 collect-job 真跑时带 re
 // C 组：单任务硬超时
 ok(support.includes('export async function executeOps(account, ops, downloadDir, compiledInfo = {}, opts = {})'), 'C1 executeOps 接受每任务预算');
 ok(support.includes('const timeoutMs = Math.max(30000, Number(opts.timeoutMs) || 150000);'), 'C2 默认 150 秒、最小 30 秒');
-ok(support.includes('}, { timeoutMs: perTask });') && support.includes('const isDownloadTask = Array.isArray(task.declaredArtifacts)') && support.includes('(isDownloadTask ? 300000 : 150000)'), 'C3 批量链路逐任务独立预算（下载型 300 秒，其余 150 秒）');
+ok(support.includes('}, { timeoutMs: perTask });') && support.includes('const isDownloadTask = declaredForBudget.some') && support.includes('(isDownloadTask ? 300000 : 150000)'), 'C3 批量链路逐任务独立预算（下载型 300 秒，其余 150 秒）');
+ok(support.includes('const declaredForBudget = Array.isArray(task.declaredArtifacts)') && support.includes("(((one.raw || {}).collection || {}).artifacts || [])"), 'C3b 产物声明两边都看（作业里为空时回落到配方原文）');
 ok(!support.includes('{ timeoutMs: 300000, downloadDir }'), 'C4 旧的固定 300 秒已清除');
 ok(support.includes("String((x || {}).kind || '') === 'download_ref'"), 'E1 下载型配方单独给 300 秒预算');
 const egoSrc = read('lib/ego.mjs');
