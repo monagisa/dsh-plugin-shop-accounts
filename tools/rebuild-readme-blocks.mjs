@@ -80,6 +80,7 @@ const SUITES = [
   ['features-v02025.mjs', 7, '用户浏览器点行即切换 / Edge 图标用官方标志'],
   ['features-v0197.mjs', 7, '浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）'],
   ['features-v02059.mjs', 41, '执行器对齐 上游（真实键盘 type / pickdate 日期提交 / 下载硬超时与快照 / 下载门禁 / 重试分层）'],
+  ['features-v02060.mjs', 22, '采集工作簿按「同店同天」归集五域（读回 xlsx/csv 表格、补齐其它作业的域、工作表顺序固定）'],
   ['platform.mjs', 12, '平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）'],
 ];
 const TOTAL = SUITES.reduce((n, s) => n + s[1], 0);
