@@ -69,7 +69,7 @@ await test('B1 按店铺勾选的采集域挑配方（域外的不要）', () =>
   const acc = fakeAccount('taobao', ['服务履约']);
   const r = support.selectRecipesForAccount(acc, inventory, { includeDownload: true, includeUnverified: true, allowNeedsParams: true });
   assert.ok(r.pickedIds.length >= 2, '服务履约域下应该有淘宝退款/服务类配方，实际 ' + r.pickedIds.join(', '));
-  assert.ok(r.pickedIds.every((id) => id.startsWith('tb_')), '挑到了别的平台的配方：' + r.pickedIds.join(', '));
+  assert.ok(r.pickedIds.every((id) => (inventory.find((m) => m.id === id) || {}).platform === 'taobao'), '挑到了别的平台的配方：' + r.pickedIds.join(', '));
   for (const id of r.pickedIds) {
     const meta = inventory.find((m) => m.id === id);
     assert.ok((meta.domains || []).includes('服务履约'), id + ' 不属于服务履约域');

@@ -392,6 +392,9 @@ await test('POST collect-run：配方平台不匹配 → 400', async () => {
 });
 
 await test('POST collect-run：下载型配方不再被 501 挡（会尝试真的跑，浏览器没开则 409）', async () => {
+  // 固定走 Chrome 后端：这条只验「不再 501、失败要给 4xx + 原因」，
+  // 走 ego 后端会真的去开任务空间，本机 ego 忙时会把整轮自检拖到超时。
+  await call('PUT', '/shop-accounts/config', { browser: 'chrome' });
   const dir = fs.mkdtempSync(path.join(TMP, 'dl-'));
   fs.writeFileSync(path.join(dir, 'need_dl.json'), JSON.stringify({
     id: 'need_dl', platform: 'taobao',

@@ -1,0 +1,581 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "lingyang_flow_source",
+  "platform": "taobao",
+  "description": "流量来源（新版「自助分析」页面：选报表类型/粒度/维度 + 批量搜索商品 ID + 下载报表）（移植自 上游 现行配方 lingyang_flow_source）",
+  "conditions": {
+    "time": {
+      "kind": "range",
+      "bindings": {
+        "{startDate}": "$condition.start",
+        "{endDate}": "$condition.end"
+      }
+    },
+    "filter": {
+      "kind": "required",
+      "fields": {
+        "productIds": {
+          "type": "stringArray",
+          "minItems": 1,
+          "maxItems": 10
+        }
+      },
+      "bindings": {
+        "{productIds}": "$filter.productIdsLines"
+      }
+    }
+  },
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "淘宝 生意参谋灵眼取数 - 商品流量来源报表下载",
+    "description": "灵眼自助取数：数据粒度选『商品』→ 数据维度选『流量来源』→ 批量搜索弹窗输入商品ID → 填写开始/结束日期 → 报表名称填『流量来源』→ 生成报表 → 下载报表。该维度无终端类型选项。入参：{productIds}（换行分隔商品ID）、{startDate}、{endDate}（YYYY-MM-DD）。下载步骤为 downloadFile：runner 先注册下载监听再点击，等待落盘完成，文件路径经 outputs 返回，不依赖扫描共享下载目录。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 1,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "id": "taobao_lingyang_flow_source_rpa:goto",
+        "action": "goto",
+        "url": "https://sycm.taobao.com/lyone/auto_analysis/datafetch/create?insertType=sycm&layoutHide=1&useDebug=false",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "taobao.lyone.dismiss-upgrade-overlay",
+            "target": [
+              {
+                "by": "css",
+                "value": "img.upgrade-page-close-btn",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".upgrade-page-close-btn",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//img[contains(@class,'upgrade-page-close-btn')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "taobao.lyone.dismiss-upgrade-overlay.click",
+            "target": [
+              {
+                "by": "css",
+                "value": "img.upgrade-page-close-btn",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".upgrade-page-close-btn",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//img[contains(@class,'upgrade-page-close-btn')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:wait-page-render",
+        "action": "waitTimeout",
+        "ms": 8000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:wait-page-shell",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='数据粒度'][not(.//*[normalize-space(.)='数据粒度'])])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(.),'数据粒度')][not(.//*[contains(normalize-space(.),'数据粒度')])])[1]",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "label.dt-oui-radio-wrapper",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='dt-oui-radio-group']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-wait-page-shell",
+        "action": "waitTimeout",
+        "ms": 500
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:pick-granularity-product",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//label[contains(@class,'dt-oui-radio-wrapper')][.//input[@type='radio' and @value='商品']]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//label[contains(@class,'dt-oui-radio-wrapper')][.//span[normalize-space(.)='商品']])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-pick-granularity-product",
+        "action": "waitTimeout",
+        "ms": 1000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:pick-dimension-flow_source",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//label[contains(@class,'dt-oui-radio-wrapper')][.//input[@type='radio' and @value='流量来源']]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//label[contains(@class,'dt-oui-radio-wrapper')][.//span[normalize-space(.)='流量来源']])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 15000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-pick-dimension-flow_source",
+        "action": "waitTimeout",
+        "ms": 1500
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:open-batch-search",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'dt-oui-dropdown-trigger')][normalize-space(.)='批量搜索']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='批量搜索' and (self::span or self::button or self::a)])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-open-batch-search",
+        "action": "waitTimeout",
+        "ms": 1500
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:fill-product-ids",
+        "action": "type",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//textarea",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//textarea[contains(@class,'dt-oui-input')]",
+            "nth": 0
+          }
+        ],
+        "value": "{productIds}",
+        "clear": true,
+        "delay": 30,
+        "timeoutMs": 10000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-fill-product-ids",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:confirm-batch-search",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//button[contains(@class,'dt-oui-btn-primary')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//button[normalize-space(.)='确 定']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-confirm-batch-search",
+        "action": "waitTimeout",
+        "ms": 2000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:open-start-date",
+        "action": "click",
+        "target": [
+          {
+            "by": "css",
+            "value": "#datePeriod",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='开始日期']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-open-start-date",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:fill-start-date",
+        "action": "type",
+        "target": [
+          {
+            "by": "css",
+            "value": "#datePeriod",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='开始日期']",
+            "nth": 0
+          }
+        ],
+        "value": "{startDate}",
+        "clear": true,
+        "delay": 30,
+        "timeoutMs": 10000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-fill-start-date",
+        "action": "waitTimeout",
+        "ms": 400
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:confirm-start-date",
+        "action": "press",
+        "key": "Enter",
+        "target": [
+          {
+            "by": "css",
+            "value": "#datePeriod",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-confirm-start-date",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:open-end-date",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'dt-oui-picker-range')]//input)[2]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-open-end-date",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:fill-end-date",
+        "action": "type",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'dt-oui-picker-range')]//input)[2]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          }
+        ],
+        "value": "{endDate}",
+        "clear": true,
+        "delay": 30,
+        "timeoutMs": 20000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-fill-end-date",
+        "action": "waitTimeout",
+        "ms": 400
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:confirm-end-date",
+        "action": "press",
+        "key": "Enter",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'dt-oui-picker-range')]//input)[2]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'picker-range')]//input[@placeholder='结束日期']",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-confirm-end-date",
+        "action": "waitTimeout",
+        "ms": 1000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:scroll-report-name",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(text()),'报表名称')]/following::input)[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-scroll-report-name",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:fill-report-name",
+        "action": "type",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(text()),'报表名称')]/following::input)[1]",
+            "nth": 0
+          }
+        ],
+        "value": "流量来源",
+        "clear": true,
+        "delay": 0,
+        "timeoutMs": 10000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-fill-report-name",
+        "action": "waitTimeout",
+        "ms": 600
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:scroll-click-generate-report",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'dt-oui-btn-primary')][.//span[normalize-space(.)='生成报表'] or normalize-space(.)='生成报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='生成报表'] or normalize-space(.)='生成报表'])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 20000,
+        "recovery": "auto"
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:click-generate-report",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[contains(@class,'dt-oui-btn-primary')][.//span[normalize-space(.)='生成报表'] or normalize-space(.)='生成报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='生成报表'] or normalize-space(.)='生成报表'])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 20000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:after-click-generate-report",
+        "action": "waitTimeout",
+        "ms": 5000
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:wait-download-report-ready",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-space')]//button[contains(@class,'dt-oui-btn')][.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[self::a or self::button][contains(normalize-space(.),'下载报表')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='下载报表'][not(.//*[normalize-space(.)='下载报表'])])[1]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 60000,
+        "retries": 0,
+        "onError": "continue"
+      },
+      {
+        "id": "taobao_lingyang_flow_source_rpa:scroll-click-download-report",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-space')]//button[contains(@class,'dt-oui-btn')][.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[self::a or self::button][contains(normalize-space(.),'下载报表')])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='下载报表'][not(.//*[normalize-space(.)='下载报表'])])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 30000,
+        "recovery": "auto"
+      },
+      {
+        "action": "downloadFile",
+        "id": "taobao_lingyang_flow_source_rpa:click-download-report",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dt-oui-space')]//button[contains(@class,'dt-oui-btn')][.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表'])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 60000,
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "lingyangFlowSourceFile"
+      }
+    ]
+  },
+  "collection": {
+    "import": {
+      "subject_mode": "single"
+    }
+  },
+  "domains": [
+    "流量转化"
+  ],
+  "verified": false
+}

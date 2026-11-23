@@ -534,261 +534,44 @@
         "ms": 800
       },
       {
-        "id": "taobao_lingyang_refund_sku_rpa:open-start-date",
-        "action": "click",
-        "target": [
-          {
-            "by": "css",
-            "value": "#datePeriod",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='开始日期']",
-            "nth": 0
-          }
-        ],
-        "timeoutMs": 10000
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-open-start-date",
-        "action": "waitTimeout",
-        "ms": 800
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:fill-start-date",
-        "action": "type",
-        "target": [
-          {
-            "by": "css",
-            "value": "#datePeriod",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='开始日期']",
-            "nth": 0
-          }
-        ],
+        "id": "taobao_lingyang_refund_sku_rpa:pick-start-date",
+        "action": "pickdate",
         "value": "{startDate}",
-        "clear": true,
-        "delay": 30,
-        "timeoutMs": 10000,
-        "recovery": "auto",
-        "after": [
-          {
-            "id": "date:wait-start-cell-visible",
-            "action": "waitFor",
-            "target": [
-              {
-                "by": "css",
-                "value": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{startDate}']",
-                "nth": 0
-              }
-            ],
-            "state": "visible",
-            "timeoutMs": 10000,
-            "retries": 0,
-            "onError": "continue",
-            "recovery": "none",
-            "optional": true
-          },
-          {
-            "id": "date:read-start-availability",
-            "action": "queryAll",
-            "containerSelector": "body",
-            "limit": 1,
-            "outputKey": "requestedStartDateAvailability",
-            "fields": {
-              "requestedDate": {
-                "childSelector": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{startDate}']",
-                "attr": "title"
-              },
-              "cellClass": {
-                "childSelector": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{startDate}']",
-                "attr": "class"
-              }
-            }
-          },
-          {
-            "id": "date:START_DATE_NOT_SELECTABLE:{startDate}",
-            "action": "assertElement",
-            "target": [
-              {
-                "by": "css",
-                "value": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view.dt-oui-picker-cell-disabled[title='{startDate}']",
-                "nth": 0
-              }
-            ],
-            "state": "detached",
-            "timeoutMs": 1000,
-            "retries": 0,
-            "onError": "fail",
-            "recovery": "none"
-          }
-        ]
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-fill-start-date",
-        "action": "waitTimeout",
-        "ms": 400
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:confirm-start-date",
-        "action": "press",
-        "key": "Enter",
-        "target": [
-          {
-            "by": "css",
-            "value": "#datePeriod",
-            "nth": 0
-          }
-        ]
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-confirm-start-date",
-        "action": "waitTimeout",
-        "ms": 800
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:open-end-date",
-        "action": "click",
-        "target": [
+        "input": [
           {
             "by": "xpath",
-            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='结束日期']",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "(//div[contains(@class,'dt-oui-picker-range')]//input)[2]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//div[contains(@class,'picker-range')]//input[@placeholder='结束日期']",
+            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='开始日期']",
             "nth": 0
           }
         ],
-        "timeoutMs": 10000,
-        "retries": 0,
-        "onError": "continue"
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-open-end-date",
-        "action": "waitTimeout",
-        "ms": 800
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:fill-end-date",
-        "action": "type",
         "target": [
           {
             "by": "xpath",
-            "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='结束日期']",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "(//div[contains(@class,'dt-oui-picker-range')]//input)[2]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//div[contains(@class,'picker-range')]//input[@placeholder='结束日期']",
+            "value": "//*[contains(@class,'picker-cell') and @title='{startDate}' and not(contains(@class,'disabled'))]",
             "nth": 0
           }
         ],
+        "description": "填开始日期并点日历格子提交（只输入文本会失焦回滚）"
+      },
+      {
+        "id": "taobao_lingyang_refund_sku_rpa:pick-end-date",
+        "action": "pickdate",
         "value": "{endDate}",
-        "clear": true,
-        "delay": 30,
-        "timeoutMs": 20000,
-        "retries": 0,
-        "recovery": "none",
-        "after": [
-          {
-            "id": "date:wait-end-cell-visible",
-            "action": "waitFor",
-            "target": [
-              {
-                "by": "css",
-                "value": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{endDate}']",
-                "nth": 0
-              }
-            ],
-            "state": "visible",
-            "timeoutMs": 10000,
-            "retries": 0,
-            "onError": "continue",
-            "recovery": "none",
-            "optional": true
-          },
-          {
-            "id": "date:read-end-availability",
-            "action": "queryAll",
-            "containerSelector": "body",
-            "limit": 1,
-            "outputKey": "requestedEndDateAvailability",
-            "fields": {
-              "requestedDate": {
-                "childSelector": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{endDate}']",
-                "attr": "title"
-              },
-              "cellClass": {
-                "childSelector": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view[title='{endDate}']",
-                "attr": "class"
-              }
-            }
-          },
-          {
-            "id": "date:END_DATE_NOT_SELECTABLE:{endDate}",
-            "action": "assertElement",
-            "target": [
-              {
-                "by": "css",
-                "value": ".dt-oui-picker-dropdown:not(.dt-oui-picker-dropdown-hidden) td.dt-oui-picker-cell-in-view.dt-oui-picker-cell-disabled[title='{endDate}']",
-                "nth": 0
-              }
-            ],
-            "state": "detached",
-            "timeoutMs": 1000,
-            "retries": 0,
-            "onError": "fail",
-            "recovery": "none"
-          }
-        ]
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-fill-end-date",
-        "action": "waitTimeout",
-        "ms": 400
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:confirm-end-date",
-        "action": "press",
-        "key": "Enter",
-        "target": [
+        "input": [
           {
             "by": "xpath",
             "value": "//div[contains(@class,'dt-oui-picker-range')]//input[@placeholder='结束日期']",
             "nth": 0
-          },
+          }
+        ],
+        "target": [
           {
             "by": "xpath",
-            "value": "(//div[contains(@class,'dt-oui-picker-range')]//input)[2]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//div[contains(@class,'picker-range')]//input[@placeholder='结束日期']",
+            "value": "//*[contains(@class,'picker-cell') and @title='{endDate}' and not(contains(@class,'disabled'))]",
             "nth": 0
           }
-        ]
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-confirm-end-date",
-        "action": "waitTimeout",
-        "ms": 1000
+        ],
+        "description": "填结束日期并点日历格子提交，区间选满后组件提交成功"
       },
       {
         "id": "taobao_lingyang_refund_sku_rpa:assert-requested-period",
@@ -833,7 +616,7 @@
             "nth": 0
           }
         ],
-        "value": "退款SKU分布",
+        "value": "退款SKU分布_{endDate}",
         "clear": true,
         "delay": 0,
         "timeoutMs": 10000,

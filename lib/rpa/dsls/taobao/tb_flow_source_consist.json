@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "dsh-shop-accounts/dsl/v1",
+  "id": "tb_flow_source_consist",
+  "platform": "taobao",
+  "description": "生意参谋「店铺流量来源构成日报」模板下载（30 天，19 指标；来源类型/上级来源/来源层级）",
+  "conditions": {},
+  "template": {
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 1,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "id": "goto-template",
+        "action": "goto",
+        "url": "https://sycm.taobao.com/lyone/auto_analysis/datafetch/create?insertType=sycm&layoutHide=1&useDebug=false&activeKey=template"
+      },
+      {
+        "id": "wait-page",
+        "action": "waitTimeout",
+        "ms": 7000
+      },
+      {
+        "id": "wait-item",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'lyone-template-item')][.//div[contains(normalize-space(.),'店铺流量来源构成日报')]]"
+          }
+        ]
+      },
+      {
+        "id": "after-wait-item",
+        "action": "waitTimeout",
+        "ms": 500
+      },
+      {
+        "id": "scroll-item",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'lyone-template-item')][.//div[contains(normalize-space(.),'店铺流量来源构成日报')]]"
+          }
+        ]
+      },
+      {
+        "id": "wait-download-btn",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'lyone-template-item')][.//div[contains(normalize-space(.),'店铺流量来源构成日报')]]//button[normalize-space(.)='下载'])[1]"
+          }
+        ]
+      },
+      {
+        "id": "assert-download-btn",
+        "action": "assertElement",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'lyone-template-item')][.//div[contains(normalize-space(.),'店铺流量来源构成日报')]]//button[normalize-space(.)='下载'])[1]"
+          }
+        ]
+      },
+      {
+        "id": "download-report",
+        "action": "downloadFile",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'lyone-template-item')][.//div[contains(normalize-space(.),'店铺流量来源构成日报')]]//button[normalize-space(.)='下载'])[1]"
+          }
+        ]
+      }
+    ]
+  },
+  "collection": {
+    "import": {
+      "subject_mode": "single"
+    }
+  },
+  "domains": [
+    "流量转化"
+  ],
+  "verified": false
+}

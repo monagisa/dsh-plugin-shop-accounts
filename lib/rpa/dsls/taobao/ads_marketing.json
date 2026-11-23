@@ -1,0 +1,813 @@
+{
+  "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
+  "id": "ads_marketing",
+  "platform": "taobao",
+  "description": "营销场景报表（阿里妈妈万相台/直通车接口页下载营销场景报表）（移植自 上游 现行配方 ads_marketing）",
+  "conditions": {
+    "time": {
+      "kind": "preset",
+      "fallback": {
+        "custom": "month"
+      },
+      "bindings": {
+        "{taobaoAdsQuickRangeLabel}": {
+          "day": "昨日",
+          "week": "过去 7 天",
+          "month": "过去 30 天"
+        },
+        "{taobaoAdsLegacyQuickRangeLabel}": {
+          "day": "近1天",
+          "week": "近7天",
+          "month": "近30天"
+        }
+      }
+    }
+  },
+  "template": {
+    "schemaVersion": "agentwork.rpa.atomic.v1",
+    "name": "Taobao Alimama marketing scene report download",
+    "description": "阿里妈妈营销场景报表下载：进入营销场景报表，选择数据汇总周期，创建纯时间戳名称的下载任务，并通过刷新任务列表下载本次营销场景数据明细。",
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 1,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "id": "taobao_ads_rpa:goto",
+        "action": "goto",
+        "url": "https://one.alimama.com/index.html#!/report/account?rptType=account&isRequestedQztDefaultSet=1",
+        "waitUntil": "domcontentloaded",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "alimama.dismiss-known-dialog",
+            "target": [
+              {
+                "by": "css",
+                "value": "[id^='wrapper_dlg_'] [data-spm-click*='dialog_close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[id^='wrapper_dlg_'] [mx-view*='icon=close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".next-dialog-close",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'next-dialog') or contains(@class,'next-overlay')]//*[contains(@class,'next-dialog-close')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".ant-modal-close, .semi-modal-close, [role='dialog'] button[aria-label='Close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "alimama.dismiss-known-dialog.click",
+            "target": [
+              {
+                "by": "css",
+                "value": "[id^='wrapper_dlg_'] [data-spm-click*='dialog_close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[id^='wrapper_dlg_'] [mx-view*='icon=close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".next-dialog-close",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'next-dialog') or contains(@class,'next-overlay')]//*[contains(@class,'next-dialog-close')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".ant-modal-close, .semi-modal-close, [role='dialog'] button[aria-label='Close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "id": "taobao_ads_rpa:wait-initial",
+        "action": "waitTimeout",
+        "ms": 8000
+      },
+      {
+        "id": "taobao_ads_rpa:NO_PERMISSION__do-not-retry__需主账号授权万相台无界",
+        "action": "assertElement",
+        "state": "detached",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'暂无权限登录')][not(.//*[contains(normalize-space(.),'暂无权限登录')])]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'授权「万相台无界」权限')][not(.//*[contains(normalize-space(.),'授权「万相台无界」权限')])]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 5000,
+        "onError": "fail",
+        "description": "2026-08-14 权限短路守卫（不可重试类异常）。stepId 采用自解释标识 NO_PERMISSION__do-not-retry__，供上层 skill 与普通可重试异常区分：stepId 含 \"NO_PERMISSION\" 即判定为权限问题，直接告知用户且【不重试】；其余 LOCATOR_NOT_FOUND / ACTION_TIMEOUT 等仍按可重试处理。说明：DSL 层无法自定义 error.code（assertElement 由执行引擎固定返回 ASSERTION_FAILED），stepId 是唯一可透传到 issues[].step 的识别通道。实测对照：无权限店(美德乐旗舰店:Cathy) 命中原文「您的账号暂无权限登录，请主账号至「子账号管理」对子账号授权「万相台无界」权限。若主账号尚未迁移/入驻万相台无界，请主账号先完成迁移/入驻。」；有权限店(皇球旗舰店) 该文案 LOCATOR_NOT_FOUND、控件全部就绪 —— 判定零误伤。"
+      },
+      {
+        "id": "taobao_ads_rpa:wait-marketing-scene-shell",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'营销场景报表') or contains(normalize-space(.),'数据汇总周期') or contains(normalize-space(.),'下载报表')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 30000,
+        "onError": "continue"
+      },
+      {
+        "action": "when",
+        "id": "taobao_ads_rpa:关闭营销弹窗",
+        "condition": {
+          "kind": "element",
+          "state": "visible",
+          "target": [
+            {
+              "by": "css",
+              "value": ".next-dialog-close",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//*[contains(@class,'next-dialog') or contains(@class,'next-overlay')]//*[contains(@class,'next-dialog-close') or contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ".ant-modal-close, .semi-modal-close, [role='dialog'] button[aria-label='Close'], [role='dialog'] button[aria-label='关闭']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//*[contains(@class,'modal') or contains(@class,'dialog') or @role='dialog']//*[contains(@class,'close') or @aria-label='Close' or @aria-label='关闭' or @title='关闭']",
+              "nth": 0
+            }
+          ],
+          "timeoutMs": 5000
+        },
+        "then": [
+          {
+            "action": "click",
+            "id": "taobao_ads_rpa:关闭营销弹窗-点击关闭",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-dialog-close",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'next-dialog') or contains(@class,'next-overlay')]//*[contains(@class,'next-dialog-close') or contains(@class,'close')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".ant-modal-close, .semi-modal-close, [role='dialog'] button[aria-label='Close'], [role='dialog'] button[aria-label='关闭']",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'modal') or contains(@class,'dialog') or @role='dialog']//*[contains(@class,'close') or @aria-label='Close' or @aria-label='关闭' or @title='关闭']",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 5000,
+            "retries": 1,
+            "onError": "continue"
+          },
+          {
+            "action": "waitTimeout",
+            "ms": 1000,
+            "id": "taobao_ads_rpa:关闭营销弹窗-等待关闭"
+          }
+        ]
+      },
+      {
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "css",
+            "value": ".mxgc-calendar-rangepicker",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'mxgc-calendar-rangepicker')])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 20000,
+        "onError": "continue",
+        "id": "taobao_ads_rpa:scroll-date-range-picker"
+      },
+      {
+        "action": "waitTimeout",
+        "ms": 1200,
+        "id": "taobao_ads_rpa:wait-after-scroll-picker",
+        "description": "滚动到日期控件后短暂等待，避免滚动未稳定即点击导致 not visible。"
+      },
+      {
+        "action": "click",
+        "target": [
+          {
+            "by": "css",
+            "value": ".mxgc-calendar-rangepicker .mx-trigger-label",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": ".mxgc-calendar-rangepicker",
+            "nth": 0
+          },
+          {
+            "by": "css",
+            "value": "[class*='rangepicker'], [class*='range-picker'], .next-range-picker",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[contains(@class,'trigger-label')][contains(normalize-space(.),'-')])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 40000,
+        "retries": 2,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:open-date-range-picker"
+      },
+      {
+        "action": "assertElement",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'mx-output-open')][.//span[normalize-space(.)='选择日期：'] or contains(normalize-space(.),'选择日期')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'mx-output-open')]//div[contains(@class,'mxgc-calendar-datepicker')][.//span[contains(@class,'mx-trigger-label')]]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'mx-output-open') or contains(@class,'next-overlay') or contains(@class,'overlay') or contains(@class,'popup')]//*[normalize-space(.)='{taobaoAdsQuickRangeLabel}' or normalize-space(.)='{taobaoAdsLegacyQuickRangeLabel}']",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 10000,
+        "retries": 1,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:assert-date-range-panel-open"
+      },
+      {
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'mx-output-open')]//button[normalize-space(.)='{taobaoAdsQuickRangeLabel}']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'mx-output-open')]//*[self::button or self::span][normalize-space(.)='{taobaoAdsQuickRangeLabel}']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'mx-output-open') or contains(@class,'next-overlay') or contains(@class,'overlay') or contains(@class,'popup')]//*[self::li or self::div or self::span or self::button][normalize-space(.)='{taobaoAdsQuickRangeLabel}']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'mx-output-open') or contains(@class,'next-overlay') or contains(@class,'overlay') or contains(@class,'popup')]//*[self::li or self::div or self::span or self::button][normalize-space(.)='{taobaoAdsLegacyQuickRangeLabel}']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[normalize-space(.)='{taobaoAdsQuickRangeLabel}']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 2,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:choose-date-quick-option"
+      },
+      {
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'营销场景数据明细') or contains(normalize-space(.),'营销场景报表')]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 8000,
+        "onError": "continue",
+        "id": "taobao_ads_rpa:scroll-marketing-detail"
+      },
+      {
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(.),'营销场景数据明细') or contains(normalize-space(.),'营销场景报表')]/following::button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 8000,
+        "onError": "continue",
+        "id": "taobao_ads_rpa:scroll-download-report"
+      },
+      {
+        "action": "when",
+        "id": "taobao_ads_rpa:关闭营销弹窗-下载前兜底",
+        "condition": {
+          "kind": "element",
+          "state": "visible",
+          "target": [
+            {
+              "by": "css",
+              "value": ".next-dialog-close",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//*[contains(@class,'next-dialog') or contains(@class,'next-overlay')]//*[contains(@class,'next-dialog-close') or contains(@class,'close')]",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": ".ant-modal-close, .semi-modal-close, [role='dialog'] button[aria-label='Close'], [role='dialog'] button[aria-label='关闭']",
+              "nth": 0
+            },
+            {
+              "by": "xpath",
+              "value": "//*[contains(@class,'modal') or contains(@class,'dialog') or @role='dialog']//*[contains(@class,'close') or @aria-label='Close' or @aria-label='关闭' or @title='关闭']",
+              "nth": 0
+            }
+          ],
+          "timeoutMs": 5000
+        },
+        "then": [
+          {
+            "action": "click",
+            "id": "taobao_ads_rpa:关闭营销弹窗-下载前兜底-点击关闭",
+            "target": [
+              {
+                "by": "css",
+                "value": ".next-dialog-close",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'next-dialog') or contains(@class,'next-overlay')]//*[contains(@class,'next-dialog-close') or contains(@class,'close')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".ant-modal-close, .semi-modal-close, [role='dialog'] button[aria-label='Close'], [role='dialog'] button[aria-label='关闭']",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'modal') or contains(@class,'dialog') or @role='dialog']//*[contains(@class,'close') or @aria-label='Close' or @aria-label='关闭' or @title='关闭']",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 5000,
+            "retries": 1,
+            "onError": "continue"
+          },
+          {
+            "action": "waitTimeout",
+            "ms": 1000,
+            "id": "taobao_ads_rpa:关闭营销弹窗-下载前兜底-等待关闭"
+          }
+        ],
+        "description": "[2026-08-16 弹窗兜底] 下载前二次关闭营销弹窗（复用首个“关闭营销弹窗”的 when 结构）。万相台营销弹窗常延迟弹出，首屏关闭覆盖不到；滚动到下载区后弹窗可能再次遮挡“下载报表”按钮。本步 when 条件不满足自动跳过、then 内 click 为 onError=continue，零副作用；仅在弹窗确实存在时关闭。"
+      },
+      {
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[contains(normalize-space(.),'营销场景数据明细') or contains(normalize-space(.),'营销场景报表')]/following::button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表'])[1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//button[.//span[normalize-space(.)='下载报表'] or normalize-space(.)='下载报表']",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "id": "taobao_ads_rpa:click-download-report",
+        "retries": 2,
+        "description": "[2026-08-16 容错增强] click-download-report 增加 retries:2。配合前置“下载前兜底”关弹窗：若首次点击仍被延迟弹窗遮挡导致 LOCATOR_NOT_FOUND，重试前兜底步会先关闭弹窗，再重试点击。onError=fail 语义不变，confirm-download-dialog 仍保持 fail。"
+      },
+      {
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[normalize-space(.)='下载报表']/ancestor::*[contains(@class,'dialog') or contains(@class,'modal') or contains(@class,'overlay') or contains(@class,'next-dialog') or contains(@class,'mx-dialog') or @role='dialog'][1]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[normalize-space(.)='下载报表' and (.//*[contains(normalize-space(.),'日期范围')] or .//*[contains(normalize-space(.),'文件名称')])]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 10000,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:wait-download-dialog",
+        "recovery": "auto"
+      },
+      {
+        "action": "type",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'dialog') or contains(@class,'modal') or contains(@class,'overlay') or @role='dialog'][.//*[contains(normalize-space(.),'文件名称')]]//input[not(@type) or @type='text']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//*[contains(normalize-space(.),'文件名称')]/following::input[1]",
+            "nth": 0
+          }
+        ],
+        "value": "营销场景报表_{downloadTaskTimestamp}",
+        "clear": true,
+        "timeoutMs": 10000,
+        "retries": 1,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:set-unique-report-name",
+        "recovery": "auto"
+      },
+      {
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='下载报表']/ancestor::*[contains(@class,'dialog') or contains(@class,'modal') or contains(@class,'overlay') or contains(@class,'next-dialog') or contains(@class,'mx-dialog') or @role='dialog'][1]//button[.//span[normalize-space(.)='确定'] or normalize-space(.)='确定'])[last()]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='下载报表' and (.//*[contains(normalize-space(.),'日期范围')] or .//*[contains(normalize-space(.),'文件名称')])]//button[.//span[normalize-space(.)='确定'] or normalize-space(.)='确定'])[last()]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[.//span[normalize-space(.)='确定'] or normalize-space(.)='确定'])[last()]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 10000,
+        "retries": 1,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:confirm-download-dialog"
+      },
+      {
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[contains(@class,'dialog') or contains(@class,'modal') or contains(@class,'overlay') or @role='dialog'][.//*[contains(normalize-space(.),'文件名称')]]//input[not(@type) or @type='text']",
+            "nth": 0
+          }
+        ],
+        "state": "hidden",
+        "timeoutMs": 30000,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:wait-download-request-accepted"
+      },
+      {
+        "action": "goto",
+        "url": "https://one.alimama.com/index.html#!/report/download-list",
+        "waitUntil": "domcontentloaded",
+        "timeoutMs": 20000,
+        "id": "taobao_ads_rpa:open-download-task-management",
+        "after": [
+          {
+            "action": "waitFor",
+            "optional": true,
+            "id": "alimama.dismiss-known-dialog#2",
+            "target": [
+              {
+                "by": "css",
+                "value": "[id^='wrapper_dlg_'] [data-spm-click*='dialog_close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[id^='wrapper_dlg_'] [mx-view*='icon=close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".next-dialog-close",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'next-dialog') or contains(@class,'next-overlay')]//*[contains(@class,'next-dialog-close')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".ant-modal-close, .semi-modal-close, [role='dialog'] button[aria-label='Close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 10000,
+            "onError": "continue",
+            "retries": 0
+          },
+          {
+            "action": "click",
+            "optional": true,
+            "id": "alimama.dismiss-known-dialog.click#2",
+            "target": [
+              {
+                "by": "css",
+                "value": "[id^='wrapper_dlg_'] [data-spm-click*='dialog_close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": "[id^='wrapper_dlg_'] [mx-view*='icon=close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".next-dialog-close",
+                "nth": 0
+              },
+              {
+                "by": "xpath",
+                "value": "//*[contains(@class,'next-dialog') or contains(@class,'next-overlay')]//*[contains(@class,'next-dialog-close')]",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ".ant-modal-close, .semi-modal-close, [role='dialog'] button[aria-label='Close']",
+                "nth": 0
+              },
+              {
+                "by": "css",
+                "value": ":is([class*='-dialog'], [class*='dialog-'], [class*='-modal'], [class*='modal-'], [class*='dialog'][class*='wrapper'], [class*='modal'][class*='wrapper']) :is([class*='-close'], [class*='close-'])",
+                "nth": 0
+              }
+            ],
+            "onError": "continue",
+            "retries": 0,
+            "timeoutMs": 1000
+          }
+        ]
+      },
+      {
+        "action": "waitTimeout",
+        "ms": 5000,
+        "id": "taobao_ads_rpa:wait-download-task-list"
+      },
+      {
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//*[self::button or @role='button'][normalize-space(.)='刷新表格' or .//*[normalize-space(.)='刷新表格']]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 20000,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:wait-download-task-refresh-control",
+        "recovery": "auto"
+      },
+      {
+        "action": "while",
+        "condition": {
+          "kind": "element",
+          "state": "hidden",
+          "target": [
+            {
+              "by": "xpath",
+              "value": "//tbody//tr[contains(normalize-space(.),'营销场景报表_{downloadTaskTimestamp}') and (contains(normalize-space(.),'生成成功') or contains(normalize-space(.),'失败'))]",
+              "nth": 0
+            }
+          ],
+          "timeoutMs": 1000
+        },
+        "maxIterations": 20,
+        "requireProgress": false,
+        "body": [
+          {
+            "action": "click",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//*[self::button or @role='button'][normalize-space(.)='刷新表格' or .//*[normalize-space(.)='刷新表格']]",
+                "nth": 0
+              }
+            ],
+            "timeoutMs": 10000,
+            "retries": 1,
+            "onError": "fail",
+            "id": "taobao_ads_rpa:refresh-download-task-list"
+          },
+          {
+            "action": "waitFor",
+            "target": [
+              {
+                "by": "xpath",
+                "value": "//tbody//tr[contains(normalize-space(.),'营销场景报表_{downloadTaskTimestamp}') and (contains(normalize-space(.),'生成成功') or contains(normalize-space(.),'失败'))]",
+                "nth": 0
+              }
+            ],
+            "state": "visible",
+            "timeoutMs": 30000,
+            "onError": "continue",
+            "id": "taobao_ads_rpa:observe-exact-download-task"
+          }
+        ],
+        "id": "taobao_ads_rpa:poll-exact-download-task"
+      },
+      {
+        "action": "assertElement",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//tbody//tr[contains(normalize-space(.),'营销场景报表_{downloadTaskTimestamp}')]",
+            "nth": 0
+          }
+        ],
+        "state": "visible",
+        "timeoutMs": 3000,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:assert-download-task-created"
+      },
+      {
+        "action": "assertElement",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//tbody//tr[contains(normalize-space(.),'营销场景报表_{downloadTaskTimestamp}') and contains(normalize-space(.),'失败')]",
+            "nth": 0
+          }
+        ],
+        "state": "hidden",
+        "timeoutMs": 1000,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:assert-download-task-not-failed"
+      },
+      {
+        "action": "assertText",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//tbody//tr[contains(normalize-space(.),'营销场景报表_{downloadTaskTimestamp}')]",
+            "nth": 0
+          }
+        ],
+        "value": "生成成功",
+        "match": "contains",
+        "timeoutMs": 3000,
+        "onError": "fail",
+        "id": "taobao_ads_rpa:assert-download-task-generated"
+      },
+      {
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//tbody//tr[contains(normalize-space(.),'营销场景报表_{downloadTaskTimestamp}')][contains(normalize-space(.),'生成成功')])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 20000,
+        "onError": "continue",
+        "id": "taobao_ads_rpa:scroll-to-task-row",
+        "description": "滚动到本次报表所在任务行，确保其进入视口。"
+      },
+      {
+        "action": "hover",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//tbody//tr[contains(normalize-space(.),'营销场景报表_{downloadTaskTimestamp}')][contains(normalize-space(.),'生成成功')])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 20000,
+        "onError": "continue",
+        "id": "taobao_ads_rpa:hover-task-row",
+        "description": "悬停任务行以渲染相邻的「下载/删除」操作条（不 hover 时按钮 not visible）。"
+      },
+      {
+        "action": "waitTimeout",
+        "ms": 1500,
+        "id": "taobao_ads_rpa:wait-action-bar",
+        "description": "等待操作条渲染稳定。"
+      },
+      {
+        "action": "downloadFile",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//tbody//tr[contains(normalize-space(.),'营销场景报表_{downloadTaskTimestamp}')][contains(normalize-space(.),'生成成功')])[1]/following-sibling::tr[1]//*[self::button or self::a or self::span][normalize-space(.)='下载']",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "((//tbody//tr[contains(normalize-space(.),'营销场景报表_{downloadTaskTimestamp}')][contains(normalize-space(.),'生成成功')])[1]/following::*[self::button or self::a or self::span][normalize-space(.)='下载'])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 90000,
+        "retries": 0,
+        "onError": "fail",
+        "outputKey": "adsMarketingFile",
+        "id": "taobao_ads_rpa:download-exact-task"
+      },
+      {
+        "action": "waitTimeout",
+        "ms": 1000,
+        "id": "taobao_ads_rpa:after-download-click"
+      }
+    ]
+  },
+  "collection": {
+    "import": {
+      "subject_mode": "single"
+    }
+  },
+  "domains": [
+    "运营推广"
+  ],
+  "verified": false
+}

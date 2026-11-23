@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "dsh-shop-accounts/dsl/v1",
+  "id": "tb_ads_scene_report",
+  "platform": "taobao",
+  "description": "万相台无界「营销场景报表」下载（阿里妈妈报表 → 下载中心异步生成后取文件；移植自 上游 现行 ads_marketing）",
+  "conditions": {},
+  "template": {
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 1,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "id": "goto-report",
+        "action": "goto",
+        "url": "https://one.alimama.com/index.html#!/report/account?rptType=account&isRequestedQztDefaultSet=1"
+      },
+      {
+        "id": "wait-page",
+        "action": "waitTimeout",
+        "ms": 9000
+      },
+      {
+        "id": "scroll-download",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//button[normalize-space(.)='下载报表'])[1]"
+          }
+        ]
+      },
+      {
+        "id": "open-download-dialog",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//button[normalize-space(.)='下载报表'])[1]"
+          }
+        ]
+      },
+      {
+        "id": "wait-dialog",
+        "action": "waitTimeout",
+        "ms": 2500
+      },
+      {
+        "id": "fill-report-name",
+        "action": "type",
+        "clear": true,
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//input[contains(@value,'营销场景报表_')])[1]"
+          },
+          {
+            "by": "css",
+            "value": "input[placeholder='请输入']"
+          }
+        ],
+        "value": "{reportName}"
+      },
+      {
+        "id": "after-fill-name",
+        "action": "waitTimeout",
+        "ms": 800
+      },
+      {
+        "id": "confirm-download",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'dialog')]//button[normalize-space(.)='确定'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//div[contains(@class,'mx')]//button[normalize-space(.)='确定'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//button[normalize-space(.)='确定'])[1]"
+          }
+        ]
+      },
+      {
+        "id": "after-confirm",
+        "action": "waitTimeout",
+        "ms": 3000
+      },
+      {
+        "id": "goto-download-center",
+        "action": "goto",
+        "url": "https://one.alimama.com/index.html#!/report/download-list"
+      },
+      {
+        "id": "wait-center",
+        "action": "waitTimeout",
+        "ms": 4000
+      },
+      {
+        "id": "refresh-table",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//button[normalize-space(.)='刷新表格'])[1]"
+          },
+          {
+            "by": "xpath",
+            "value": "(//*[normalize-space(.)='刷新表格' and (self::button or self::span or self::a)])[1]"
+          }
+        ]
+      },
+      {
+        "id": "wait-refreshed",
+        "action": "waitTimeout",
+        "ms": 4000
+      },
+      {
+        "id": "hover-task-row",
+        "action": "hover",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//tbody//tr[contains(normalize-space(.),'{reportName}')])[1]"
+          }
+        ]
+      },
+      {
+        "id": "wait-action-bar",
+        "action": "waitTimeout",
+        "ms": 1500
+      },
+      {
+        "id": "download-task",
+        "action": "downloadFile",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//tbody//tr[contains(normalize-space(.),'{reportName}')]//*[normalize-space(.)='下载'])[1]"
+          }
+        ]
+      }
+    ]
+  },
+  "collection": {
+    "import": {
+      "subject_mode": "single"
+    }
+  },
+  "domains": [
+    "运营推广"
+  ],
+  "verified": false
+}
