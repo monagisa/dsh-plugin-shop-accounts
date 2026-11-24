@@ -1,6 +1,35 @@
+## v0.20.65（2026-11-24）
+
+**需求**
+
+- 采集数据目录名太乱：都是 `collection/acc_taobao_mw05dt23d7jw` 这种账号 id，文件管理器里看不出是哪家店。
+
+**改动**
+
+- 采集数据目录改成可读命名：`collection/<店名>_<平台>_<账号尾号>/`（例如 `collection/示例店铺_taobao_23d7jw/`），作业目录、原始产物、覆盖率台账、配方台账都挂在这个目录下。
+- 新增 `lib/collection-dir.mjs`：目录名生成、归属标记（目录内 `.account.json` 记录账号 id）、老目录兼容解析（老目录存在就继续用，不会把历史数据分裂成两份）。
+- 新增 `tools/migrate-collection-dirs.mjs`：把老目录一键改成新命名，支持 `--dry` 预演；老目录与新目录同时存在时只报告、不合并。
+- 数据目录路径解析统一走新模块：`lib/datastore.mjs` 的 `collectionStoreDir`、`lib/collect-support.mjs` 的下载/原始产物目录、`lib/collect-runner.mjs` 的作业目录与配方台账。
+
+**验证**
+
+- 新增 `test/features-v02065.mjs`（31 项）：目录名形状、尾号规则、归属标记、仅凭账号 id 反查、老目录兼容、三处调用点接线、迁移工具、版本与变更记录。
+- 本机三个采集目录已迁移为 `示例抖音店_douyin_nnoulf`、`示例拼多多店_pdd_jisilb`、`示例店铺_taobao_23d7jw`。
+
 ## v0.20.64（2026-11-24）
 
-（待补：需求 / 改动 / 验证）
+**需求**
+
+- 用不了的旧配方直接删掉，避免按域采集时又被挑中。
+
+**改动**
+
+- 删除 4 份真机跑不通的配方：`tb_product_lost_to_competitor`（12 分钟不返回）、`tb_ads_product_promotion`（175 秒下载超时）、`ads_marketing`（被 `tb_ads_scene_report` 取代）、天猫同族的 `tmall_product_lost_to_competitor`；淘宝种子 23→20 份、天猫 13→12 份。
+- 保留「配方显式停用」能力（`disabled` / `disabledReason`），以后复测时仍可用。
+
+**验证**
+
+- `test/features-v02063.mjs` 的 D/E 组同步改为断言「已删除 + 挑选里没有坏配方」，39 项全过；源码库与安装副本 `run-suites` 各 957 项全绿。
 
 ## v0.20.63（2026-11-24）
 

@@ -395,19 +395,20 @@ node test/features-v02059.mjs  # 41 项：执行器对齐 上游（真实键盘 
 node test/features-v02060.mjs  # 22 项：采集工作簿按「同店同天」归集五域（读回 xlsx/csv 表格、补齐其它作业的域、工作表顺序固定）
 node test/features-v02061.mjs  # 33 项：退款配方批量搜索 + 真实键盘换行 → Enter（服务履约出数）、ego 用户配置可选与同平台同身份冲突校验
 node test/features-v02063.mjs  # 39 项：退款类配方归档延迟（T+2）：配方可声明 t_minus、准备层不再硬塞统一窗口；坏配方显式停用、能跑的配方标校准
+node test/features-v02065.mjs  # 31 项：采集数据目录按「店名_平台_尾号」命名（归属标记、老目录兼容、一键迁移）
 node test/features-v02062.mjs  # 31 项：淘宝运营推广：阿里妈妈营销场景报表配方（页内取字节 + ZIP 自动解包）、门禁认 evaluate 产物
 node test/platform.mjs         # 12 项：平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）
 node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome，读取 cookie 后关闭 + 「慢跳转」回归
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前 75 套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 76 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**1170 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**1201 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -454,7 +455,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.64**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.65**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
