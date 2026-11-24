@@ -1,3 +1,24 @@
+## v0.20.66（2026-11-24）
+
+**需求**
+
+- 作业目录太乱：成品表、每个任务的执行 json、原始导出文件全混在 `artifacts/` 里，单个 json 能到十几 MB。希望「json 算日志放 logs 里，原始表不留，只留一个成品表」。
+
+**改动**
+
+- 作业目录按「成品 / 日志」分层：
+  - `artifacts/` 只放成品：`采集数据_<时间>_<店名>.xlsx` + `manifest.json`；
+  - `logs/` 放过程：每个任务的执行记录 `t_001.json`（原来在 artifacts 里），下载型配方的原始导出落在 `logs/raw/t_001/`。
+- 交付后自动清理原始导出（`organizeArtifacts` 默认清理，需要留现场可传 `keepRaw`）；`manifest.json` 里新增 `layout` 说明，`rawFiles` 只在保留原始文件时才有内容。
+- 同店同天按域补齐改成**读对方的成品工作簿**（原来读原始导出文件，清理后就没有来源了）：新增 `tableSheetsOfWorkbook()`，工作簿里缺的域从同一天其它作业的成品表并进来。
+- 新增 `tools/reorganize-job-artifacts.mjs`：把老作业目录整理成新布局（执行记录挪进 logs/、删原始导出目录、重写 manifest 只留成品），支持 `--dry` 预演与 `--keep-raw`。
+
+**验证**
+
+- 新增 `test/features-v02066.mjs`（41 项）：布局接线、keepRaw 与默认清理、manifest 字段、同店同天从工作簿补齐、跨天不并、整理工具的预演与真整理、版本与文档。
+- `test/features-v0218.mjs` 的产物整理用例同步改成 keepRaw / 清理两段。
+- 真实作业跑一次采集后确认：`artifacts/` 只剩成品工作簿与 manifest，执行记录在 `logs/`。
+
 ## v0.20.65（2026-11-24）
 
 **需求**

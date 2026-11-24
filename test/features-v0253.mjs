@@ -99,16 +99,18 @@ await test('B3 没解析出指标的作业写一张「采集情况」表，而�
   assert.ok(xlsxEntry.sheets.some((s) => s.name === '采集情况'), '缺采集情况表：' + JSON.stringify(xlsxEntry.sheets));
 });
 
-await test('C1 下载型产物仍然单独保留（平台导出文件不合并）', () => {
+await test('C1 下载型产物默认只进工作簿，keepRaw 时才单独保留', () => {
   const jobDir = path.join(TMP, 'job-c1');
-  fs.mkdirSync(path.join(jobDir, 'artifacts', 't_001'), { recursive: true });
-  const src = path.join(jobDir, 'artifacts', 't_001', '抖音电商罗盘-成交分析.xlsx');
+  fs.mkdirSync(path.join(jobDir, 'logs', 'raw', 't_001'), { recursive: true });
+  const src = path.join(jobDir, 'logs', 'raw', 't_001', '抖音电商罗盘-成交分析.xlsx');
   fs.writeFileSync(src, 'x', 'utf8');
   const job = fakeJob('c1', [{ taskId: 't_001', dslId: 'douyin_shop_transaction', state: 'ok', artifacts: [{ role: 'business', kind: 'download_ref', present: true, filePath: src, bytes: 1 }] }], { platform: 'douyin' });
-  const manifest = organizeArtifacts(jobDir, job);
-  const downloads = manifest.files.filter((f) => f.kind !== 'xlsx');
-  assert.equal(downloads.length, 1, '下载型产物该保留');
-  assert.ok(downloads[0].fileName.includes('douyin_shop_transaction') || downloads[0].fileName.includes('抖店-成交分析'), '下载产物没按采集项改名');
+  const kept = organizeArtifacts(jobDir, job, { keepRaw: true });
+  const raws = (kept.rawFiles || []).filter((f) => f.kind !== 'xlsx');
+  assert.equal(raws.length, 1, 'keepRaw 时原始产物该保留');
+  assert.ok(raws[0].fileName.includes('douyin_shop_transaction') || raws[0].fileName.includes('抖店-成交分析'), '下载产物没按采集项改名');
+  const purged = organizeArtifacts(jobDir, job);
+  assert.equal((purged.rawFiles || []).length, 0, '默认交付后原始产物该清理');
 });
 
 await test('D1 运行期代码：工作簿按域分组、面板按五项域命名', () => {

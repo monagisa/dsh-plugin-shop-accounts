@@ -103,19 +103,27 @@ await test('organizeArtifacts：文件改成 <采集项>_<时间>_<原名>，man
     plan: { window: { start: '2026-10-05', end: '2026-11-03' } },
     tasks: [{ taskId: 't_001', dslId: 'douyin_shop_transaction', state: 'ok', artifacts: [{ present: true, kind: 'download_ref', outputKey: 'xlsx', bytes: 11, filePath: file }] }],
   };
-  const manifest = J.organizeArtifacts(jobDir, job);
+  // v0.20.66：原始导出文件只是过程，默认交付后清理；keepRaw 时才保留并记进 rawFiles
+  const kept = J.organizeArtifacts(jobDir, job, { keepRaw: true });
   const name = path.basename(job.tasks[0].artifacts[0].filePath);
   assert.ok(name.startsWith('抖店-成交分析_20261111-1230_'), '产物名没带采集项与时间：' + name);
   assert.ok(name.endsWith(origName), '原始文件名要留在后缀里');
-  const downloads = manifest.files.filter((x) => x.kind !== 'xlsx');
-  assert.equal(downloads.length, 1);
-  assert.equal(downloads[0].fileName, name);
-  assert.equal(downloads[0].item, '抖店-成交分析');
-  assert.equal(manifest.naming, '<采集项>_<YYYYMMDD-HHmm>_<店名>_<原始文件名>');
-  assert.ok((manifest.items || []).some((i) => i.name === '抖店-成交分析'), 'manifest 没标采集项名');
+  const rawFiles = kept.rawFiles || [];
+  assert.equal(rawFiles.length, 1);
+  assert.equal(rawFiles[0].fileName, name);
+  assert.equal(rawFiles[0].item, '抖店-成交分析');
+  assert.equal(kept.naming, '<采集项>_<YYYYMMDD-HHmm>_<店名>_<原始文件名>');
+  assert.ok((kept.items || []).some((i) => i.name === '抖店-成交分析'), 'manifest 没标采集项名');
   const manifestFile = path.join(jobDir, 'artifacts', 'manifest.json');
   assert.ok(fs.existsSync(manifestFile), 'manifest.json 没落盘');
   assert.equal(JSON.parse(fs.readFileSync(manifestFile, 'utf8')).jobId, 'job_20261111-1230_abc123');
+  // 再做一次默认清理：原始文件被删、任务元信息标记为已清理、manifest 的 rawFiles 为空
+  fs.mkdirSync(path.join(jobDir, 'logs', 'raw', 't_001'), { recursive: true });
+  const purged = J.organizeArtifacts(jobDir, job);
+  assert.equal((purged.rawFiles || []).length, 0, '默认不应列原始文件');
+  assert.equal(job.tasks[0].artifacts[0].purged, true, '原始文件应标记为已清理');
+  assert.equal(job.tasks[0].artifacts[0].filePath, '', '清理后不再保留文件路径');
+  assert.equal(fs.existsSync(path.join(jobDir, 'logs', 'raw')), false, 'logs/raw 目录应被删掉');
 });
 
 // ── C. 保留上限 ─────────────────────────────────────────────────────────────
