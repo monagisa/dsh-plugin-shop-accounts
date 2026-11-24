@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "tb_traffic_source_excel",
-  "verified": false,
+  "verified": true,
   "domains": [
     "流量转化"
   ],

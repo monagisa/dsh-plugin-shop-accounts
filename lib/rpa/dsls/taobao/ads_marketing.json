@@ -809,5 +809,7 @@
   "domains": [
     "运营推广"
   ],
-  "verified": false
+  "verified": false,
+  "disabled": true,
+  "disabledReason": "已被 tb_ads_scene_report 取代（同一张营销场景报表，后者走 API 取字节且已真机跑通）"
 }

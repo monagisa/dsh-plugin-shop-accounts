@@ -1,7 +1,7 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "tb_ads_product_promotion",
-  "verified": true,
+  "verified": false,
   "domains": [
     "运营推广"
   ],
@@ -825,5 +825,7 @@
       "dimension": "store",
       "subject_mode": "row_identity"
     }
-  }
+  },
+  "disabled": true,
+  "disabledReason": "真机实测 175 秒下载超时（等不到下载文件），且没有可用的接口取数路径"
 }

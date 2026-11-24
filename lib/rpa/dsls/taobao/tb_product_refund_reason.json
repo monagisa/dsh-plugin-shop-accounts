@@ -620,6 +620,11 @@
   "collection": {
     "import": {
       "subject_mode": "single"
+    },
+    "schedule": {
+      "mode": "period",
+      "days": 30,
+      "t_minus": 2
     }
   },
   "needsParams": true

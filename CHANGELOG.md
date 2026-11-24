@@ -1,3 +1,25 @@
+## v0.20.63（2026-11-24）
+
+**需求**
+
+- 三家店铺（淘宝/拼多多/抖店）全量采集一遍。跑的过程中发现 4 份退款报表长期只有表头，需要一起查掉。
+
+**改动**
+
+- 配方时间窗支持**归档延迟**：`collection.schedule.t_minus` 声明「数据比今天晚 N 天归档」时，查询窗口整体往前挪。退款类报表是 T+2，原来截止日填「昨天」，那天在页面日历里是 disabled，日期填不进去，报表只能回表头。9 份退款配方（淘宝 5 + 天猫 4）统一改成 `days: 30, t_minus: 2`。
+- 批量准备层不再把「整批统一窗口」硬塞给每份配方（`prepareJob` 只在调用方显式给了 start/end 时才传），配方自己的排期（含 t_minus）才生效。
+- 配方可**显式停用**：`disabled` / `disabledReason` 进配方元信息，按域挑选时直接跳过并计入 `skipped.disabled`；显式指定 `dslIds` 时也要 `allowDisabled` 才会跑（留给以后修复/复测）。
+- 校准标记收口：真机跑通并产出过数据的模板/接口型配方（`tb_store_core_daily`、`tb_flow_source_consist`、`tb_product_overall_tpl`、`tb_traffic_source_excel`、`lingyang_refund_overall`）标为已校准 —— 它们此前是 `verified: false`，按域挑选时永远挑不到。真机跑不通的 `tb_product_lost_to_competitor`（12 分钟不返回）、`tb_ads_product_promotion`（175 秒下载超时）与被取代的 `ads_marketing` 显式停用；同族但从未真机跑过的 5 份（roi / sku_metrics / traffic_source / traffic_by_audience / overall_metrics）回到未校准，不再被自动挑中。
+
+**验证**
+
+- 退款域真机出数：整体退款分布 24 行、退款原因分布 29 行、已完结退款 29 行、退款SKU分布 28 行（区间 2026-10-24 ~ 2026-11-22，10 个商品）。
+- 淘宝按域挑选结果：12 份已校准配方被挑中（模板 3 份 + 阿里妈妈 1 份 + 退款 4 份 + 店铺概览 + 商品详情 + 流量来源 Excel）；3 份停用配方进 `skipped.disabled`。
+- 三家全量采集产物：淘宝 10 表、拼多多 5 表、抖店 14 表。
+- 新增 `test/features-v02063.mjs`（39 项）：T+2 窗口、编译窗口、9 份配方排期、停用/校准标记、挑选跳过、显式指定需 allowDisabled、版本与变更记录。
+
+（待补：需求 / 改动 / 验证）
+
 ## v0.20.62（2026-11-24）
 
 ### 需求

@@ -53,16 +53,17 @@ await test('A3 缓存为空时 productParamHint 报 supported 但不 cached', ()
 await test('B1 selectRecipesForAccount：支持自动补参数的平台不再把 needsParams 配方跳过', () => {
   const inventory = dsls.listDsls().items;
   const acc = { platform: 'taobao', collection: { domains: ['商品供给'] } };
-  const r = support.selectRecipesForAccount(acc, inventory, { includeDownload: true });
-  assert.ok(r.pickedIds.includes('tb_product_overall_metrics'), '需要商品 ID 的配方应当被挑中');
+  // v0.20.63：同族未校准配方不再自动挑，这里显式带上 includeUnverified，只验「needsParams 不再被跳过」
+  const r = support.selectRecipesForAccount(acc, inventory, { includeDownload: true, includeUnverified: true });
+  assert.ok(r.pickedIds.includes('tb_product_roi'), '需要商品 ID 的配方应当被挑中');
   assert.equal(r.skipped.needsParams.length, 0, '淘宝不该再把 needsParams 配方跳过');
 });
 
 await test('B2 传 autoParams:false 时回到旧行为（需要参数的配方跳过）', () => {
   const inventory = dsls.listDsls().items;
   const acc = { platform: 'taobao', collection: { domains: ['商品供给'] } };
-  const r = support.selectRecipesForAccount(acc, inventory, { includeDownload: true, autoParams: false });
-  assert.ok(r.skipped.needsParams.includes('tb_product_overall_metrics'), '关掉自动补参数后应当跳过');
+  const r = support.selectRecipesForAccount(acc, inventory, { includeDownload: true, autoParams: false, includeUnverified: true });
+  assert.ok(r.skipped.needsParams.includes('tb_product_roi'), '关掉自动补参数后应当跳过');
 });
 
 await test('B3 没有商品 ID 抓取能力的平台仍然跳过 needsParams 配方', () => {

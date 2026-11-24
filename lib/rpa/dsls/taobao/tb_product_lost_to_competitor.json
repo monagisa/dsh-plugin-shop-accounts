@@ -1,7 +1,7 @@
 {
   "schemaVersion": "multi-platform-rpa-execution-new.dsl-spec.v1",
   "id": "tb_product_lost_to_competitor",
-  "verified": true,
+  "verified": false,
   "domains": [
     "商品供给"
   ],
@@ -966,5 +966,7 @@
       "subject_mode": "single"
     }
   },
-  "needsParams": true
+  "needsParams": true,
+  "disabled": true,
+  "disabledReason": "真机实测跑 12 分钟以上不返回（内部等一个不会出现的按钮），会拖住整轮采集"
 }
