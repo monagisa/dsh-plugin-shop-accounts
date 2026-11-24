@@ -1,8 +1,8 @@
 {
   "name": "dsh-plugin-shop-accounts",
-  "version": "0.20.63",
+  "version": "0.20.64",
   "type": "module",
-  "description": "DSH 插件：电商店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688 商家端）——一店一份独立登录档案，登录一次长期复用；浏览器优先 ego lite，未安装时回退 Chrome CDP；支持静默/定时检测登录态、保活续期与采集作业编排。；采集工作簿按同店同天归集五个域，表格产物可直接读回合并；执行器支持真实键盘换行，新建店铺可自选 ego 用户配置；淘宝运营推广（阿里妈妈营销场景报表）已固化成配方；退款类配方支持归档延迟（T+2），配方可显式停用",
+  "description": "DSH 插件：电商店铺账号管理（拼多多 / 淘宝 / 天猫 / 抖音 / 京东 / 1688 商家端）——一店一份独立登录档案，登录一次长期复用；浏览器优先 ego lite，未安装时回退 Chrome CDP；支持静默/定时检测登录态、保活续期与采集作业编排。；采集工作簿按同店同天归集五个域，表格产物可直接读回合并；执行器支持真实键盘换行，新建店铺可自选 ego 用户配置；淘宝运营推广（阿里妈妈营销场景报表）已固化成配方；退款类配方支持归档延迟（T+2），配方可显式停用；删除跑不通的旧配方",
   "keywords": [
     "dsh-plugin",
     "dsh",
@@ -108,7 +108,8 @@
     "features72": "node test/features-v02060.mjs",
     "features73": "node test/features-v02061.mjs",
     "features74": "node test/features-v02062.mjs",
-    "features75": "node test/features-v02063.mjs"
+    "features75": "node test/features-v02063.mjs",
+    "features76": "node test/features-v02063.mjs"
   },
   "dsh": {
     "manifestVersion": 1,

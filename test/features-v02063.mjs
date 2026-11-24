@@ -73,28 +73,27 @@ const badSched = refundIds.filter((rel) => {
 ok(badSched.length === 0, 'C1 9 份退款配方都声明 days:30 + t_minus:2' + (badSched.length ? ' → ' + badSched.join(',') : ''));
 ok(refundIds.length === 9, 'C2 退款配方清单是 9 份（淘宝 5 + 天猫 4）');
 
-// ── D 组：停用 / 校准标记
-ok(/disabled: raw\.disabled === true/.test(dslSrc), 'D1 readMeta 暴露 disabled');
-ok(/disabledReason/.test(dslSrc), 'D2 readMeta 暴露 disabledReason');
+// ── D 组：坏配方已删除 / 校准标记
 const inv = listDsls().items;
-const byId = (id) => inv.find((m) => m.id === id) || {};
-ok(byId('tb_product_lost_to_competitor').disabled === true, 'D3 lost_to_competitor 已停用（12 分钟不返回）');
-ok(byId('tb_ads_product_promotion').disabled === true, 'D4 ads_product_promotion 已停用（下载超时）');
-ok(byId('ads_marketing').disabled === true, 'D5 ads_marketing 已停用（被 tb_ads_scene_report 取代）');
-ok(String(byId('tb_product_lost_to_competitor').disabledReason || '').length > 5, 'D6 停用原因有文字说明');
-ok(['tb_product_lost_to_competitor', 'tb_ads_product_promotion', 'ads_marketing'].every((id) => byId(id).verified !== true), 'D7 停用的配方不再标已校准');
-ok(byId('tb_product_roi').verified !== true && byId('tb_product_sku_metrics').verified !== true, 'D8 没真机跑过的同族配方回到未校准');
+const byId = (id) => inv.find((m) => m.id === id);
+ok(/disabled: raw\.disabled === true/.test(dslSrc), 'D1 readMeta 仍支持 disabled（留给以后停用把不稳的配方）');
+ok(/disabledReason/.test(dslSrc), 'D2 readMeta 仍暴露 disabledReason');
+ok(!byId('tb_product_lost_to_competitor'), 'D3 lost_to_competitor 已从种子里删除（12 分钟不返回）');
+ok(!byId('tb_ads_product_promotion'), 'D4 ads_product_promotion 已删除（下载超时）');
+ok(!byId('ads_marketing'), 'D5 旧 ads_marketing 已删除（被 tb_ads_scene_report 取代）');
+ok(!byId('tmall_product_lost_to_competitor'), 'D6 天猫同族坏配方一起删了');
+ok(!fs.existsSync(path.join(ROOT, 'lib/rpa/dsls/taobao/tb_product_lost_to_competitor.json')) && !fs.existsSync(path.join(ROOT, 'lib/rpa/dsls/taobao/tb_ads_product_promotion.json')) && !fs.existsSync(path.join(ROOT, 'lib/rpa/dsls/taobao/ads_marketing.json')), 'D7 文件确实不在盘上');
+ok(byId('tb_product_roi').verified !== true && byId('tb_product_sku_metrics').verified !== true, 'D8 没真机跑过的同族配方仍是未校准（不会自动挑）');
 ok(byId('tb_store_core_daily').verified === true, 'D9 真机跑通的模板配方是已校准（否则按域挑选永远挑不到）');
 ok(byId('tb_flow_source_consist').verified === true, 'D10 流量来源构成日报已校准');
 ok(byId('tb_product_overall_tpl').verified === true, 'D11 商品整体效果日报已校准');
 ok(byId('tb_traffic_source_excel').verified === true, 'D12 流量来源 Excel 已校准');
-
 // ── E 组：挑选时跳过停用配方
 const acc = { id: 'acc_t1_v02063', platform: 'taobao', accountType: 'seller', collection: { domains: ['经营总览', '流量转化', '运营推广', '商品供给', '服务履约'] } };
 const filtered = selectRecipesForAccount(acc, inv, { includeDownload: true });
-ok(filtered.skipped.disabled.length === 3, 'E1 skipped.disabled = 3（三份停用配方）');
-ok(filtered.skipped.disabled.includes('tb_product_lost_to_competitor') && filtered.skipped.disabled.includes('tb_ads_product_promotion'), 'E2 停用清单里有两份坏配方');
-ok(!filtered.pickedIds.includes('tb_product_lost_to_competitor') && !filtered.pickedIds.includes('tb_ads_product_promotion'), 'E3 坏配方不会被挑中');
+ok(filtered.skipped.disabled.length === 0, 'E1 现在种子里没有停用配方（坏配方已删除）');
+ok(filtered.pickedIds.length >= 10, 'E2 已校准配方仍能正常挑出（≥10 份）');
+ok(!filtered.pickedIds.some((id) => id.includes('lost_to_competitor') || id === 'ads_marketing'), 'E3 坏配方不在挑选结果里');
 ok(filtered.pickedIds.includes('tb_store_core_daily') && filtered.pickedIds.includes('tb_flow_source_consist'), 'E4 已校准的模板配方现在能被挑中');
 ok(filtered.pickedIds.includes('tb_ads_scene_report') && filtered.pickedIds.includes('tb_product_refund_overall'), 'E5 运营推广/服务履约配方在清单里');
 ok(!filtered.pickedIds.includes('tb_product_roi'), 'E6 未校准配方仍不自动挑');
