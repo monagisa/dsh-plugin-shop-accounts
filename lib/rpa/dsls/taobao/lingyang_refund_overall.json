@@ -242,12 +242,12 @@
         "target": [
           {
             "by": "xpath",
-            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//button[contains(@class,'dt-oui-btn-primary')]",
+            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//button[contains(normalize-space(.),'确') and contains(normalize-space(.),'定')]",
             "nth": 0
           },
           {
             "by": "xpath",
-            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//button[normalize-space(.)='确 定']",
+            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//button[contains(@class,'dt-oui-btn-primary')]",
             "nth": 0
           }
         ],
@@ -403,7 +403,7 @@
           }
         ],
         "state": "visible",
-        "timeoutMs": 60000,
+        "timeoutMs": 300000,
         "retries": 0,
         "onError": "continue"
       },
@@ -450,7 +450,7 @@
             "nth": 0
           }
         ],
-        "timeoutMs": 60000,
+        "timeoutMs": 180000,
         "retries": 0,
         "onError": "fail",
         "outputKey": "lingyangRefundOverallFile"

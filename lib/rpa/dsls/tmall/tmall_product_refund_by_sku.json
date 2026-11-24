@@ -334,204 +334,73 @@
         "ms": 1500
       },
       {
-        "id": "taobao_lingyang_refund_sku_rpa:pick-search-items",
+        "id": "taobao_lingyang_refund_sku_rpa:open-batch-search",
         "action": "click",
-        "target": [
-          {
-            "by": "xpath",
-            "value": "//label[contains(@class,'dt-oui-radio-wrapper')][.//input[@type='radio' and @value='items']]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "(//label[contains(@class,'dt-oui-radio-wrapper')][.//span[normalize-space(.)='搜索商品']])[1]",
-            "nth": 0
-          }
-        ],
-        "timeoutMs": 15000
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-pick-search-items",
-        "action": "waitTimeout",
-        "ms": 500
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:fill-product-id",
-        "action": "type",
-        "target": [
-          {
-            "by": "css",
-            "value": "input[placeholder=\"请输入商品关键字或商品id\"]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//input[contains(@placeholder,'商品关键字')]",
-            "nth": 0
-          }
-        ],
-        "value": "{productIds}",
-        "clear": true,
-        "delay": 30,
         "timeoutMs": 10000,
-        "recovery": "auto"
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-fill-product-id",
-        "action": "waitTimeout",
-        "ms": 800
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:click-inline-search",
-        "action": "click",
-        "target": [
-          {
-            "by": "css",
-            "value": "button.dt-oui-input-search-button",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//span[contains(@class,'dt-oui-input-group-addon')]//button[contains(@class,'dt-oui-input-search-button')]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//button[.//span[@aria-label='search']]",
-            "nth": 0
-          }
-        ],
-        "timeoutMs": 10000
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-click-inline-search",
-        "action": "waitTimeout",
-        "ms": 1500
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:click-input-expand-results",
-        "action": "click",
-        "target": [
-          {
-            "by": "css",
-            "value": "input[placeholder=\"请输入商品关键字或商品id\"]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//input[contains(@placeholder,'商品关键字')]",
-            "nth": 0
-          }
-        ],
-        "timeoutMs": 10000
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-click-input-expand-results",
-        "action": "waitTimeout",
-        "ms": 1500
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:wait-search-results",
-        "action": "waitFor",
         "target": [
           {
             "by": "xpath",
-            "value": "(//*[contains(@class,'dt-oui-dropdown-menu-item')][contains(normalize-space(.),'商品ID：')])[1]",
+            "value": "//button[contains(@class,'dt-oui-dropdown-trigger')][normalize-space(.)='批量搜索']",
             "nth": 0
           },
           {
             "by": "xpath",
-            "value": "//div[contains(@class,'dt-oui-dropdown')][not(contains(@class,'trigger'))][contains(normalize-space(.),'商品ID：')]",
-            "nth": 0
-          }
-        ],
-        "state": "visible",
-        "timeoutMs": 6000,
-        "retries": 0,
-        "onError": "continue",
-        "optional": true
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:press-enter-search",
-        "action": "press",
-        "key": "Enter",
-        "target": [
-          {
-            "by": "css",
-            "value": "input[placeholder=\"请输入商品关键字或商品id\"]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//input[contains(@placeholder,'商品关键字')]",
+            "value": "(//*[normalize-space(.)='批量搜索' and (self::span or self::button or self::a)])[1]",
             "nth": 0
           }
         ]
       },
       {
-        "id": "taobao_lingyang_refund_sku_rpa:wait-search-results-confirmed",
-        "action": "waitFor",
-        "target": [
-          {
-            "by": "xpath",
-            "value": "(//*[contains(@class,'dt-oui-dropdown-menu-item')][contains(normalize-space(.),'商品ID：')])[1]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "//div[contains(@class,'dt-oui-dropdown')][not(contains(@class,'trigger'))][contains(normalize-space(.),'商品ID：')]",
-            "nth": 0
-          }
-        ],
-        "state": "visible",
-        "timeoutMs": 15000,
-        "recovery": "auto",
-        "optional": true,
-        "onError": "continue"
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:click-select-all-results",
-        "action": "click",
-        "target": [
-          {
-            "by": "xpath",
-            "value": "(//*[contains(@class,'dt-oui-dropdown-menu-item')][normalize-space(.)='一键全选'])[1]",
-            "nth": 0
-          },
-          {
-            "by": "xpath",
-            "value": "(//*[contains(@class,'dt-oui-dropdown-menu-title-content')][normalize-space(.)='一键全选'])[1]",
-            "nth": 0
-          }
-        ],
-        "timeoutMs": 10000
-      },
-      {
-        "id": "taobao_lingyang_refund_sku_rpa:after-click-select-all-results",
+        "id": "taobao_lingyang_refund_sku_rpa:after-open-batch-search",
         "action": "waitTimeout",
         "ms": 1500
       },
       {
-        "id": "taobao_lingyang_refund_sku_rpa:close-results-dropdown",
-        "action": "click",
+        "id": "taobao_lingyang_refund_sku_rpa:fill-product-ids",
+        "action": "type",
+        "value": "{productIds}",
+        "clear": true,
+        "delay": 30,
+        "timeoutMs": 10000,
         "target": [
           {
             "by": "xpath",
-            "value": "(//*[normalize-space(.)='选择数据来源：'])[1]",
+            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//textarea",
             "nth": 0
           },
           {
             "by": "xpath",
-            "value": "(//*[contains(normalize-space(.),'选择数据来源')][not(.//*[contains(normalize-space(.),'选择数据来源')])])[1]",
+            "value": "//textarea[contains(@class,'dt-oui-input')]",
             "nth": 0
           }
-        ],
-        "timeoutMs": 10000
+        ]
       },
       {
-        "id": "taobao_lingyang_refund_sku_rpa:after-close-results-dropdown",
+        "id": "taobao_lingyang_refund_sku_rpa:after-fill-product-ids",
         "action": "waitTimeout",
         "ms": 800
+      },
+      {
+        "id": "taobao_lingyang_refund_sku_rpa:confirm-batch-search",
+        "action": "click",
+        "timeoutMs": 10000,
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//button[contains(normalize-space(.),'确') and contains(normalize-space(.),'定')]",
+            "nth": 0
+          },
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'batch-search-dropdown-overlay')]//button[contains(@class,'dt-oui-btn-primary')]",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "taobao_lingyang_refund_sku_rpa:after-confirm-batch-search",
+        "action": "waitTimeout",
+        "ms": 2000
       },
       {
         "id": "taobao_lingyang_refund_sku_rpa:pick-start-date",
@@ -693,7 +562,7 @@
           }
         ],
         "state": "visible",
-        "timeoutMs": 60000,
+        "timeoutMs": 300000,
         "retries": 0,
         "onError": "continue",
         "optional": true
@@ -741,7 +610,7 @@
             "nth": 0
           }
         ],
-        "timeoutMs": 60000,
+        "timeoutMs": 180000,
         "retries": 0,
         "onError": "fail",
         "outputKey": "lingyangRefundSkuFile"
