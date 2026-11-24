@@ -114,6 +114,8 @@ await check('B1 includeDownload=false：抖音的下载型配方一条都选不�
   const r = await call('POST', BASE + '/accounts/' + douyinId + '/collect-job', {
     includeDownload: false,
     skipCovered: false,
+    // 自检不依赖本机 ego：直接给商品 ID，避免「先去店铺列表页抓 ID」把结果变成 PRODUCT_IDS_UNAVAILABLE。
+    params: { productIdsLines: '1001\n1002', productIds: '1001\n1002', productId: '1001' },
   });
   // v0.20.39 起抖音也有已校准的非下载型配方（商品卡列表、商品详情等），所以这里不再是「一条都选不上」，
   // 但下载型的两条（成交分析 / 收支分析）必须被排除。

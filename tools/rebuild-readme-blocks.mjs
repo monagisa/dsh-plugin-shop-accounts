@@ -82,6 +82,7 @@ const SUITES = [
   ['features-v02059.mjs', 41, '执行器对齐 上游（真实键盘 type / pickdate 日期提交 / 下载硬超时与快照 / 下载门禁 / 重试分层）'],
   ['features-v02060.mjs', 22, '采集工作簿按「同店同天」归集五域（读回 xlsx/csv 表格、补齐其它作业的域、工作表顺序固定）'],
   ['features-v02061.mjs', 33, '退款配方批量搜索 + 真实键盘换行 → Enter（服务履约出数）、ego 用户配置可选与同平台同身份冲突校验'],
+  ['features-v02062.mjs', 31, '淘宝运营推广：阿里妈妈营销场景报表配方（页内取字节 + ZIP 自动解包）、门禁认 evaluate 产物'],
   ['platform.mjs', 12, '平台适配层契约 + macOS 分支（可在 Windows 上验证的部分）'],
 ];
 const TOTAL = SUITES.reduce((n, s) => n + s[1], 0);
