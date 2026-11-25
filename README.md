@@ -87,6 +87,8 @@ Chrome 后端用哪个浏览器可以在设置页「用户浏览器」里选：�
 | 抖音（抖店） | `douyin_shop_transaction`、`douyin_shop_income_expense` |
 | 拼多多 | `pdd_shop_overview` |
 
+每次采集按域生成一份成品工作簿（`采集数据_<时间>_<店名>.xlsx`），同一店铺同一天的多次采集会并进同一本。工作簿是只读的交付物：配套插件 [dsh-plugin-shop-dashboard](https://github.com/monagisa/dsh-plugin-shop-dashboard) 直接读它出经营看板，不重复采集、不写回数据。
+
 ### 账号身份
 
 | 平台 | 卖家（商家后台） | 买家（C 端） |
