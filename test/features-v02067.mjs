@@ -134,7 +134,8 @@ eq(lagOk, 9, 'E1 9 份退款配方都带 t_minus>=2 的区间排期');
 const pkg = JSON.parse(read('package.json'));
 ok(/0\.20\.(67|68|69|7\d)/.test(pkg.version), 'E2 版本已升到 0.20.67+（当前 ' + pkg.version + '）');
 ok(read('CHANGELOG.md').indexOf('## v0.20.67') >= 0, 'E3 CHANGELOG 有 v0.20.67 段');
-ok(read('README.md').indexOf('当前版本 **0.20.67**') >= 0, 'E4 README 版本行同步');
+const readmeVer = (read('README.md').match(/当前版本 \*\*([0-9.]+)\*\*/) || [])[1];
+ok(readmeVer === pkg.version, 'E4 README 版本行与 package.json 一致（' + readmeVer + '）');
 
 // ── F. 退款类配方的商品 ID 优先取「商品供给」报表 ─────────────────────────
 console.log('F. 商品 ID 来源');
