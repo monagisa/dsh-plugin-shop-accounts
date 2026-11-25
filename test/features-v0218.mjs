@@ -180,12 +180,46 @@ await test('pruneJobs：同一窗口同一配方只留最新一次，且每天�
   const d1b = make('job_20261101-0200_bbbbbb', '2026-11-01T02:00:00.000Z', 'tb_shop_overview', '2026-10-03');
   const d1c = make('job_20261101-0300_cccccc', '2026-11-01T03:00:00.000Z', 'tb_shop_overview', '2026-10-04');
   const d2a = make('job_20261102-0200_dddddd', '2026-11-02T02:00:00.000Z', 'tb_shop_overview', '2026-10-03');
-  const out = J.pruneJobs(accountId, { keepOk: 9, keepFailed: 9 });
+  const out = J.pruneJobs(accountId, { keepOk: 9, keepFailed: 9, keepPerDay: 2, dedupe: true });
   assert.equal(out.removed, 2, '应删掉同一天重复的那两份：' + JSON.stringify(out));
   const left = fs.readdirSync(root).sort();
   assert.deepEqual(left, ['job_20261101-0300_cccccc', 'job_20261102-0200_dddddd'], '每天保留最新，同窗口同配方只留最新：' + left.join(','));
   assert.ok(!fs.existsSync(d1a) && !fs.existsSync(d1b), '旧的重复作业应被删');
   assert.ok(fs.existsSync(d1c) && fs.existsSync(d2a), '当天唯一与后一天的那份应留下');
+});
+
+await test('pruneJobs：默认「采到多少留多少」——有数据的作业同一天多份也全留，只压纯失败作业', () => {
+  const accountId = 'acc_taobao_v218d';
+  const root = path.join(process.env.DSH_SHOP_ACCOUNTS_DIR, 'collection', accountId, 'jobs');
+  fs.mkdirSync(root, { recursive: true });
+  const make = (name, createdAt, state) => {
+    const dir = path.join(root, name);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'job.json'),
+      JSON.stringify({ version: 1, jobId: name, accountId, createdAt, finished: true, plan: { window: { start: '2026-10-03', end: '2026-11-02' } }, tasks: [{ taskId: 't_001', dslId: 'tb_shop_overview', state }] }, null, 2),
+      'utf8'
+    );
+    return dir;
+  };
+  const okJobs = [
+    make('job_20261101-0900_okaaaa', '2026-11-01T09:00:00.000Z', 'ok'),
+    make('job_20261101-1200_okbbbb', '2026-11-01T12:00:00.000Z', 'ok'),
+    make('job_20261101-1700_okcccc', '2026-11-01T17:00:00.000Z', 'ok'),
+  ];
+  const badJobs = [
+    make('job_20261102-0900_bad111', '2026-11-02T09:00:00.000Z', 'failed'),
+    make('job_20261102-1200_bad222', '2026-11-02T12:00:00.000Z', 'failed'),
+    make('job_20261102-1700_bad333', '2026-11-02T17:00:00.000Z', 'failed'),
+    make('job_20261103-0900_bad444', '2026-11-03T09:00:00.000Z', 'failed'),
+  ];
+  const out = J.pruneJobs(accountId);
+  const left = fs.readdirSync(root).sort();
+  assert.equal(out.removed, 1, '默认只删掉超出 keepFailed 的最旧失败作业：' + JSON.stringify(out));
+  assert.equal(left.length, 6, '3 个有数据的 + 3 个失败应留下：' + left.join(','));
+  for (const dir of okJobs) assert.ok(left.includes(path.basename(dir)), '同一天多份有数据的作业都要留下：' + path.basename(dir));
+  assert.ok(left.includes('job_20261103-0900_bad444'), '最新失败作业留下');
+  assert.ok(!left.includes('job_20261102-0900_bad111'), '最旧的失败作业被压掉');
 });
 
 // ── D. 兼容旧目录 ───────────────────────────────────────────────────────────

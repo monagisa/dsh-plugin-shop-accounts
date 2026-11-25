@@ -76,7 +76,7 @@ const SUITES = [
   ['features-v02028.mjs', 9, '工具参数采集域枚举（修掉启动时 COLLECTION_DOMAINS 未定义与对象型参数校验）'],
   ['features-v0216.mjs', 6, '设置页显示采集数据保存在哪，并能一键打开目录'],
   ['features-v0217.mjs', 9, '数据目录可以看、可以打开、也可以换一个（可选把数据搬过去）'],
-  ['features-v0218.mjs', 20, '采集数据命名规范（作业目录带时间与采集项、产物带采集项名、manifest、保留上限、job.json 路径同步）'],
+  ['features-v0218.mjs', 21, '采集数据命名规范（作业目录带时间与采集项、产物带采集项名、manifest、保留策略：默认采到多少留多少、只压纯失败作业、job.json 路径同步）'],
   ['features-v02025.mjs', 7, '用户浏览器点行即切换 / Edge 图标用官方标志'],
   ['features-v0197.mjs', 7, '浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）'],
   ['features-v02059.mjs', 41, '执行器对齐 上游（真实键盘 type / pickdate 日期提交 / 下载硬超时与快照 / 下载门禁 / 重试分层）'],

@@ -390,7 +390,7 @@ node test/features-v02024.mjs  # 10 项：Microsoft Edge 支持（扫描列表�
 node test/features-v02028.mjs  # 9 项：工具参数采集域枚举（修掉启动时 COLLECTION_DOMAINS 未定义与对象型参数校验）
 node test/features-v0216.mjs   # 6 项：设置页显示采集数据保存在哪，并能一键打开目录
 node test/features-v0217.mjs   # 9 项：数据目录可以看、可以打开、也可以换一个（可选把数据搬过去）
-node test/features-v0218.mjs   # 20 项：采集数据命名规范（作业目录带时间与采集项、产物带采集项名、manifest、保留上限、job.json 路径同步）
+node test/features-v0218.mjs   # 21 项：采集数据命名规范（作业目录带时间与采集项、产物带采集项名、manifest、保留策略：默认采到多少留多少、只压纯失败作业、job.json 路径同步）
 node test/features-v02025.mjs  # 7 项：用户浏览器点行即切换 / Edge 图标用官方标志
 node test/features-v0197.mjs   # 7 项：浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）
 node test/features-v02059.mjs  # 41 项：执行器对齐 上游（真实键盘 type / pickdate 日期提交 / 下载硬超时与快照 / 下载门禁 / 重试分层）
@@ -413,7 +413,7 @@ node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行�
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**1289 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**1290 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -460,7 +460,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.68**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.20.69**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
