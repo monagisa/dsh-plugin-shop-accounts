@@ -37,18 +37,18 @@ const supportSrc = read('lib/collect-support.mjs');
 const refund = loadDsl('tb_product_refund_overall');
 ok(!!refund && !!refund.raw, 'A1 种子里有 tb_product_refund_overall');
 const refundWin = dslWindow(refund.raw, new Date(2026, 10, 24));
-ok(refundWin.end === '2026-11-22', 'A2 退款配方窗口截止日 = 今天往前 2 天（T+2）');
-ok(refundWin.start === '2026-10-24' && refundWin.days === 30, 'A3 退款配方窗口 = 截止日往前 29 天（区间 30 天）');
+ok(refundWin.end === '2026-11-21', 'A2 退款配方窗口截止日 = 今天往前 3 天（T+3 归档安全边界）');
+ok(refundWin.start === '2026-10-23' && refundWin.days === 30, 'A3 退款配方窗口 = 截止日往前 29 天（区间 30 天）');
 const shopDaily = loadDsl('tb_store_core_daily');
 const shopWin = dslWindow(shopDaily.raw, new Date(2026, 10, 24));
 ok(shopWin.end === '2026-11-23', 'A4 没声明 t_minus 的配方窗口不变（截止到昨天）');
 ok(/t_minus/.test(rpaSrc), 'A5 rpa.mjs 里 dslWindow 读 collection.schedule.t_minus');
-ok(dslWindow(refund.raw, new Date(2026, 0, 3)).end === '2026-01-01', 'A6 跨年也不出错（1 月 3 日 → 1 月 1 日）');
+ok(dslWindow(refund.raw, new Date(2026, 0, 3)).end === '2025-12-31', 'A6 跨年也不出错（1 月 3 日 → 去年 12 月 31 日）');
 
 // ── B 组：编译出来的窗口 = 配方自己的窗口（不会被外部统一窗口覆盖成默认值）
 const compiled = compileExecution(refund.raw, { now: new Date(2026, 10, 24), params: { productIdsLines: '1\n2', productIds: '1\n2' } });
-ok(compiled.window && compiled.window.end === '2026-11-22', 'B1 编译产物 window.end = 2026-11-22');
-ok(compiled.window && compiled.window.start === '2026-10-24', 'B2 编译产物 window.start = 2026-10-24');
+ok(compiled.window && compiled.window.end === '2026-11-21', 'B1 编译产物 window.end = 2026-11-21（T+3）');
+ok(compiled.window && compiled.window.start === '2026-10-23', 'B2 编译产物 window.start = 2026-10-23');
 ok(compiled.ops.length > 10, 'B3 退款配方仍能编译出完整 ops 序列');
 ok(/start: opts\.start \|\| undefined,/.test(runnerSrc) && /end: opts\.end \|\| undefined,/.test(runnerSrc), 'B4 prepareJob 不再把整批统一窗口硬塞给配方');
 ok(/request\.window|window: trailingWindow|trailingWindow\(/ .test(runnerSrc), 'B5 准备层只把统一窗口记进作业台账');
@@ -68,9 +68,9 @@ const refundIds = [
 const badSched = refundIds.filter((rel) => {
   const j = JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
   const sched = (j.collection && j.collection.schedule) || {};
-  return !(sched.days === 30 && sched.t_minus === 2);
+  return !(sched.days === 30 && sched.t_minus === 3);
 });
-ok(badSched.length === 0, 'C1 9 份退款配方都声明 days:30 + t_minus:2' + (badSched.length ? ' → ' + badSched.join(',') : ''));
+ok(badSched.length === 0, 'C1 9 份退款配方都声明 days:30 + t_minus:3' + (badSched.length ? ' → ' + badSched.join(',') : ''));
 ok(refundIds.length === 9, 'C2 退款配方清单是 9 份（淘宝 5 + 天猫 4）');
 
 // ── D 组：坏配方已删除 / 校准标记

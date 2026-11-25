@@ -3,7 +3,6 @@
   "id": "tmall_product_refund_by_sku",
   "verified": false,
   "domains": [
-    "商品供给",
     "服务履约"
   ],
   "platform": "tmall",
@@ -624,7 +623,7 @@
     "schedule": {
       "mode": "period",
       "days": 30,
-      "t_minus": 2
+      "t_minus": 3
     }
   },
   "needsParams": true

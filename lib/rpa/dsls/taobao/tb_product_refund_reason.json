@@ -3,7 +3,6 @@
   "id": "tb_product_refund_reason",
   "verified": true,
   "domains": [
-    "商品供给",
     "服务履约"
   ],
   "platform": "taobao",
@@ -624,7 +623,7 @@
     "schedule": {
       "mode": "period",
       "days": 30,
-      "t_minus": 2
+      "t_minus": 3
     }
   },
   "needsParams": true
