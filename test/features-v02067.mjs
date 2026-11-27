@@ -132,7 +132,16 @@ for (const [plat, id] of refundIds) {
 }
 eq(lagOk, 9, 'E1 9 份退款配方都带 t_minus>=2 的区间排期');
 const pkg = JSON.parse(read('package.json'));
-ok(/0\.20\.(67|68|69|7\d)/.test(pkg.version), 'E2 版本已升到 0.20.67+（当前 ' + pkg.version + '）');
+function vcAtLeast(v, want) {
+  const a = String(v || '').split('.').map(Number);
+  const b = String(want || '').split('.').map(Number);
+  for (let i = 0; i < b.length; i += 1) {
+    if ((a[i] || 0) > (b[i] || 0)) return true;
+    if ((a[i] || 0) < (b[i] || 0)) return false;
+  }
+  return true;
+}
+ok(vcAtLeast(pkg.version, '0.20.67'), 'E2 版本已升到 0.20.67+（当前 ' + pkg.version + '）');
 ok(read('CHANGELOG.md').indexOf('## v0.20.67') >= 0, 'E3 CHANGELOG 有 v0.20.67 段');
 const readmeVer = (read('README.md').match(/当前版本 \*\*([0-9.]+)\*\*/) || [])[1];
 ok(readmeVer === pkg.version, 'E4 README 版本行与 package.json 一致（' + readmeVer + '）');

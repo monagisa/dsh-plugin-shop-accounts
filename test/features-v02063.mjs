@@ -103,7 +103,16 @@ ok(/body\.allowDisabled !== true/.test(supportSrc), 'E9 显式 dslIds 也要 all
 
 // ── F 组：版本与变更记录
 const pkg = JSON.parse(read('package.json'));
-ok(/^0\.20\.(6[3-9]|[7-9]\d)/.test(pkg.version) || Number(pkg.version.split('.')[2]) >= 63, 'F1 package.json 版本 ≥ 0.20.63');
+function vcAtLeast(v, want) {
+  const a = String(v || '').split('.').map(Number);
+  const b = String(want || '').split('.').map(Number);
+  for (let i = 0; i < b.length; i += 1) {
+    if ((a[i] || 0) > (b[i] || 0)) return true;
+    if ((a[i] || 0) < (b[i] || 0)) return false;
+  }
+  return true;
+}
+ok(vcAtLeast(pkg.version, '0.20.63'), 'F1 package.json 版本 ≥ 0.20.63（当前 ' + pkg.version + '）');
 const changelog = read('CHANGELOG.md');
 ok(changelog.includes('## v0.20.63'), 'F2 CHANGELOG 有 v0.20.63 段');
 ok(changelog.includes('t_minus'), 'F3 CHANGELOG 说明 t_minus 归档延迟修复');

@@ -85,7 +85,7 @@ Chrome 后端用哪个浏览器可以在设置页「用户浏览器」里选：�
 | 淘宝 / 天猫 | `tb_shop_overview`、`tmall_shop_overview` |
 | 京东 | `jd_shop_overview`、`jd_traffic_overview` |
 | 抖音（抖店） | `douyin_shop_transaction`、`douyin_shop_income_expense` |
-| 拼多多 | `pdd_shop_overview` |
+| 拼多多 | `pdd_shop_overview`、`pdd_ads_goods_report`（商品级推广花费）、`pdd_activity_records`（活动报名记录） |
 
 每次采集按域生成一份成品工作簿（`采集数据_<时间>_<店名>.xlsx`），同一店铺同一天的多次采集会并进同一本。工作簿是只读的交付物：配套插件 [dsh-plugin-shop-dashboard](https://github.com/monagisa/dsh-plugin-shop-dashboard) 直接读它出经营看板，不重复采集、不写回数据。
 
@@ -391,6 +391,7 @@ node test/features-v02028.mjs  # 9 项：工具参数采集域枚举（修掉启
 node test/features-v0216.mjs   # 6 项：设置页显示采集数据保存在哪，并能一键打开目录
 node test/features-v0217.mjs   # 9 项：数据目录可以看、可以打开、也可以换一个（可选把数据搬过去）
 node test/features-v0218.mjs   # 21 项：采集数据命名规范（作业目录带时间与采集项、产物带采集项名、manifest、保留策略：默认采到多少留多少、只压纯失败作业、job.json 路径同步）
+node test/features-v0210.mjs   # 10 项：表格型配方（产物 table_rows、工作簿直接铺页面表格、拼多多商品推广花费与活动报名两条配方）
 node test/features-v02025.mjs  # 7 项：用户浏览器点行即切换 / Edge 图标用官方标志
 node test/features-v0197.mjs   # 7 项：浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）
 node test/features-v02059.mjs  # 41 项：执行器对齐 上游（真实键盘 type / pickdate 日期提交 / 下载硬超时与快照 / 下载门禁 / 重试分层）
@@ -407,13 +408,13 @@ node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome�
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前 79 套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 80 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**1290 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**1300 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -460,7 +461,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.20.69**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.21.0**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 

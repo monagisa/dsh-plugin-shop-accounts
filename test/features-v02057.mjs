@@ -38,7 +38,7 @@ ok(dsl.includes('"action": "fetchFile"') && !dsl.includes('"action": "downloadFi
 ok(dsl.includes('/flow/gray/excel.do') && dsl.includes('{dateRange}'), 'C2 仍用官方导出接口 + 日期占位符');
 ok(dsl.includes('"output_key": "trafficSourceExcel"'), 'C3 产物键与配方声明一致');
 const parts = pkg.version.split('.').map(Number);
-ok(parts[1] === 20 && parts[2] >= 57, 'C4 版本已到 0.20.57');
+ok(parts[1] > 20 || (parts[1] === 20 && parts[2] >= 57), 'C4 版本已到 0.20.57');
 ok(read('CHANGELOG.md').includes('v0.20.57'), 'C5 CHANGELOG 写了这一节');
 ok(read('README.md').includes(pkg.version), 'C6 README 版本行一致');
 

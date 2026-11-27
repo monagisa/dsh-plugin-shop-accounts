@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "agentwork.rpa.atomic.v1",
+  "id": "pdd_ads_goods_report",
+  "verified": true,
+  "domains": [
+    "运营推广"
+  ],
+  "platform": "pdd",
+  "name": "PDD-商品营销报表-商品级花费",
+  "description": "只读 PDD 推广后台「商品营销报表」：切到昨日，逐行读取商品维度的花费/交易额/投产比/曝光/点击等 40 列，直接铺成工作表（不依赖浏览器下载）。",
+  "defaults": {
+    "timeoutMs": 8000,
+    "retries": 1,
+    "continueOnError": true,
+    "stepGapMs": 300
+  },
+  "steps": [
+    {
+      "action": "goto",
+      "id": "打开商品营销报表",
+      "url": "https://yingxiao.pinduoduo.com/goods/report/promotion/overView",
+      "waitUntil": "domcontentloaded",
+      "timeoutMs": 45000,
+      "retries": 1
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待报表渲染",
+      "ms": 12000
+    },
+    {
+      "action": "waitFor",
+      "id": "等表头出现",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//table//th[contains(normalize-space(.),'推广商品')]",
+          "nth": 0
+        },
+        {
+          "by": "css",
+          "value": "table thead th",
+          "nth": 0
+        }
+      ],
+      "timeoutMs": 20000,
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "click",
+      "id": "切到昨日",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[contains(@class,'DateAreaV2_item') and normalize-space(.)='昨日']",
+          "nth": 0
+        },
+        {
+          "by": "css",
+          "value": "div[class*='DateAreaV2_item']",
+          "nth": 1
+        },
+        {
+          "by": "xpath",
+          "value": "//button[normalize-space(.)='昨日']",
+          "nth": 0
+        }
+      ],
+      "timeoutMs": 8000,
+      "optional": false
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待昨日数据刷新",
+      "ms": 8000
+    },
+    {
+      "action": "evaluate",
+      "id": "读商品级报表行",
+      "outputKey": "pdd_ads_goods_rows",
+      "expression": "return (function(){ var pick=function(e){return (e.innerText||e.textContent||'').replace(/\\s+/g,' ').trim();}; var clean=function(t){return String(t||'').replace(/商品 ?ID：.*$/,'').replace(/拼单价：.*$/,'').replace(/[|｜]/g,' ').replace(/\\s+/g,' ').trim();}; var heads=[]; document.querySelectorAll('table thead th').forEach(function(x){var v=pick(x); if(v) heads.push(v.slice(0,40));}); var y=new Date(Date.now()-86400000); var mm=(y.getMonth()+1); var dd=y.getDate(); var day=y.getFullYear()+'-'+(mm<10?'0'+mm:mm)+'-'+(dd<10?'0'+dd:dd); var rows=[]; var seen={}; document.querySelectorAll('[class*=\"anq-table-row\"]').forEach(function(tr){ var cls=String(tr.className||''); if(cls.indexOf('anq-table-row-level')<0) return; var fix=''; var cells=[]; tr.querySelectorAll('[class*=\"anq-table-cell\"]').forEach(function(c){ var cc=String(c.className||''); if(cc.indexOf('cell-fix-left')>=0){ if(!fix) fix=pick(c); return; } cells.push(pick(c).slice(0,40)); }); if(!cells.length) return; var m=/([0-9]{6,20})/.exec(fix); var id=m?m[1]:''; if(id&&seen[id]) return; if(id) seen[id]=1; var name=clean(fix.split('|')[0]||fix).slice(0,60); var p=/拼单价：([0-9.]+)/.exec(fix); rows.push([day,id,name,p?p[1]:''].concat(cells)); }); return JSON.stringify({columns:['日期','商品ID','商品名称','拼单价'].concat(heads), rows:rows.slice(0,200)}); })();"
+    }
+  ],
+  "collection": {
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "table_rows",
+        "output_key": "pdd_ads_goods_rows",
+        "tableName": "商品推广花费"
+      }
+    ],
+    "schedule": {
+      "mode": "snapshot"
+    }
+  }
+}

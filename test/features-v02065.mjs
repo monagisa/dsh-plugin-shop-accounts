@@ -80,7 +80,16 @@ ok(/冲突/.test(migSrc), 'E4 老目录与新目录同时存在时不合并、�
 
 // ── F 组：版本与变更记录
 const pkg = JSON.parse(read('package.json'));
-ok(Number(pkg.version.split('.')[2]) >= 65, 'F1 package.json 版本 ≥ 0.20.65');
+function vcAtLeast(v, want) {
+  const a = String(v || '').split('.').map(Number);
+  const b = String(want || '').split('.').map(Number);
+  for (let i = 0; i < b.length; i += 1) {
+    if ((a[i] || 0) > (b[i] || 0)) return true;
+    if ((a[i] || 0) < (b[i] || 0)) return false;
+  }
+  return true;
+}
+ok(vcAtLeast(pkg.version, '0.20.65'), 'F1 package.json 版本 ≥ 0.20.65（当前 ' + pkg.version + '）');
 const changelog = read('CHANGELOG.md');
 ok(changelog.includes('## v0.20.65'), 'F2 CHANGELOG 有 v0.20.65 段');
 ok(changelog.includes('collection') || changelog.includes('采集数据目录'), 'F3 CHANGELOG 说明目录命名');

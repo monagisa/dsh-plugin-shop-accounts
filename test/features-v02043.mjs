@@ -120,7 +120,7 @@ t('E1 界面固定只列这五项', () => {
 
 t('F1 版本号已到 0.20.43', () => {
   const parts = String(pkg.version).split('.').map(Number);
-  assert.ok(parts[0] === 0 && parts[1] === 20 && parts[2] >= 43, '版本号是 ' + pkg.version);
+  assert.ok(parts[0] > 0 || parts[1] > 20 || (parts[1] === 20 && parts[2] >= 43), '版本号是 ' + pkg.version);
 });
 
 t('F2 CHANGELOG 与 README 写了五项', () => {

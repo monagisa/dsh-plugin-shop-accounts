@@ -41,7 +41,7 @@ ok(!egoSrc.includes('Math.min(120000, Number(opts.timeoutMs)') && egoSrc.include
 // D 组：文档与版本
 ok(support.includes('body.__collectionHint.loginBootstrap = loginBootstrap;'), 'D1 登录前置结果写进作业报告');
 const parts = pkg.version.split('.').map(Number);
-ok(parts[1] === 20 && parts[2] >= 56, 'D2 版本已到 0.20.56');
+ok(parts[1] > 20 || (parts[1] === 20 && parts[2] >= 56), 'D2 版本已到 0.20.56');
 ok(read('CHANGELOG.md').includes('v0.20.56'), 'D3 CHANGELOG 写了这一节');
 ok(read('README.md').includes(pkg.version), 'D4 README 版本行一致');
 

@@ -87,7 +87,7 @@ await test('B4 列表下方给出切换说明', () => {
 await test('C1 版本与文档一致', () => {
   assert.ok(/^\d+\.\d+\.\d+$/.test(String(pkg.version)), '版本号格式不对');
   const [maj, min, pat] = String(pkg.version).split('.').map((n) => parseInt(n, 10));
-  assert.ok(maj > 0 || (min === 20 && pat >= 25), '版本号应 ≥ 0.20.25，实际 ' + pkg.version);
+  assert.ok(maj > 0 || min > 20 || (min === 20 && pat >= 25), '版本号应 ≥ 0.20.25，实际 ' + pkg.version);
   assert.ok(changelog.includes('v0.20.25'), 'CHANGELOG 缺 v0.20.25');
   assert.ok(readme.includes('点浏览器那一行'), 'README 没写新的切换方式');
 });

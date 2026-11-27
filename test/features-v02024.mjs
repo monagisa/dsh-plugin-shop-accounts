@@ -130,7 +130,7 @@ await test('C3 README 与 CHANGELOG 写明了 Edge 支持', () => {
 
 await test('C4 版本号已到 0.20.24', () => {
   const parts = pkg.version.split('.').map((n) => parseInt(n, 10));
-  assert.ok(parts[0] === 0 && parts[1] === 20 && parts[2] >= 24, '版本号应 ≥ 0.20.24，实际 ' + pkg.version);
+  assert.ok(parts[0] > 0 || parts[1] > 20 || (parts[1] === 20 && parts[2] >= 24), '版本号应 ≥ 0.20.24，实际 ' + pkg.version);
 });
 
 console.log('');
