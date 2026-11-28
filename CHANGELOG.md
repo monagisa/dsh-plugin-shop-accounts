@@ -1,3 +1,12 @@
+﻿## v0.21.3（2026-11-28）
+
+- 需求：淘宝整店采集在真机上出现「无限期卡死」——文件已经落盘，作业却 28 分钟没有任何进展，只能结束进程。
+- 改动：
+  - 下载等待改由插件自己计时：ego 的 `page.waitForEvent('download')` 没有超时语义，事件不来就永远挂着；现在与本地计时器赛跑，超时走原有兜底（目录里已落盘就直接采用，否则记下载超时并写 `_download-failure.json` 现场）。
+  - ego 调用加硬超时：`page.cdp` 同样没有超时语义，daemon 卡住时 `Runtime.evaluate` 会永远挂着；现在 25 秒未返回即抛 `EGO_TIMEOUT`（可重试错误），不再把整条配方吊死在一个 await 上。
+  - 批次层加硬看门狗：单任务超出预算 30 秒仍未返回即记 `TIMEOUT`（带 `watchdog: true` 与配方 id），让重试与交付逻辑照常往下走，不再整批冻结。
+- 验证：新增 `test/features-v0213.mjs` 11 项；源码库与安装副本全量自检 980 项全部通过；真机单跑 `tb_product_overall_tpl`（原本卡住的那份）105 秒正常结束、下载产物落盘。
+
 ## v0.21.2（2026-11-28）
 
 （待补：需求 / 改动 / 验证）
@@ -2473,4 +2482,5 @@ reset 与删号都不越界删 / 自更新按 commit 落地且脏工作区不生
 - 端口归属不用 `Browser.getBrowserCommandLine`（它要配合 `--enable-automation`，会设置 `navigator.webdriver`），
   改成「自己起的浏览器自己登记（`runtime.json`）+ 进程命令行查询判定」。
 - 验证：smoke 32 项；`live-probe.mjs` 六平台各自单跑全过（Chrome 154.0.8037.99）。
+
 
