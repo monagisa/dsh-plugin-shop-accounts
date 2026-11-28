@@ -393,7 +393,7 @@ node test/features-v0217.mjs   # 9 项：数据目录可以看、可以打开、
 node test/features-v0218.mjs   # 21 项：采集数据命名规范（作业目录带时间与采集项、产物带采集项名、manifest、保留策略：默认采到多少留多少、只压纯失败作业、job.json 路径同步）
 node test/features-v0210.mjs   # 10 项：表格型配方（产物 table_rows、工作簿直接铺页面表格、拼多多商品推广花费与活动报名两条配方）
 node test/features-v0211.mjs   # 8 项：跨平台商品级推广与活动配方（阿里妈妈商品报表、生意参谋活动分析、抖店罗盘商品投放消耗；table_rows 空行保留表头）
-node test/features-v0211.mjs   # 8 项：跨平台商品级推广与活动配方（阿里妈妈商品报表、生意参谋活动分析、抖店罗盘商品投放消耗；table_rows 空行保留表头）
+node test/features-v0212.mjs   # 4 项：代填可靠性（登录按钮晚放开再点一次、已登录不再误报未找到输入框）
 node test/features-v02025.mjs  # 7 项：用户浏览器点行即切换 / Edge 图标用官方标志
 node test/features-v0197.mjs   # 7 项：浏览器设置面板的 hook 顺序（先跑 hook，再提前返回）
 node test/features-v02059.mjs  # 41 项：执行器对齐 上游（真实键盘 type / pickdate 日期提交 / 下载硬超时与快照 / 下载门禁 / 重试分层）
@@ -410,13 +410,13 @@ node test/live-probe.mjs pdd   # 真机链路：临时档案启动无头 Chrome�
 node test/live-probe.mjs all   # 六个平台依次验证（建议逐个执行，共用档案会串 cookie）
 ```
 
-`npm test` 一次执行上述前 81 套（零依赖、不触碰真实账号、不启动浏览器）。
+`npm test` 一次执行上述前 82 套（零依赖、不触碰真实账号、不启动浏览器）。
 
 `smoke.mjs` 通过 `DSH_SHOP_ACCOUNTS_DIR` 将数据目录指向临时目录，不触碰真实账号、不启动任何浏览器。`live-probe.mjs` 会真实启动无头 Chrome（临时档案、不弹窗口、不触碰店铺档案），验证「启动 → 调试端口 → `Network.getAllCookies`（读取 HttpOnly cookie 的唯一可靠途径）→ 正常关闭」这条链路。
 
 发布与校验脚本在仓库的 `tools/` 目录：`npm run readme` 重建上面的自检清单，`npm run check` 做语法检查，`npm run suites` 一次跑完全部套件，`npm run doctor` 检查 README 锚点 / 口语化表达 / 脱敏。用法见 [tools/README.md](tools/README.md)。
 
-- 自检：**1308 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
+- 自检：**1312 项**（`npm test` 一次执行，不启动浏览器、不触碰真实账号；明细见[自检](#自检)）
 
 ---
 
@@ -463,7 +463,7 @@ tools/              发布与校验脚本（重建自检清单 / 语法检查 / 
 
 ## 更新日志
 
-当前版本 **0.21.1**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **0.21.2**。逐版变更、修复原因与验证记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
