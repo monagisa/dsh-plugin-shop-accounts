@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "agentwork.rpa.atomic.v1",
+  "id": "douyin_ads_goods_report",
+  "verified": true,
+  "domains": [
+    "运营推广"
+  ],
+  "platform": "douyin",
+  "name": "抖店罗盘-商品列表-商品级投放消耗",
+  "description": "只读抖店罗盘「商品列表」：切到近1天并查询，逐行读取商品维度的投放消耗（店铺被投）、投放消耗（推商品）、投放费比、成交金额、曝光/点击/成交人数等列，直接铺成工作表（不依赖浏览器下载）。",
+  "defaults": {
+    "timeoutMs": 10000,
+    "retries": 1,
+    "continueOnError": true,
+    "stepGapMs": 300
+  },
+  "steps": [
+    {
+      "action": "goto",
+      "id": "打开商品列表",
+      "url": "https://compass.jinritemai.com/shop/commodity/product-list",
+      "waitUntil": "domcontentloaded",
+      "timeoutMs": 45000,
+      "retries": 1,
+      "after": [
+        {
+          "action": "click",
+          "optional": true,
+          "id": "关闭通知",
+          "target": [
+            {
+              "by": "css",
+              "value": "button.ecom-notification-notice-close",
+              "nth": 0
+            },
+            {
+              "by": "css",
+              "value": "[class*='notification'] [class*='close']",
+              "nth": 0
+            }
+          ],
+          "timeoutMs": 3000,
+          "onError": "continue",
+          "retries": 0
+        }
+      ]
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待列表渲染",
+      "ms": 10000
+    },
+    {
+      "action": "click",
+      "id": "切到近1天",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//*[@data-node-key='one']//*[@role='tab'][normalize-space(.)='近1天']",
+          "nth": 0
+        },
+        {
+          "by": "text",
+          "value": "近1天",
+          "match": "exact",
+          "nth": 0
+        }
+      ],
+      "timeoutMs": 8000,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等时间切换",
+      "ms": 3000
+    },
+    {
+      "action": "click",
+      "id": "点查询",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//button[normalize-space(.)='查询']",
+          "nth": 0
+        },
+        {
+          "by": "text",
+          "value": "查询",
+          "match": "exact",
+          "nth": 0
+        }
+      ],
+      "timeoutMs": 6000,
+      "onError": "continue",
+      "optional": true,
+      "retries": 0
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等表格刷新",
+      "ms": 9000
+    },
+    {
+      "action": "evaluate",
+      "id": "读商品级投放行",
+      "outputKey": "douyin_ads_goods_rows",
+      "expression": "return (function(){ var pick=function(e){return (e.innerText||e.textContent||'').replace(/\\s+/g,' ').trim();}; var heads=['关注商品','商品信息','退款后用户支付金额（支付时间）','波动拆解','结算金额','成交金额','用户支付金额','成交订单数','投放消耗（店铺被投）','投放费比（剔除退款、店铺被投）','投放消耗（推商品）','退款金额（支付时间）','商品曝光人数','商品点击人数','成交人数','净成交金额','曝光支付率（人数）','操作']; var y=new Date(Date.now()-86400000); var mm=(y.getMonth()+1); var dd=y.getDate(); var day=y.getFullYear()+'-'+(mm<10?'0'+mm:mm)+'-'+(dd<10?'0'+dd:dd); var rows=[]; var seen={}; var trs=document.querySelectorAll('table tbody tr'); for(var i=0;i<trs.length;i++){ var tr=trs[i]; var cs=tr.querySelectorAll('td'); if(!cs.length) continue; var cells=[]; for(var k=0;k<cs.length;k++){ cells.push(pick(cs[k]).slice(0,60)); } var joined=cells.join(' '); if(/暂无数据|商品信息\\s*退款/.test(joined)) continue; var id=/商品 ?ID[:：]?\\s*([0-9]{6,25})/.exec(joined); var pid=id?id[1]:''; if(pid&&seen[pid]) continue; if(pid) seen[pid]=1; var name=(cells[1]||'').replace(/商品 ?ID[:：]?\\s*[0-9]+/,'').trim(); var vals=cells.slice(2); rows.push([day,pid,name.slice(0,40)].concat(vals)); } return JSON.stringify({columns:['日期','商品ID','商品名称'].concat(heads), rows:rows.slice(0,300)}); })();"
+    }
+  ],
+  "collection": {
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "table_rows",
+        "output_key": "douyin_ads_goods_rows",
+        "tableName": "商品投放消耗"
+      }
+    ],
+    "schedule": {
+      "mode": "snapshot"
+    }
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "schemaVersion": "dsh-shop-accounts/dsl/v1",
+  "id": "tb_ads_goods_report",
+  "platform": "taobao",
+  "description": "阿里妈妈「商品报表」导出（商品维度、分天，平台默认过去 7 天，导出文件含每件商品每日的展现/点击/花费/成交等列）",
+  "conditions": {},
+  "template": {
+    "defaults": {
+      "timeoutMs": 15000,
+      "retries": 1,
+      "continueOnError": false,
+      "stepGapMs": 200
+    },
+    "steps": [
+      {
+        "id": "goto-alimama",
+        "action": "goto",
+        "url": "https://one.alimama.com/index.html#!/report/item_promotion?rptType=item_promotion"
+      },
+      {
+        "id": "wait-render",
+        "action": "waitTimeout",
+        "ms": 6000
+      },
+      {
+        "id": "wait-download-report",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[normalize-space(.)='下载报表']",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "scroll-download-report",
+        "action": "scrollIntoView",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[normalize-space(.)='下载报表']",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "after-scroll",
+        "action": "waitTimeout",
+        "ms": 600
+      },
+      {
+        "id": "click-download-report",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//button[normalize-space(.)='下载报表']",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "wait-dialog",
+        "action": "waitTimeout",
+        "ms": 2500
+      },
+      {
+        "id": "wait-dialog-ok",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dialog-footer')]//button[normalize-space(.)='确定' or normalize-space(.)='确 定']",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "click-dialog-ok",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//div[contains(@class,'dialog-footer')]//button[normalize-space(.)='确定' or normalize-space(.)='确 定']",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "wait-task-created",
+        "action": "waitTimeout",
+        "ms": 3000
+      },
+      {
+        "id": "click-download-manager",
+        "action": "click",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "//a[contains(normalize-space(.),'下载管理')]",
+            "nth": 0
+          }
+        ]
+      },
+      {
+        "id": "wait-nav",
+        "action": "waitTimeout",
+        "ms": 1500
+      },
+      {
+        "id": "open-download-list",
+        "action": "evaluate",
+        "expression": "\n  const a = Array.from(document.querySelectorAll('a')).find((e) => String(e.getAttribute('href') || '') === '#!/report/download-list');\n  if (a && typeof a.click === 'function') a.click();\n  try { location.hash = '#!/report/download-list'; } catch (e) {}\n  return { ok: true };\n"
+      },
+      {
+        "id": "wait-download-list",
+        "action": "waitTimeout",
+        "ms": 6000
+      },
+      {
+        "id": "wait-ready-row",
+        "action": "waitFor",
+        "target": [
+          {
+            "by": "xpath",
+            "value": "(//tr[.//button[normalize-space(.)='下载']])[1]",
+            "nth": 0
+          }
+        ],
+        "timeoutMs": 180000
+      },
+      {
+        "id": "after-ready",
+        "action": "waitTimeout",
+        "ms": 1200
+      },
+      {
+        "id": "fetch-report-file",
+        "action": "evaluate",
+        "expression": "\n  const t = (e) => String((e && (e.innerText || e.textContent)) || '').replace(/\\s+/g, ' ').trim();\n  const vis = (e) => { try { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; } catch (err) { return false; } };\n  const rows = Array.from(document.querySelectorAll('tr')).filter((row) => vis(row) && /生成成功/.test(t(row)) && row.querySelector('input[type=checkbox]'));\n  if (!rows.length) return { ok: false, error: '下载管理里还没有生成成功的任务' };\n  const row = rows[0];\n  const cb = row.querySelector('input[type=checkbox]');\n  const taskId = String((cb && cb.value) || '');\n  if (!taskId) return { ok: false, error: '任务行没有 taskId' };\n  const rowText = t(row);\n  const m = rowText.match(/(\\d{4}-\\d{2}-\\d{2})至(\\d{4}-\\d{2}-\\d{2})/);\n  const rangeFrom = (m && m[1]) || '';\n  const rangeTo = (m && m[2]) || '';\n  const api = 'https://bpcommon.alimama.com/commonapi/report/async/getDownloadUrl.json?bizCode=universalBP&taskId=' + encodeURIComponent(taskId);\n  const x1 = new XMLHttpRequest();\n  x1.open('GET', api, false);\n  x1.withCredentials = true;\n  x1.send(null);\n  let j = {};\n  try { j = JSON.parse(x1.responseText || '{}'); } catch (err) { return { ok: false, error: 'getDownloadUrl 返回不是 JSON' }; }\n  const dl = (((j || {}).data || {}).result || {}).downloadUrl || '';\n  if (!dl) return { ok: false, error: 'getDownloadUrl 没有 downloadUrl', taskId, rowText };\n  const x2 = new XMLHttpRequest();\n  x2.open('GET', dl, false);\n  x2.overrideMimeType('text/plain; charset=x-user-defined');\n  x2.send(null);\n  const raw = String(x2.responseText || '');\n  if (!raw) return { ok: false, error: '下载直链返回空', status: x2.status };\n  let hex = '';\n  for (let i = 0; i < raw.length; i += 1) { const c = raw.charCodeAt(i) & 0xff; hex += (c < 16 ? '0' : '') + c.toString(16); }\n  return {\n    ok: true,\n    taskId,\n    rowText,\n    status: x2.status,\n    contentType: String(x2.getResponseHeader('content-type') || ''),\n    bytes: raw.length,\n    filename: 'attachment; filename=\"营销场景报表_' + (rangeFrom || 'from') + '_' + (rangeTo || 'to') + '.zip\"',\n    hex,\n  };\n",
+        "outputKey": "tbAdsSceneFile"
+      }
+    ]
+  },
+  "collection": {
+    "schedule": {
+      "mode": "period",
+      "days": 7
+    },
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "download_ref",
+        "output_key": "tbAdsSceneFile"
+      }
+    ]
+  },
+  "domains": [
+    "运营推广"
+  ],
+  "verified": true
+}

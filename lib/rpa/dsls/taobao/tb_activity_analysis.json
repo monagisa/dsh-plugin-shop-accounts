@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "agentwork.rpa.atomic.v1",
+  "id": "tb_activity_analysis",
+  "verified": true,
+  "domains": [
+    "运营推广"
+  ],
+  "platform": "taobao",
+  "name": "生意参谋-营销-活动分析",
+  "description": "只读生意参谋「营销-活动分析」：读取店铺已配置/已报名活动的活动名称、活动类型、预热期、活动期、累计支付金额、累计引流访客数，直接铺成工作表（不依赖浏览器下载）。",
+  "defaults": {
+    "timeoutMs": 9000,
+    "retries": 1,
+    "continueOnError": true,
+    "stepGapMs": 300
+  },
+  "steps": [
+    {
+      "action": "goto",
+      "id": "打开活动分析",
+      "url": "https://sycm.taobao.com/datawar/activity/analysis",
+      "waitUntil": "domcontentloaded",
+      "timeoutMs": 45000,
+      "retries": 1
+    },
+    {
+      "action": "waitTimeout",
+      "id": "等待活动列表渲染",
+      "ms": 11000
+    },
+    {
+      "action": "waitFor",
+      "id": "等活动表头",
+      "target": [
+        {
+          "by": "xpath",
+          "value": "//table//th[contains(normalize-space(.),'活动名称')]",
+          "nth": 0
+        },
+        {
+          "by": "css",
+          "value": "table thead th",
+          "nth": 0
+        }
+      ],
+      "timeoutMs": 20000,
+      "optional": true,
+      "onError": "continue"
+    },
+    {
+      "action": "evaluate",
+      "id": "读活动分析行",
+      "outputKey": "tb_activity_rows",
+      "expression": "return (function(){ var pick=function(e){return (e.innerText||e.textContent||'').replace(/\\s+/g,' ').trim();}; var heads=[]; document.querySelectorAll('table thead th').forEach(function(x){var v=pick(x); if(v) heads.push(v.slice(0,30));}); var y=new Date(Date.now()-86400000); var mm=(y.getMonth()+1); var dd=y.getDate(); var day=y.getFullYear()+'-'+(mm<10?'0'+mm:mm)+'-'+(dd<10?'0'+dd:dd); var rows=[]; document.querySelectorAll('table tbody tr').forEach(function(tr){ var cs=[]; tr.querySelectorAll('td').forEach(function(td){ cs.push(pick(td).slice(0,80)); }); if(cs.length<4) return; var joined=cs.join(' '); if(/暂无数据/.test(joined)) return; var stage=''; if(/活动未开始|未开始/.test(joined)) stage='未开始'; else if(/预热中/.test(joined)) stage='预热中'; else if(/活动中/.test(joined)) stage='活动中'; else if(/已结束/.test(joined)) stage='已结束'; rows.push([day, cs[1]||'', cs[2]||'', cs[3]||'', cs[4]||'', cs[5]||'', cs[6]||'', stage]); }); return JSON.stringify({columns:['日期','活动名称','活动类型','预热期','活动期','累计支付金额','累计引流访客数','活动状态'], rows:rows.slice(0,200)}); })();"
+    }
+  ],
+  "collection": {
+    "artifacts": [
+      {
+        "role": "business",
+        "kind": "table_rows",
+        "output_key": "tb_activity_rows",
+        "tableName": "活动分析"
+      }
+    ],
+    "schedule": {
+      "mode": "snapshot"
+    }
+  }
+}
